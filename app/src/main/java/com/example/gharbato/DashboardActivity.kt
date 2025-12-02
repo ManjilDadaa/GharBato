@@ -50,7 +50,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.ui.theme.Green
+import androidx.navigation.NavHost
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.gharbato.ui.theme.Blue
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,7 +115,7 @@ fun DashboardBody(){
                             Icon(
                                 painter = painterResource(R.drawable.outline_location_on_24),
                                 contentDescription = null,
-                                tint = Green
+                                tint = Blue
 
                             )
                             Text("Kathmandu, Nepal")
@@ -127,7 +132,7 @@ fun DashboardBody(){
                         contentDescription = null,
                         modifier = Modifier
                             .size(30.dp),
-                        tint = Green
+                        tint = Blue
                     )
                 }
 
@@ -171,7 +176,7 @@ fun DashboardBody(){
                     focusedContainerColor = Color.Gray.copy(0.2f),
                     unfocusedContainerColor = Color.Gray.copy(0.2f),
                     unfocusedBorderColor = Color.Gray.copy(0.1f),
-                    focusedBorderColor = Green,
+                    focusedBorderColor = Blue,
                 ),
                 placeholder = {
                     Text("Search Properties...",
@@ -191,11 +196,77 @@ fun DashboardBody(){
 
             )
 
+
+
         }
     }
 }
 
+data class NavItem(
+    val title: String,
+    val route: String,
+    val iconRes: Int
+)
 
+val navItems = listOf(
+    NavItem("Home", "home", R.drawable.baseline_home_24),
+    NavItem("Search", "search", R.drawable.outline_search_24),
+    NavItem("Messages", "messages", R.drawable.round_message_24),
+    NavItem("Saved", "saved", R.drawable.outline_favorite_border_24),
+    NavItem("Profile", "profile", R.drawable.outline_person_24)
+)
+
+@Composable
+fun BottomNavigationBar(
+    currentRoute: String?,
+    onItemClick : (String) -> Unit
+){
+    NavigationBar {
+        navItems.forEach { item ->
+            NavigationBarItem(
+                selected = currentRoute == item.route,
+                onClick = { onItemClick(item.route) },
+                icon = {
+                    Icon(painterResource(item.iconRes), contentDescription = null )
+                },
+                label = {Text(item.title)}
+            )
+        }
+    }
+
+}
+
+@Composable
+fun MainScreen(){
+    val navController = rememberNavController()
+    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    Scaffold(
+        bottomBar = {
+            BottomNavigationBar(
+                currentRoute = currentRoute,
+                onItemClick = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.startDestinationId)
+                        launchSingleTop = true
+                    }
+                }
+
+            )
+        }
+    ){  padding ->
+        NavHost(
+            navController = navController,
+            startDestination = "home",
+            modifier = Modifier.padding(padding)
+        ){
+            composable("home"){DashboardBody()}
+            composable("search"){DashboardBody()}
+            composable ("messages"){DashboardBody()}
+            }
+
+    }
+
+}
 
 
 @Composable

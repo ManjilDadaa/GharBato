@@ -49,7 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.ui.theme.Green
+import com.example.gharbato.ui.theme.Blue
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -86,7 +86,7 @@ fun LoginBody(){
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 30.sp,
-                        color = Green
+                        color = Blue
                     ),
                     modifier = Modifier
                         .padding(top = 150.dp)
@@ -130,7 +130,7 @@ fun LoginBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 singleLine = true,
@@ -175,7 +175,7 @@ fun LoginBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 leadingIcon = {
@@ -221,7 +221,7 @@ fun LoginBody(){
             ) {
                 Text("Forgot Password? ",
                     style = TextStyle(
-                        color = Green
+                        color = Blue
                     ),
                     modifier = Modifier
                         .clickable{
@@ -243,7 +243,7 @@ fun LoginBody(){
                         .height(45.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Green,
+                        containerColor = Blue,
                     )
 
                 ) {
@@ -330,7 +330,7 @@ fun LoginBody(){
                 Text("Sign up",
                     style = TextStyle(
                         fontSize = 15.sp,
-                        color = Green
+                        color = Blue
                     ),
                     modifier = Modifier
                         .clickable{

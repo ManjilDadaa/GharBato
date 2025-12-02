@@ -53,7 +53,7 @@ import com.arpitkatiyarprojects.countrypicker.CountryPickerOutlinedTextField
 import com.arpitkatiyarprojects.countrypicker.enums.CountryListDisplayType
 import com.arpitkatiyarprojects.countrypicker.models.CountryDetails
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.ui.theme.Green
+import com.example.gharbato.ui.theme.Blue
 
 class SignUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,7 +131,7 @@ fun SignUpBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 modifier = Modifier
@@ -173,7 +173,7 @@ fun SignUpBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 modifier = Modifier
@@ -211,7 +211,7 @@ fun SignUpBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
                 placeholder = {Text("Enter phone number")},
                 modifier = Modifier
@@ -247,7 +247,7 @@ fun SignUpBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 modifier = Modifier
@@ -307,7 +307,7 @@ fun SignUpBody(){
                 colors = TextFieldDefaults.colors(
                     unfocusedContainerColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Green
+                    focusedIndicatorColor = Blue
                 ),
 
                 placeholder = {
@@ -353,7 +353,7 @@ fun SignUpBody(){
                 shape = RoundedCornerShape(5.dp),
                 colors = ButtonDefaults.buttonColors(
                     contentColor = Color.White,
-                    containerColor = Green
+                    containerColor = Blue
                 ),
                 border = BorderStroke(1.dp, Color.Gray),
                 modifier = Modifier
@@ -445,7 +445,7 @@ fun SignUpBody(){
                 Text("Sign in",
                     style = TextStyle(
                         fontSize = 15.sp,
-                        color = Green
+                        color = Blue
                     ),
                     modifier = Modifier
                         .clickable{
