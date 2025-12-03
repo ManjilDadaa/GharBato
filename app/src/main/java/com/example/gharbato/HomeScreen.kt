@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,90 +53,10 @@ fun HomeScreen(){
         modifier = Modifier
             .fillMaxSize()
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 5.dp, end = 5.dp, top = 2.dp)
-        ) {
-            Card(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp)
-                    .clickable{
-
-                    },
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.Transparent
-                )
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text("Location",
-                        style = TextStyle(
-                            color = Color.Gray.copy(0.9f)
-                        ),
-                        modifier = Modifier
-                            .padding(start = 5.dp)
-                    )
-                    Spacer(modifier = Modifier
-                        .height(3.dp)
-                    )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_location_on_24),
-                            contentDescription = null,
-                            tint = Blue
-
-                        )
-                        Text("Kathmandu, Nepal")
-                    }
-
-                }
-            }
-
-            IconButton(
-                onClick = {},
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.outline_notifications_24),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(30.dp),
-                    tint = Blue
-                )
-            }
-
-            Spacer(modifier = Modifier
-                .width(6.dp))
-
-            Box(
-                modifier = Modifier
-                    .background(color = Color.Gray, shape = CircleShape)
-
-            ){
-                Image(
-                    painter = painterResource(R.drawable.baseline_person_24),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clickable{
-
-
-                        }
-                )
-            }
-        }
-
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 15.dp, horizontal = 5.dp )
+                .padding(vertical = 5.dp, horizontal = 5.dp )
                 .height(48.dp),
 
             value = search,
