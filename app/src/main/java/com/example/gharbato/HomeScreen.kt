@@ -1,11 +1,7 @@
 package com.example.gharbato
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,17 +11,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -37,7 +28,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
@@ -45,10 +35,19 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.Purple
 
 @Composable
 fun HomeScreen(){
     var search by remember { mutableStateOf("") }
+
+    // variables required for multi selection FilterChips
+    var selectedFilters by remember { mutableStateOf(setOf<String>()) }
+    val filters = mapOf("Trending" to R.drawable.baseline_trending_up_24,
+        "Nearby" to  R.drawable.outline_location_on_24,
+        "Price Range" to R.drawable.baseline_currency_rupee_24,
+        "New" to R.drawable.baseline_star_border_purple500_24
+    )
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -56,7 +55,7 @@ fun HomeScreen(){
         OutlinedTextField(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 5.dp, horizontal = 5.dp )
+                .padding(vertical = 5.dp, horizontal = 5.dp)
                 .height(48.dp),
 
             value = search,
@@ -95,44 +94,33 @@ fun HomeScreen(){
                 .padding(horizontal = 5.dp, vertical = 8.dp)
                 .horizontalScroll(rememberScrollState())
         ) {
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
-                )
-            ) {
-                Text("Filters")
-            }
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue,
 
-                )) {
-                Text("Advanced")
+            for((filter, icon )in filters){
+                FilterChip(
+                    selected =
+                        selectedFilters.contains(filter),
+                    onClick = {
+                        selectedFilters = if (filter in selectedFilters)
+                            selectedFilters - filter
+                        else selectedFilters + filter
+                    },
+                    label = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ){
+                            Icon(painter = painterResource(icon),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(filter)
+                        }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Purple.copy(0.3f)
+                    )
+                )
             }
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
-                )) {
-                Text("Trending")
-            }
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
-                )) {
-                Text("Price Range")
-            }
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
-                )) {
-                Text("Map View")
-            }
-            Button(onClick = {},
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
-                )) {
-                Text("New Listings")
-            }
+
         }
     }
 }

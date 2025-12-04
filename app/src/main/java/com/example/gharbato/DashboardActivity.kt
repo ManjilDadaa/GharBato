@@ -76,14 +76,13 @@ fun DashboardBody(){
         NavItem("Home", R.drawable.baseline_home_24),
         NavItem("Search", R.drawable.outline_search_24),
         NavItem("Messages", R.drawable.round_message_24),
-        NavItem("Saved", R.drawable.outline_favorite_border_24),
+        NavItem("Notifications", R.drawable.outline_notifications_24),
         NavItem("Person", R.drawable.outline_person_24)
     )
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
+            CenterAlignedTopAppBar(
+                title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -93,7 +92,20 @@ fun DashboardBody(){
                             tint = Blue
 
                         )
-                        Text("Kathmandu, Nepal")
+                        Text("Kathmandu, Nepal",
+                            style = TextStyle(
+                                fontSize = 15.sp
+                            )
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(
+                        onClick = {}
+                    ) {
+                        Icon(painter = painterResource(R.drawable.baseline_add_24),
+                            contentDescription = null
+                        )
                     }
                 },
 
@@ -102,7 +114,6 @@ fun DashboardBody(){
                         Icon(
                             painter = painterResource(R.drawable.outline_favorite_border_24),
                             contentDescription = null,
-                            tint = Blue
                         )
                     }
                 },
@@ -110,7 +121,10 @@ fun DashboardBody(){
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                tonalElevation = 4.dp,
+                containerColor = Color.Transparent,
+            ) {
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = {
