@@ -12,9 +12,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
-            android:name=".ProfileActivity"
+            android:name=".ForgotActivity"
             android:exported="true"
-            android:label="@string/title_activity_profile"
+            android:label="@string/title_activity_forgot"
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -225,6 +225,8 @@ fun LoginBody(){
                     ),
                     modifier = Modifier
                         .clickable{
+                            val intent = Intent(context, ForgotActivity::class.java)
+                            context.startActivity(intent)
                         }
                 )
             }

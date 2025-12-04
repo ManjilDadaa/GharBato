@@ -4,5 +4,5 @@
     <string name="title_activity_dashboard">DashboardActivity</string>
     <string name="title_activity_random">RandomActivity</string>
     <string name="title_activity_splash">SplashActivity</string>
-    <string name="title_activity_profile">ProfileActivity</string>
+    <string name="title_activity_forgot">ForgotActivity</string>
 </resources>
