@@ -54,6 +54,7 @@ class ForgotActivity : ComponentActivity() {
 
 @Composable
 fun ForgotBody() {
+    var emailError by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val context = LocalContext.current
     Scaffold { padding ->
@@ -90,7 +91,7 @@ fun ForgotBody() {
             Spacer(modifier = Modifier.height(40.dp))
             Text(
                 "Email",
-                color = Color.Gray, // Changed from colorResource(R.color.Grey) to Color.Gray
+                color = Color.Gray,
                 style = TextStyle(
                     fontSize = 15.sp
                 )
@@ -98,14 +99,24 @@ fun ForgotBody() {
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    unfocusedIndicatorColor = Color.Gray,
-                    focusedIndicatorColor = Color.Green,
+                  unfocusedIndicatorColor = if (emailError) Color.Red else Color.Gray,
+                    focusedIndicatorColor = if (emailError) Color.Red else Color.Blue,
                 ),
+                isError = emailError,
                 shape = RoundedCornerShape(10.dp),
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it
+                    emailError = !it.endsWith("@gmail.com") },
                 label = { Text("Email Address") }
             )
+            if (emailError) {
+            Text(
+                text = "Invalid email, try again.",
+                color = Color.Red,
+                style = TextStyle(fontSize = 12.sp),
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
             Row (
                 modifier = Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 30.dp)
             ) {
