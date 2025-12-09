@@ -41,6 +41,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.ui.theme.Blue
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -126,7 +127,7 @@ fun ForgotBody() {
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Blue
+                        containerColor = Blue
                     )
 
                 ) {
@@ -142,7 +143,7 @@ fun ForgotBody() {
                     pushStringAnnotation(tag = "SignIn", annotation = "SignIn")
                     withStyle(
                         style = androidx.compose.ui.text.SpanStyle(
-                            color = Color.Blue,
+                            color = Blue,
                         )
                     ) {
                         append("Sign In")
