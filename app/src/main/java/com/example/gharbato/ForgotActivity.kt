@@ -2,6 +2,7 @@ package com.example.gharbato
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 
 class ForgotActivity : ComponentActivity() {
@@ -59,6 +61,7 @@ class ForgotActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotBody() {
+    val userRepo = UserRepoImpl()
     var emailError by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val context = LocalContext.current
@@ -136,6 +139,21 @@ fun ForgotBody() {
             ) {
                 Button(
                     onClick = {
+                        if (email.isEmpty() || !email.endsWith("@gmail.com")) {
+                            emailError = true
+                        } else {
+                            emailError = false
+                            val userRepo = UserRepoImpl()
+                            userRepo.forgotPassword(email) { success, message ->
+                                (context as? ComponentActivity)?.runOnUiThread {
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    if (success) {
+                                        // Navigate back to login screen
+                                        context.startActivity(Intent(context, MainActivity::class.java))
+                                    }
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(10.dp),

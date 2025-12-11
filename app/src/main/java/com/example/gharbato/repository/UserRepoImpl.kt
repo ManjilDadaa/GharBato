@@ -56,6 +56,13 @@ class UserRepoImpl : UserRepo{
         email: String,
         callback: (Boolean, String) -> Unit
     ) {
-        TODO("Not yet implemented")
+        auth.sendPasswordResetEmail(email)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    callback(true, "Reset Email sent successfully")
+                } else {
+                    callback(false, "${it.exception?.message}")
+                }
+            }
     }
 }
