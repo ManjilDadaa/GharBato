@@ -21,13 +21,5 @@ interface UserRepo {
 
     fun forgotPassword(email: String, callback: (Boolean, String) -> Unit)
 
-//    fun editProfile(userId: String, model: UserModel,
-//                    callback: (Boolean, String) -> Unit)
-//    fun deleteAccount(userId: String, callback: (Boolean, String) -> Unit)
-//    fun logout(
-//        callback: (Boolean, String) -> Unit)
-//    fun getCurrentUser() : FirebaseUser?
-//    fun getUserById(userId: String,
-//                    callback: (Boolean, String, UserModel?) -> Unit)
-//    fun getAllUser(callback: (Boolean, String, List<UserModel>?) -> Unit)
+
 }
