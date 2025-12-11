@@ -58,7 +58,7 @@ fun SearchScreen() {
 
         // Properties Count
         Text(
-            text = "${SampleData.properties.size} ads",
+            text = "${SampleData.properties.size} Listing",
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             fontWeight = FontWeight.Bold,
             fontSize = 18.sp
