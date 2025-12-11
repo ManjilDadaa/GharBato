@@ -2,6 +2,7 @@ package com.example.gharbato
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -17,11 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,6 +45,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 
 class ForgotActivity : ComponentActivity() {
@@ -53,28 +58,39 @@ class ForgotActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotBody() {
+    val userRepo = UserRepoImpl()
     var emailError by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val context = LocalContext.current
-    Scaffold { padding ->
+    Scaffold (topBar ={
+        TopAppBar(
+            title = {},
+            navigationIcon = {
+                IconButton(onClick = {
+                    val intent =Intent(context, MainActivity::class.java)
+                    context.startActivity(intent)
+                }) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
+                        "Back"
+
+                    )
+                }
+            }
+        )
+    }
+
+    ){ innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 25.dp, top = 35.dp, end = 20.dp)
+                .padding(innerPadding)
+                .padding(horizontal = 20.dp)
         ) {
-            // Removed redundant padding parameter usage here
-            Icon(
-                painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
-                contentDescription = "Back",
-                modifier = Modifier.padding(8.dp)
-                    .clickable{
-                    val intent = Intent(context, MainActivity::class.java)
-                    context.startActivity(intent)
-                }// Added contentDescription for accessibility
-            )
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             Text(
                 "Forgot Password?", style = TextStyle(
                     fontWeight = FontWeight.W500,
@@ -108,7 +124,7 @@ fun ForgotBody() {
                 value = email,
                 onValueChange = { email = it
                     emailError = !it.endsWith("@gmail.com") },
-                label = { Text("Email Address") }
+                placeholder = { Text("Email Address") }
             )
             if (emailError) {
             Text(
@@ -123,6 +139,21 @@ fun ForgotBody() {
             ) {
                 Button(
                     onClick = {
+                        if (email.isEmpty() || !email.endsWith("@gmail.com")) {
+                            emailError = true
+                        } else {
+                            emailError = false
+                            val userRepo = UserRepoImpl()
+                            userRepo.forgotPassword(email) { success, message ->
+                                (context as? ComponentActivity)?.runOnUiThread {
+                                    Toast.makeText(context, "Password reset link sent successfully", Toast.LENGTH_LONG).show()
+                                    if (success) {
+                                        // Navigate back to login screen
+                                        context.startActivity(Intent(context, MainActivity::class.java))
+                                    }
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(10.dp),
