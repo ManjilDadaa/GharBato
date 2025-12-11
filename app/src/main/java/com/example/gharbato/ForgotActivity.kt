@@ -146,7 +146,7 @@ fun ForgotBody() {
                             val userRepo = UserRepoImpl()
                             userRepo.forgotPassword(email) { success, message ->
                                 (context as? ComponentActivity)?.runOnUiThread {
-                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Email Reset Link Sent Successfully", Toast.LENGTH_LONG).show()
                                     if (success) {
                                         // Navigate back to login screen
                                         context.startActivity(Intent(context, MainActivity::class.java))
