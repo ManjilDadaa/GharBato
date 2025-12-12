@@ -1,7 +1,7 @@
 package com.example.gharbato
 
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -13,21 +13,21 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.ui.theme.Blue
 
-class ProfileScreenActivity : ComponentActivity(){
+class ProfileScreenActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -39,11 +39,22 @@ class ProfileScreenActivity : ComponentActivity(){
 
 @Composable
 fun ProfileScreen() {
+    val context = LocalContext.current
+    val prefs = context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE)
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
 
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+
+
+    LaunchedEffect(Unit) {
+        name = prefs.getString("name", "Abhi Khatiwada")!!
+        email = prefs.getString("email", "KKKhatiwada@gmail.com")!!
+        phone = prefs.getString("phone", "+977 9861996115")!!
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
 
         Box(
             modifier = Modifier
@@ -56,9 +67,7 @@ fun ProfileScreen() {
                 ),
             contentAlignment = Alignment.Center
         ) {
-
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
 
                 Image(
                     painter = painterResource(R.drawable.billu),
@@ -71,9 +80,9 @@ fun ProfileScreen() {
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text("Abhi Khatiwada", color = Color.White, fontWeight = FontWeight.Bold)
-                Text("KKKhatiwada@gmail.com", color = Color.White)
-                Text("+977 9861996115", color = Color.White)
+                Text(name, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(email, color = Color.White)
+                Text(phone, color = Color.White)
 
                 Spacer(modifier = Modifier.height(15.dp))
 
@@ -87,9 +96,7 @@ fun ProfileScreen() {
             }
         }
 
-
         Spacer(modifier = Modifier.height(20.dp))
-
 
         Text(
             "ACCOUNT",
@@ -101,7 +108,9 @@ fun ProfileScreen() {
         SettingItem(
             icon = R.drawable.baseline_create_24,
             title = "Edit Profile",
-            onClick = { /* Edit profile */ }
+            onClick = {
+                context.startActivity(Intent(context, EditProfileActivity::class.java))
+            }
         )
 
         SettingItem(
@@ -109,9 +118,6 @@ fun ProfileScreen() {
             title = "My Activitys",
             onClick = { /* Notifications clicked */ }
         )
-
-
-
 
         SettingItem(
             icon = R.drawable.baseline_logout_24,
@@ -121,7 +127,6 @@ fun ProfileScreen() {
         )
 
         Spacer(modifier = Modifier.height(15.dp))
-
 
         Text(
             "HELP & SUPPORT",
@@ -142,10 +147,7 @@ fun ProfileScreen() {
             onClick = { /* Contact us */ }
         )
     }
-
 }
-
-
 
 @Composable
 fun SettingItem(
@@ -154,7 +156,6 @@ fun SettingItem(
     titleColor: Color = Color.Black,
     onClick: () -> Unit
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -162,8 +163,6 @@ fun SettingItem(
             .padding(horizontal = 20.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
-
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -188,7 +187,7 @@ fun SettingItem(
         )
 
         Icon(
-            painter =painterResource( R.drawable.outline_arrow_forward_ios_24),
+            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
             contentDescription = null,
             tint = Color.Gray,
             modifier = Modifier.size(15.dp)
