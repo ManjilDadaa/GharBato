@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -84,383 +85,405 @@ fun SignUpBody(){
 
 
     Scaffold{ padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-        ) {
-            Text("Create Account",
-                style = TextStyle(
-                    fontSize = 25.sp,
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 30.dp)
-            )
-
-            Text("Sign up to get started with Ghar Bato",
-                style = TextStyle(
-                    color = Color.Gray,
-                    fontSize = 16.sp
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 8.dp)
-            )
-
-            Text("Full Name",
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 18.dp)
-            )
-
-            OutlinedTextField(
-                value = fullname,
-                onValueChange = { data ->
-                    fullname = data
-                },
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text
-                ),
-                
-                placeholder = {
-                    Text("Enter your full name")
-                },
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                    .height(56.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_person_24),
-                        contentDescription = null
-                    )
-                }
-
-            )
-
-            Text("Email",
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 15.dp)
-            )
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { data ->
-                    email = data
-                },
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text
-                ),
-
-                placeholder = {
-                    Text("Enter your email")
-                },
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                    .height(56.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_email_24),
-                        contentDescription = null
-                    )
-                }
-
-            )
-
-            Text("Phone Number",
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 15.dp)
-            )
-
-            CountryPickerOutlinedTextField(
-                mobileNumber = phoneNo,
-                onMobileNumberChange = {data ->
-                    phoneNo =data
-                },
-                countryListDisplayType = CountryListDisplayType.BottomSheet,
-                onCountrySelected = { country ->
-                    selectedCountry = country
-                },
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-                placeholder = {Text("Enter phone number")},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                    .height(56.dp),
-                singleLine = true,
-                shape = RoundedCornerShape(5.dp),
-            )
-
-            Text("Password",
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 15.dp)
-            )
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { data ->
-                    password = data
-                },
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password
-                ),
-
-                placeholder = {
-                    Text("Enter your password")
-                },
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                    .height(56.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            passVisibility = !passVisibility
-                        }
-                    ) {
-                        Icon(
-                            painter =
-                                if (passVisibility){
-                                    painterResource(R.drawable.baseline_visibility_off_24)
-                                }
-                                else{
-                                    painterResource(R.drawable.baseline_visibility_24)
-                                },
-                            contentDescription = null
-
-                        )
-                    }
-                },
-
-                visualTransformation = if (!passVisibility){ PasswordVisualTransformation()}
-                else {VisualTransformation.None},
-
-            )
-
-            Text("Confirm Password",
-                style = TextStyle(
-                    fontSize = 15.sp,
-                    color = Color.DarkGray
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp, top = 15.dp)
-            )
-
-            OutlinedTextField(
-                value = confirmPassword,
-                onValueChange = { data ->
-                    confirmPassword = data
-                },
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Text
-                ),
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                placeholder = {
-                    Text("Confirm your password")
-                },
-
-                visualTransformation =
-                    if(!passVisibility)
-                        PasswordVisualTransformation()
-                    else VisualTransformation.None,
-
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                    .height(56.dp),
-                singleLine = true,
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            passVisibility = !passVisibility
-                        }
-                    ) {
-                        Icon(
-                            painter =
-                                if(!passVisibility)
-                                    painterResource(R.drawable.baseline_visibility_24)
-                                else painterResource(R.drawable.baseline_visibility_off_24),
-                            contentDescription = null
-                        )
-                    }
-                },
-
-            )
-
-            Button(
-                onClick = {},
-                shape = RoundedCornerShape(5.dp),
-                colors = ButtonDefaults.buttonColors(
-                    contentColor = Color.White,
-                    containerColor = Blue
-                ),
-                border = BorderStroke(1.dp, Color.Gray),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
-                    .size(height = 45.dp, width = 10.dp)
-            ) {
-                Text("Create Account",
-                    style = TextStyle(
-                        fontSize = 17.sp
-                    )
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                HorizontalDivider(thickness = 2.dp,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                        .weight(1f)
-                )
-
-                Text("Or continue with",
-                    style = TextStyle(
-                        color = Gray
-                    )
-                )
-
-                HorizontalDivider(thickness = 2.dp,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                        .weight(1f)
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 15.dp)
-            ) {
-
-                Card(
+        LazyColumn() {
+            item {
+                Column(
                     modifier = Modifier
-                        .height(50.dp)
-                        .padding(horizontal = 20.dp)
+                        .padding(padding)
                         .fillMaxWidth()
-                        .clickable{},
-                    shape = RoundedCornerShape(15.dp)
                 ) {
+                    Text(
+                        "Create Account",
+                        style = TextStyle(
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 30.dp)
+                    )
+
+                    Text(
+                        "Sign up to get started with Ghar Bato",
+                        style = TextStyle(
+                            color = Color.Gray,
+                            fontSize = 16.sp
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 8.dp)
+                    )
+
+                    Text(
+                        "Full Name",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 18.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = fullname,
+                        onValueChange = { data ->
+                            fullname = data
+                        },
+
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text
+                        ),
+
+                        placeholder = {
+                            Text("Enter your full name")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Blue
+                        ),
+
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                            .height(56.dp),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_person_24),
+                                contentDescription = null
+                            )
+                        }
+
+                    )
+
+                    Text(
+                        "Email",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 15.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { data ->
+                            email = data
+                        },
+
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text
+                        ),
+
+                        placeholder = {
+                            Text("Enter your email")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Blue
+                        ),
+
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                            .height(56.dp),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_email_24),
+                                contentDescription = null
+                            )
+                        }
+
+                    )
+
+                    Text(
+                        "Phone Number",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 15.dp)
+                    )
+
+                    CountryPickerOutlinedTextField(
+                        mobileNumber = phoneNo,
+                        onMobileNumberChange = { data ->
+                            phoneNo = data
+                        },
+                        countryListDisplayType = CountryListDisplayType.BottomSheet,
+                        onCountrySelected = { country ->
+                            selectedCountry = country
+                        },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Blue
+                        ),
+                        placeholder = { Text("Enter phone number") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                            .height(56.dp),
+                        singleLine = true,
+                        shape = RoundedCornerShape(5.dp),
+                    )
+
+                    Text(
+                        "Password",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 15.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { data ->
+                            password = data
+                        },
+
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password
+                        ),
+
+                        placeholder = {
+                            Text("Enter your password")
+                        },
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Blue
+                        ),
+
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                            .height(56.dp),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_lock_24),
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    passVisibility = !passVisibility
+                                }
+                            ) {
+                                Icon(
+                                    painter =
+                                        if (passVisibility) {
+                                            painterResource(R.drawable.baseline_visibility_off_24)
+                                        } else {
+                                            painterResource(R.drawable.baseline_visibility_24)
+                                        },
+                                    contentDescription = null
+
+                                )
+                            }
+                        },
+
+                        visualTransformation = if (!passVisibility) {
+                            PasswordVisualTransformation()
+                        } else {
+                            VisualTransformation.None
+                        },
+
+                        )
+
+                    Text(
+                        "Confirm Password",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        ),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 15.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { data ->
+                            confirmPassword = data
+                        },
+
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text
+                        ),
+                        colors = TextFieldDefaults.colors(
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Blue
+                        ),
+
+                        placeholder = {
+                            Text("Confirm your password")
+                        },
+
+                        visualTransformation =
+                            if (!passVisibility)
+                                PasswordVisualTransformation()
+                            else VisualTransformation.None,
+
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+                            .height(56.dp),
+                        singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_lock_24),
+                                contentDescription = null
+                            )
+                        },
+                        trailingIcon = {
+                            IconButton(
+                                onClick = {
+                                    passVisibility = !passVisibility
+                                }
+                            ) {
+                                Icon(
+                                    painter =
+                                        if (!passVisibility)
+                                            painterResource(R.drawable.baseline_visibility_24)
+                                        else painterResource(R.drawable.baseline_visibility_off_24),
+                                    contentDescription = null
+                                )
+                            }
+                        },
+
+                        )
+
+                    Button(
+                        onClick = {},
+                        shape = RoundedCornerShape(5.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            contentColor = Color.White,
+                            containerColor = Blue
+                        ),
+                        border = BorderStroke(1.dp, Color.Gray),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 20.dp)
+                            .size(height = 45.dp, width = 10.dp)
+                    ) {
+                        Text(
+                            "Create Account",
+                            style = TextStyle(
+                                fontSize = 17.sp
+                            )
+                        )
+                    }
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.googlee),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                                .weight(1f)
                         )
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Or continue with",
+                            style = TextStyle(
+                                color = Gray
+                            )
+                        )
 
-                        Text("Continue with Google", style = TextStyle(
-                            fontSize = 15.sp
-                        ))
+                        HorizontalDivider(
+                            thickness = 2.dp,
+                            modifier = Modifier.padding(horizontal = 20.dp)
+                                .weight(1f)
+                        )
                     }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 15.dp)
+                    ) {
+
+                        Card(
+                            modifier = Modifier
+                                .height(50.dp)
+                                .padding(horizontal = 20.dp)
+                                .fillMaxWidth()
+                                .clickable {},
+                            shape = RoundedCornerShape(15.dp)
+                        ) {
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Image(
+                                    painter = painterResource(R.drawable.googlee),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp)
+                                )
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                Text(
+                                    "Continue with Google", style = TextStyle(
+                                        fontSize = 15.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 20.dp)
+
+                    ) {
+                        Text(
+                            "Already have an account?",
+                            style = TextStyle(
+                                fontSize = 15.sp,
+                                color = Color.DarkGray
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(7.dp))
+                        Text(
+                            "Sign in",
+                            style = TextStyle(
+                                fontSize = 15.sp,
+                                color = Blue
+                            ),
+                            modifier = Modifier
+                                .clickable(
+                                    indication = null,
+                                    interactionSource = remember { MutableInteractionSource() }
+                                ) {
+                                    val intent = Intent(context, MainActivity::class.java)
+                                    context.startActivity(intent)
+                                    activity.finish()
+                                }
+                        )
+                    }
+
+
                 }
             }
-
-            Row(horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp)
-
-            ) {
-                Text("Already have an account?",
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        color = Color.DarkGray
-                    )
-                )
-                Spacer(modifier = Modifier.width(7.dp))
-                Text("Sign in",
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        color = Blue
-                    ),
-                    modifier = Modifier
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ){
-                            val intent = Intent(context, MainActivity::class.java)
-                            context.startActivity(intent)
-                            activity.finish()
-                        }
-                )
-            }
-
-
         }
     }
 }

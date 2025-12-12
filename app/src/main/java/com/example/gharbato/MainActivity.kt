@@ -222,7 +222,7 @@ fun LoginBody(){
             ) {
                 Text("Forgot Password? ",
                     style = TextStyle(
-                        color = Blue
+                        color = Gray
                     ),
                     modifier = Modifier
                         .clickable(
