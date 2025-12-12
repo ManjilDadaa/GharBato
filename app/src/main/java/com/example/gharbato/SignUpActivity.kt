@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -448,7 +449,10 @@ fun SignUpBody(){
                         color = Blue
                     ),
                     modifier = Modifier
-                        .clickable{
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ){
                             val intent = Intent(context, MainActivity::class.java)
                             context.startActivity(intent)
                             activity.finish()

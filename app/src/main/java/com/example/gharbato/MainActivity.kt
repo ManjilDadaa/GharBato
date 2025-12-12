@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -224,7 +225,10 @@ fun LoginBody(){
                         color = Blue
                     ),
                     modifier = Modifier
-                        .clickable{
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ){
                             val intent = Intent(context, ForgotActivity::class.java)
                             context.startActivity(intent)
                         }
@@ -335,9 +339,13 @@ fun LoginBody(){
                         color = Blue
                     ),
                     modifier = Modifier
-                        .clickable{
+                        .clickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() }
+                        ){
                             val intent = Intent(context, SignUpActivity::class.java)
                             context.startActivity(intent)
+
                         }
                 )
             }
