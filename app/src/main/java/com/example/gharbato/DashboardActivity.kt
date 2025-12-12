@@ -68,6 +68,9 @@ class DashboardActivity : ComponentActivity() {
 @Composable
 fun DashboardBody(){
 
+    // topAppBar scroll behavior
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
     //Bottom NavigationBar data class and its requirements
     data class NavItem(val label : String, val icon : Int)
     var selectedIndex by remember { mutableStateOf(0) }
@@ -76,28 +79,29 @@ fun DashboardBody(){
         NavItem("Home", R.drawable.baseline_home_24),
         NavItem("Search", R.drawable.outline_search_24),
         NavItem("Messages", R.drawable.round_message_24),
-        NavItem("Notifications", R.drawable.outline_notifications_24),
+        NavItem("Saved", R.drawable.outline_favorite_border_24),
         NavItem("Person", R.drawable.outline_person_24)
     )
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_location_on_24),
-                            contentDescription = null,
-                            tint = Blue
-
-                        )
-                        Text("Kathmandu, Nepal",
-                            style = TextStyle(
-                                fontSize = 15.sp
-                            )
-                        )
-                    }
+//                    Row(
+//                        verticalAlignment = Alignment.CenterVertically
+//                    ) {
+//                        Icon(
+//                            painter = painterResource(R.drawable.outline_location_on_24),
+//                            contentDescription = null,
+//                            tint = Blue
+//
+//                        )
+//                        Text("Kathmandu, Nepal",
+//                            style = TextStyle(
+//                                fontSize = 15.sp
+//                            )
+//                        )
+//                    }
                 },
                 navigationIcon = {
                     IconButton(
@@ -112,11 +116,12 @@ fun DashboardBody(){
                 actions = {
                     IconButton(onClick = {}) {
                         Icon(
-                            painter = painterResource(R.drawable.outline_favorite_border_24),
+                            painter = painterResource(R.drawable.outline_notifications_24),
                             contentDescription = null,
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior
 
             )
         },
