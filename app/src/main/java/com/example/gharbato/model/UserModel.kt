@@ -7,3 +7,4 @@ data class UserModel(
     val phoneNumber : String = "",
 //    val dob : String = "",
 )
+
