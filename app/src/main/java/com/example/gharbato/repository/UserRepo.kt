@@ -10,7 +10,7 @@ interface UserRepo {
         callback: (Boolean, String) -> Unit
     )
     fun signUp(
-        email: String, password: String,
+        email: String, password: String, fullName : String, phoneNo : String, country : String,
         callback: (Boolean, String, String) -> Unit
     )
 

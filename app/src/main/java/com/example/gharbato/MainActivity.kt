@@ -3,6 +3,7 @@ package com.example.gharbato
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -49,8 +50,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.UserViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -65,12 +68,18 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun LoginBody(){
 
+    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
+
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity  = context as Activity
+
+    var isErrorEmail by remember { mutableStateOf(false) }
+    var isErrorPassword by remember { mutableStateOf(false) }
+
 
     Scaffold {
         padding ->
@@ -122,6 +131,8 @@ fun LoginBody(){
                     email = data
                 },
 
+                isError = isErrorEmail,
+
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email
                 ),
@@ -164,6 +175,8 @@ fun LoginBody(){
                 onValueChange = { data ->
                     password = data
                 },
+
+                isError = isErrorPassword,
 
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password
@@ -239,10 +252,27 @@ fun LoginBody(){
                 modifier = Modifier.fillMaxWidth()
                     .padding(top = 20.dp, start = 20.dp, end = 20.dp)) {
                 Button(onClick = {
-                    val intent = Intent(context, DashboardActivity::class.java)
-                    context.startActivity(intent)
-                    activity.finish()
-
+                    if (email.equals("") || password.equals("")){
+                        isErrorEmail = true
+                        isErrorPassword = true
+                        Toast.makeText(context, "Please enter all fields", Toast.LENGTH_LONG).show()
+                    }
+                    else {
+                        userViewModel.login(email, password) { success, message ->
+                            if (success) {
+                                Toast.makeText(
+                                    context, message, Toast.LENGTH_LONG
+                                ).show()
+                                val intent = Intent(context, DashboardActivity::class.java)
+                                context.startActivity(intent)
+                                activity.finish()
+                            } else {
+                                Toast.makeText(
+                                    context, message, Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
                 },
                     modifier = Modifier
                         .weight(1f)
@@ -326,7 +356,7 @@ fun LoginBody(){
                 .padding(horizontal = 20.dp, vertical = 15.dp)
 
             ) {
-                Text("Dont have an account?",
+                Text("Don't have an account?",
                     style = TextStyle(
                         fontSize = 15.sp,
                         color = Color.DarkGray

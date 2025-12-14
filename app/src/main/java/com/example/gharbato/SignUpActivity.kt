@@ -3,6 +3,7 @@ package com.example.gharbato
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -54,8 +55,11 @@ import androidx.compose.ui.unit.sp
 import com.arpitkatiyarprojects.countrypicker.CountryPickerOutlinedTextField
 import com.arpitkatiyarprojects.countrypicker.enums.CountryListDisplayType
 import com.arpitkatiyarprojects.countrypicker.models.CountryDetails
+import com.example.gharbato.model.UserModel
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.UserViewModel
 
 class SignUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +74,8 @@ class SignUpActivity : ComponentActivity() {
 @Composable
 fun SignUpBody(){
 
+    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
+
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phoneNo by remember { mutableStateOf("") }
@@ -80,9 +86,7 @@ fun SignUpBody(){
     val context = LocalContext.current
     val activity = context as Activity
 
-    // For country-code dropdown
-    var selectedCountry by remember { mutableStateOf<CountryDetails?>(null) }
-
+    var selectedCountry by remember { mutableStateOf("") }
 
     Scaffold{ padding ->
         LazyColumn() {
@@ -215,8 +219,9 @@ fun SignUpBody(){
                         },
                         countryListDisplayType = CountryListDisplayType.BottomSheet,
                         onCountrySelected = { country ->
-                            selectedCountry = country
+                            selectedCountry = country.countryName
                         },
+                        defaultCountryCode = "np",
                         colors = TextFieldDefaults.colors(
                             unfocusedContainerColor = Color.Transparent,
                             focusedContainerColor = Color.Transparent,
@@ -295,8 +300,7 @@ fun SignUpBody(){
                         } else {
                             VisualTransformation.None
                         },
-
-                        )
+                    )
 
                     Text(
                         "Confirm Password",
@@ -362,7 +366,34 @@ fun SignUpBody(){
                         )
 
                     Button(
-                        onClick = {},
+                        onClick = {
+                            userViewModel.signUp(email, password, fullname, phoneNo, selectedCountry) {
+                                success, message, userId ->
+                                if(success){
+                                    val model = UserModel(
+                                        userId = userId,
+                                        email = email,
+                                        phoneNo = phoneNo,
+                                        fullName = fullname,
+                                        selectedCountry = selectedCountry
+                                    )
+                                    userViewModel.addUserToDatabase(userId,model){
+                                        success, message ->
+                                        if(success){
+                                            Toast.makeText(context,message, Toast.LENGTH_LONG).show()
+                                        }
+                                        else{
+                                            Toast.makeText(context,message, Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                    val intent = Intent(context, MainActivity::class.java)
+                                    context.startActivity(intent)
+                                    activity.finish()
+                                }else{
+                                    Toast.makeText(context,message, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        },
                         shape = RoundedCornerShape(5.dp),
                         colors = ButtonDefaults.buttonColors(
                             contentColor = Color.White,
