@@ -2,6 +2,7 @@ package com.example.gharbato
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,172 +26,226 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.ui.theme.Blue
 
 class ProfileScreenActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent {
-            ProfileScreen()
-        }
+        setContent { ProfileScreen() }
     }
 }
 
 @Composable
 fun ProfileScreen() {
+
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE)
-
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var imageUri by remember { mutableStateOf<String?>(null) }
 
 
-    LaunchedEffect(Unit) {
-        name = prefs.getString("name", "Abhi Khatiwada")!!
-        email = prefs.getString("email", "KKKhatiwada@gmail.com")!!
-        phone = prefs.getString("phone", "+977 9861996115")!!
+    DisposableEffect(Unit) {
+        val lifecycleOwner = context as ComponentActivity
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                name = prefs.getString("name", "Abhi Khatiwada")!!
+                email = prefs.getString("email", "KKKhatiwada@gmail.com")!!
+                phone = prefs.getString("phone", "+977 9861996115")!!
+                imageUri = prefs.getString("profile_image", null)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FB))
+    ) {
+
+
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(250.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color(0xFF673AB7), Color(0xFF3F51B5))
-                    )
-                ),
+                .height(300.dp)
+                .background(color = Blue),
+//                .background(
+//                    Brush.verticalGradient(
+//                        listOf(Color(0xFF6A5AE0), Color(0xFF4D8DFF))
+//                    )
+//                ),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
                 Image(
-                    painter = painterResource(R.drawable.billu),
+                    painter = if (imageUri != null)
+                        rememberAsyncImagePainter(Uri.parse(imageUri))
+                    else painterResource(R.drawable.billu),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(85.dp)
+                        .size(100.dp)
                         .clip(CircleShape),
                     contentScale = ContentScale.Crop
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
-                Text(name, color = Color.White, fontWeight = FontWeight.Bold)
-                Text(email, color = Color.White)
-                Text(phone, color = Color.White)
+                Text(
+                    name,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
 
-                Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    email,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+
+                Text(
+                    phone,
+                    fontSize = 14.sp,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
 
                 Button(
-                    onClick = { /* SELL property */ },
-                    shape = RoundedCornerShape(25.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+                    onClick = {},
+                    shape = RoundedCornerShape(30.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.White,
+                        contentColor = Color(0xFF4D8DFF)
+                    ),
+                    modifier = Modifier.fillMaxWidth(0.65f)
                 ) {
-                    Text("Sell a Property", color = Color(0xFF673AB7))
+                    Text(
+                        "Sell a Property",
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            "ACCOUNT",
-            modifier = Modifier.padding(start = 20.dp),
-            color = Color.Gray,
-            fontWeight = FontWeight.Bold
-        )
 
-        SettingItem(
+
+        SectionTitle("Account")
+
+        ProfileItem(
             icon = R.drawable.baseline_create_24,
-            title = "Edit Profile",
-            onClick = {
-                context.startActivity(Intent(context, EditProfileActivity::class.java))
-            }
-        )
+            title = "Edit Profile"
+        ) {
+            context.startActivity(
+                Intent(context, EditProfileActivity::class.java)
+            )
+        }
 
-        SettingItem(
+        ProfileItem(
             icon = R.drawable.baseline_watch_24,
-            title = "My Activitys",
-            onClick = { /* Notifications clicked */ }
-        )
+            title = "My Activities"
+        ) {}
 
-        SettingItem(
+        ProfileItem(
             icon = R.drawable.baseline_logout_24,
             title = "Logout",
-            titleColor = Color.Red,
-            onClick = { /* Logout clicked */ }
-        )
+            titleColor = Color.Red
+        ) {}
 
-        Spacer(modifier = Modifier.height(15.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Text(
-            "HELP & SUPPORT",
-            modifier = Modifier.padding(start = 20.dp),
-            color = Color.Gray,
-            fontWeight = FontWeight.Bold
-        )
 
-        SettingItem(
+
+        SectionTitle("Help & Support")
+
+        ProfileItem(
             icon = R.drawable.outline_adb_24,
-            title = "Help Center",
-            onClick = { /* Help center */ }
-        )
+            title = "Help Center"
+        ) {}
 
-        SettingItem(
+        ProfileItem(
             icon = R.drawable.baseline_email_24,
-            title = "Contact Us",
-            onClick = { /* Contact us */ }
-        )
+            title = "Contact Us"
+        ) {}
     }
 }
 
+
+
 @Composable
-fun SettingItem(
+fun SectionTitle(title: String) {
+    Text(
+        title,
+        modifier = Modifier.padding(start = 20.dp, bottom = 8.dp),
+        color = Color.Gray,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+}
+
+@Composable
+fun ProfileItem(
     icon: Int,
     title: String,
     titleColor: Color = Color.Black,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFF2F2F2)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Image(
-                painter = painterResource(icon),
+
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF1F3F6)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(icon),
+                    contentDescription = null,
+                    tint = Color(0xFF4D8DFF),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Text(
+                title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                color = titleColor,
+                modifier = Modifier.weight(1f)
+            )
+
+            Icon(
+                painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
                 contentDescription = null,
-                modifier = Modifier.size(22.dp)
+                tint = Color.Gray,
+                modifier = Modifier.size(14.dp)
             )
         }
-
-        Spacer(modifier = Modifier.width(15.dp))
-
-        Text(
-            title,
-            color = titleColor,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
-
-        Icon(
-            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
-            contentDescription = null,
-            tint = Color.Gray,
-            modifier = Modifier.size(15.dp)
-        )
     }
 }
