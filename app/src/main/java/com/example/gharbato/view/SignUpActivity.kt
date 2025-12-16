@@ -1,4 +1,4 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
@@ -54,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.arpitkatiyarprojects.countrypicker.CountryPickerOutlinedTextField
 import com.arpitkatiyarprojects.countrypicker.enums.CountryListDisplayType
-import com.arpitkatiyarprojects.countrypicker.models.CountryDetails
+import com.example.gharbato.R
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
