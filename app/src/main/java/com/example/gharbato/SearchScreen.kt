@@ -302,13 +302,13 @@ fun SearchTopBar(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
-                    contentDescription = "Back",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { /* Handle back */ }
-                )
+//                Icon(
+//                    imageVector = Icons.Default.ArrowBackIosNew,
+//                    contentDescription = "Back",
+//                    modifier = Modifier
+//                        .size(24.dp)
+//                        .clickable { /* Handle back */ }
+//                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
