@@ -94,4 +94,12 @@ dependencies {
         // Image loading from URLs - loads and caches images from internet efficiently with rememberAsyncImagePainter()
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    implementation("com.google.maps.android:maps-compose:4.3.3") // Maps for Compose
+    implementation("com.google.android.gms:play-services-maps:18.2.0") // Google Maps SDK
+    implementation("com.google.android.gms:play-services-location:21.1.0") // Location services
+    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
+    implementation("com.google.maps.android:maps-compose:4.4.1")
+
+
+
 }

@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-          LoginBody()
+            LoginBody()
         }
     }
 }
@@ -82,7 +82,7 @@ fun LoginBody(){
 
 
     Scaffold {
-        padding ->
+            padding ->
         Column(
             modifier = Modifier
                 .padding(padding)
@@ -206,12 +206,12 @@ fun LoginBody(){
                     ) {
                         Icon(
                             painter =
-                            if (visibility){
-                                painterResource(R.drawable.baseline_visibility_off_24)
-                            }
-                            else{
-                                painterResource(R.drawable.baseline_visibility_24)
-                            },
+                                if (visibility){
+                                    painterResource(R.drawable.baseline_visibility_off_24)
+                                }
+                                else{
+                                    painterResource(R.drawable.baseline_visibility_24)
+                                },
                             contentDescription = null
 
                         )
@@ -352,8 +352,8 @@ fun LoginBody(){
             Row(horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 15.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 15.dp)
 
             ) {
                 Text("Don't have an account?",

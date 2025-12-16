@@ -27,6 +27,13 @@ import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.SampleData
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun SearchScreen() {
@@ -157,95 +164,34 @@ fun MapPlaceholder(
     properties: List<PropertyModel>,
     isFullScreen: Boolean
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFE8F5E9)) // Light green background as placeholder
-    ) {
-        // Simulate map with gradient background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFFE3F2FD),
-                            Color(0xFFBBDEFB),
-                            Color(0xFF90CAF9)
-                        )
-                    )
-                )
+    val startLocation = properties.firstOrNull()?.latLng
+        ?: LatLng(27.7172, 85.3240) // Kathmandu fallback
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            startLocation,
+            if (isFullScreen) 12f else 10f
         )
+    }
 
-        // Display price markers on "map"
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.SpaceEvenly
-        ) {
-            properties.forEachIndexed { index, property ->
-                // Position markers pseudo-randomly on the map
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = when (index % 3) {
-                        0 -> Arrangement.Start
-                        1 -> Arrangement.Center
-                        else -> Arrangement.End
-                    }
-                ) {
-                    PriceMarker(price = property.price)
-                }
-            }
-        }
-
-        // Map placeholder text in center
-        if (!isFullScreen) {
-            Text(
-                text = "🗺️ Map View\n(Google Maps will be here)",
-                modifier = Modifier.align(Alignment.Center),
-                color = Color.Gray,
-                fontSize = 16.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+    GoogleMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = true
+        )
+    ) {
+        properties.forEach { property ->
+            Marker(
+                state = MarkerState(position = property.latLng),
+                title = property.price,
+                snippet = property.location
             )
-        }
-
-        // Zoom controls
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(16.dp)
-        ) {
-            FloatingActionButton(
-                onClick = { /* Zoom in */ },
-                modifier = Modifier.size(40.dp),
-                containerColor = Color.White
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Zoom In",
-                    tint = Color.Black,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            FloatingActionButton(
-                onClick = { /* Zoom out */ },
-                modifier = Modifier.size(40.dp),
-                containerColor = Color.White
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = "Zoom Out",
-                    tint = Color.Black,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
         }
     }
 }
+
 
 // Price marker bubble for map
 @Composable
