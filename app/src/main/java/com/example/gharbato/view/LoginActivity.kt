@@ -1,4 +1,4 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
@@ -50,6 +50,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.ForgotActivity
+import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
