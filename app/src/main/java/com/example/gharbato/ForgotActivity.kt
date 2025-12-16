@@ -129,7 +129,7 @@ fun ForgotBody() {
             )
             if (emailError) {
             Text(
-                text = "Invalid email, try again.",
+                text = "Invalid email,Please try again.",
                 color = Color.Red,
                 style = TextStyle(fontSize = 12.sp),
                 modifier = Modifier.padding(top = 4.dp)
