@@ -113,6 +113,7 @@ fun ForgotBody() {
                     fontSize = 15.sp
                 )
             )
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
