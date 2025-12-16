@@ -118,7 +118,7 @@ fun ForgotBody() {
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = if (emailError) Color.Red else Color.Gray,
-                    focusedIndicatorColor = if (emailError) Color.Red else Color.Blue,
+                    focusedIndicatorColor = if (emailError) Color.Red else Blue,
                 ),
                 isError = emailError,
                 shape = RoundedCornerShape(10.dp),
