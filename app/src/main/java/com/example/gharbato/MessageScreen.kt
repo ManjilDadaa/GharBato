@@ -1,6 +1,7 @@
 package com.example.gharbato
 
 import android.R
+
 import android.graphics.Color
 import android.graphics.Outline
 import android.media.MediaCodecInfo
@@ -115,7 +116,7 @@ fun MessageUserItem(
 ){
     Row (
         modifier = Modifier.fillMaxWidth()
-            .clickable{onclick()}
+            .clickable(onClick = onclick)
             .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
     ){
