@@ -1,4 +1,4 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
 import android.content.Context
 import android.net.Uri
@@ -22,7 +22,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -30,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.R
 
 class EditProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -117,7 +117,7 @@ fun EditProfileScreen() {
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            /* ---------- INPUT FIELDS ---------- */
+
 
             ProfileTextField(
                 value = name,
@@ -140,7 +140,7 @@ fun EditProfileScreen() {
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            /* ---------- SAVE BUTTON ---------- */
+
 
             Button(
                 onClick = {

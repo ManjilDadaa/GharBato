@@ -1,4 +1,4 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
 import android.content.Context
 import android.content.Intent
@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -26,9 +25,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Black
-import com.example.gharbato.ui.theme.Blue
 
 class ProfileScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -52,8 +53,8 @@ fun ProfileScreen() {
 
     DisposableEffect(Unit) {
         val lifecycleOwner = context as ComponentActivity
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
                 name = prefs.getString("name", "Abhi Khatiwada")!!
                 email = prefs.getString("email", "KKKhatiwada@gmail.com")!!
                 phone = prefs.getString("phone", "+977 9861996115")!!

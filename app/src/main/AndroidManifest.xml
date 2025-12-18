@@ -52,11 +52,11 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
-            android:name=".ProfileScreenActivity"
+            android:name=".view.ProfileScreenActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
-            android:name=".EditProfileActivity"
+            android:name=".view.EditProfileActivity"
             android:exported="true"
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
