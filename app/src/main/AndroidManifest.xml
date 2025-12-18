@@ -32,6 +32,17 @@
             </intent-filter>
         </activity>
         <activity
+            android:name=".MessageScreenActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <activity
             android:name=".ForgotActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
