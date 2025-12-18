@@ -70,6 +70,7 @@ fun DashboardBody(){
         NavItem("Person", R.drawable.outline_person_24)
     )
     Scaffold(
+        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
