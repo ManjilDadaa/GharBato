@@ -6,43 +6,43 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.Animatable
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -54,7 +54,6 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.view.ui.theme.GharBatoTheme
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,64 +71,90 @@ fun ListingBody(){
     val context = LocalContext.current
     val activity = context as Activity
 
-    var step by remember { mutableStateOf(1) }
+    var step by remember { mutableIntStateOf(1) }
+    val showHeader = step == 1
 
-    Scaffold {
+    Scaffold (
+        containerColor = Color.White
+    ){
         padding ->
         Column (
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .animateContentSize()
+                .verticalScroll(rememberScrollState())
         ){
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp)
-            ){
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(color = Blue, shape = RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center,
-
-                    ){
-                    Icon(
-                        painter = painterResource(R.drawable.home),
-                        contentDescription = null,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.White
+            AnimatedVisibility(
+                visible = showHeader,
+                enter = fadeIn(
+                    animationSpec = tween(durationMillis = 600) // Slow down fade in
+                ) + expandVertically(
+                    animationSpec = tween(
+                        durationMillis = 600, // ✅ Slow down expansion
+                        easing = FastOutSlowInEasing
                     )
+                ),
+                exit = fadeOut(
+                    animationSpec = tween(durationMillis = 600) // Slow down fade out
+                ) + shrinkVertically(
+                    animationSpec = tween(
+                        durationMillis = 600, // ✅ Slow down shrinking
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            ) {
+                Column {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .background(color = Blue, shape = RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.home),
+                                contentDescription = null,
+                                modifier = Modifier.size(25.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(15.dp))
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "List Your Property",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        Text(
+                            "Reach thousands of potential buyers and renters",
+                            style = TextStyle(
+                                //                    fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Gray
+                            )
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Column (
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ){
-                Text(
-                    "List Your Property",
-                    style = TextStyle(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Text(
-                    "Reach thousands of potential buyers and renters",
-                    style = TextStyle(
-//                    fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Gray
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             Row(
                 modifier = Modifier
@@ -145,7 +170,7 @@ fun ListingBody(){
                         )
                         Box(
                             modifier = Modifier
-                                .background(color = circleColor , shape = CircleShape)
+                                .background(color = circleColor, shape = CircleShape)
                                 .size(40.dp),
                             contentAlignment = Alignment.Center
                         ){
@@ -170,7 +195,7 @@ fun ListingBody(){
                                 .padding(horizontal = 7.dp)
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(if(step > i) Blue else Gray.copy(0.3f))
+                                .background(if (step > i) Blue else Gray.copy(0.3f))
                         ){
 
                         }
@@ -182,44 +207,51 @@ fun ListingBody(){
 
             Column (
                 modifier = Modifier
+                    .padding(horizontal = 10.dp)
                     .fillMaxWidth()
-                    .padding(start = 15.dp, end = 15.dp)
-                    .height(550.dp)
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Card (
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .shadow(8.dp)
-                        .fillMaxSize()
-
-                ){
-                    Box(){
-                        when (step){
-                            1 -> PurposeContentScreen()
-                            2 -> DetailsContentScreen()
-                            3 -> PhotosContentScreen()
-                        }
-                    }
+                when (step){
+                    1 -> PurposeContentScreen()
+                    2 -> DetailsContentScreen()
+                    3 -> PhotosContentScreen()
                 }
-
             }
             Row (
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+
             ){
-                OutlinedButton(onClick = {
+                Button(onClick = {
                     val newStep = step - 1
                     if ( newStep<= 0) {
                         val intent = Intent(context, DashboardActivity::class.java)
                         context.startActivity(intent)
                         activity.finish()
                     } else {step -= 1}
-                }) {
+                },
+                    modifier = Modifier
+                        .weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gray.copy(0.7f)
+                    )
+                ) {
                     Text("Back")
                 }
-                OutlinedButton(onClick = {
+                Spacer(modifier = Modifier.width(7.dp))
+                Button(onClick = {
                     step += 1
-                }) {
+                },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Blue
+                    ),
+                ) {
                     Text("Next")
                 }
             }
@@ -227,21 +259,6 @@ fun ListingBody(){
         }
     }
 }
-@Composable
-fun PurposeContentScreen() {
-    Text("This is Step 1 content")
-}
-
-@Composable
-fun DetailsContentScreen() {
-    Text("This is Step 2 content")
-}
-
-@Composable
-fun PhotosContentScreen() {
-    Text("This is Step 3 content")
-}
-
 
 @Preview
 @Composable

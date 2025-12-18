@@ -88,8 +88,10 @@ fun SignUpBody(){
 
     var selectedCountry by remember { mutableStateOf("") }
 
-    Scaffold{ padding ->
-        LazyColumn() {
+    Scaffold(
+        containerColor = Color.White
+    ){ padding ->
+        LazyColumn{
             item {
                 Column(
                     modifier = Modifier

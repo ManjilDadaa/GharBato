@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.ui.theme.Black
 import com.example.gharbato.ui.theme.Blue
 
 class ProfileScreenActivity : ComponentActivity() {
@@ -75,7 +76,7 @@ fun ProfileScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp)
-                .background(color = Blue),
+                .background(color = Black),
 //                .background(
 //                    Brush.verticalGradient(
 //                        listOf(Color(0xFF6A5AE0), Color(0xFF4D8DFF))

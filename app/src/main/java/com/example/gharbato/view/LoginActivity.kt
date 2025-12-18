@@ -83,7 +83,9 @@ fun LoginBody(){
     var isErrorPassword by remember { mutableStateOf(false) }
 
 
-    Scaffold {
+    Scaffold(
+        containerColor = Color.White
+    ) {
         padding ->
         Column(
             modifier = Modifier
