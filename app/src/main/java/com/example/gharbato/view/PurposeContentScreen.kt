@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +22,7 @@ import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -35,13 +37,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.Gray
 
 @Composable
 fun PurposeContentScreen() {
 
-    var selectedIndex by remember { mutableStateOf(-1) }
+    var selectedIndex by remember { mutableIntStateOf(-1) }
+    var selectedType by remember { mutableStateOf("") }
+    val propertyTypes = listOf("Apartment", "House", "Villa", "Studio")
 
-    Column {
+    Column (
+//        modifier = Modifier.background(Blue)
+    ){
         Row {
             Text(
                 "What would you like to do?",
@@ -49,24 +56,22 @@ fun PurposeContentScreen() {
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 ),
-                modifier = Modifier.padding(start = 10.dp, top = 15.dp, end = 10.dp, bottom = 4.dp)
+                modifier = Modifier.padding(start = 10.dp, top = 20.dp, end = 10.dp, bottom = 5.dp)
             )
         }
 
         Column (
             modifier = Modifier
-                .fillMaxSize()
+//                .fillMaxSize()
                 .padding(horizontal = 5.dp, vertical = 15.dp)
                 .background(Color.White)
         ){
             listOf("Sell", "Rent", "Book").forEachIndexed { index, title ->
                 OutlinedCard(
+                    onClick = {selectedIndex = index},
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            selectedIndex = index
-                        }
-                        .size(70.dp),
+                        .height(70.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (selectedIndex == index) Blue else Color.Transparent,
                         contentColor = if (selectedIndex == index) Color.White else Color.Black
@@ -104,7 +109,8 @@ fun PurposeContentScreen() {
                                         else -> ""
                                     },
                                     style = TextStyle(
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp
                                     )
                                 )
                                 Text(when(index) {
@@ -112,7 +118,9 @@ fun PurposeContentScreen() {
                                     1 -> "FInd tenants for long-term rental"
                                     2 -> "Vacation rental for daily booking"
                                     else -> ""
-                                }
+                                },
+                                    fontSize = 15.sp,
+                                    color = if (selectedIndex == index) Color.White else Gray
                                 )
                             }
                         }
@@ -120,7 +128,48 @@ fun PurposeContentScreen() {
                     }
 
                 }
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(20.dp))
+            }
+
+            Text("Property Type",
+                style = TextStyle(
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                maxItemsInEachRow = 2
+            ) {
+                propertyTypes.forEachIndexed { index, type ->
+                    OutlinedCard(onClick = {selectedType = type},
+                        modifier = Modifier
+                            .height(50.dp)
+                            .weight(1f),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if(selectedType == type) Blue else Color.Transparent,
+                            contentColor = if(selectedType == type) Color.White else Color.Black
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ){
+                            Text(
+                                text = type,
+                                fontSize = 16.sp,
+                                color = if (selectedType == type)
+                                    Color.White
+                                else
+                                    Color.Black
+                            )
+                        }
+                    }
+                }
             }
 
         }

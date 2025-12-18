@@ -6,20 +6,35 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -46,6 +61,8 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.ui.theme.Purple
+import com.example.gharbato.ui.theme.Purple40
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +81,7 @@ fun ListingBody(){
     val activity = context as Activity
 
     var step by remember { mutableIntStateOf(1) }
+    val showHeader = step == 1
 
     Scaffold (
         containerColor = Color.White
@@ -73,56 +91,64 @@ fun ListingBody(){
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .animateContentSize()
+                .verticalScroll(rememberScrollState())
         ){
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 20.dp)
-            ){
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .background(color = Blue, shape = RoundedCornerShape(16.dp)),
-                    contentAlignment = Alignment.Center,
+            AnimatedVisibility(visible = showHeader,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column {
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(64.dp)
+                                .background(color = Blue, shape = RoundedCornerShape(16.dp)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.home),
+                                contentDescription = null,
+                                modifier = Modifier.size(25.dp),
+                                tint = Color.White
+                            )
+                        }
+                    }
 
-                    ){
-                    Icon(
-                        painter = painterResource(R.drawable.home),
-                        contentDescription = null,
-                        modifier = Modifier.size(25.dp),
-                        tint = Color.White
-                    )
+                    Spacer(modifier = Modifier.height(15.dp))
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "List Your Property",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 26.sp
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(5.dp))
+
+                        Text(
+                            "Reach thousands of potential buyers and renters",
+                            style = TextStyle(
+                                //                    fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = Gray
+                            )
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Column (
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ){
-                Text(
-                    "List Your Property",
-                    style = TextStyle(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Text(
-                    "Reach thousands of potential buyers and renters",
-                    style = TextStyle(
-//                    fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = Gray
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(15.dp))
+            Spacer(modifier = Modifier.height(30.dp))
 
             Row(
                 modifier = Modifier
@@ -138,7 +164,7 @@ fun ListingBody(){
                         )
                         Box(
                             modifier = Modifier
-                                .background(color = circleColor , shape = CircleShape)
+                                .background(color = circleColor, shape = CircleShape)
                                 .size(40.dp),
                             contentAlignment = Alignment.Center
                         ){
@@ -163,7 +189,7 @@ fun ListingBody(){
                                 .padding(horizontal = 7.dp)
                                 .weight(1f)
                                 .height(2.dp)
-                                .background(if(step > i) Blue else Gray.copy(0.3f))
+                                .background(if (step > i) Blue else Gray.copy(0.3f))
                         ){
 
                         }
@@ -175,47 +201,51 @@ fun ListingBody(){
 
             Column (
                 modifier = Modifier
-                    .fillMaxWidth()
                     .padding(horizontal = 10.dp)
-                    .height(550.dp)
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
             ) {
-                Card (
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(24.dp))
-                        .shadow(8.dp)
-                        .fillMaxSize(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White
-                    )
-
-                ){
-                    Box{
-                        when (step){
-                            1 -> PurposeContentScreen()
-                            2 -> DetailsContentScreen()
-                            3 -> PhotosContentScreen()
-                        }
-                    }
+                when (step){
+                    1 -> PurposeContentScreen()
+                    2 -> DetailsContentScreen()
+                    3 -> PhotosContentScreen()
                 }
-
             }
             Row (
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                horizontalArrangement = Arrangement.SpaceAround,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 15.dp)
+
             ){
-                OutlinedButton(onClick = {
+                Button(onClick = {
                     val newStep = step - 1
                     if ( newStep<= 0) {
                         val intent = Intent(context, DashboardActivity::class.java)
                         context.startActivity(intent)
                         activity.finish()
                     } else {step -= 1}
-                }) {
+                },
+                    modifier = Modifier
+                        .weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gray.copy(0.7f)
+                    )
+                ) {
                     Text("Back")
                 }
-                OutlinedButton(onClick = {
+                Spacer(modifier = Modifier.width(7.dp))
+                Button(onClick = {
                     step += 1
-                }) {
+                },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Blue
+                    )
+                ) {
                     Text("Next")
                 }
             }
