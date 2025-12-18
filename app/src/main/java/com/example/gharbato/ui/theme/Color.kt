@@ -13,3 +13,5 @@ val Green = Color(0xFF22641D)
 val Blue = Color(0xFF0061FF)
 val Gray = Color(0xFF757474)
 val Purple = Color(0xFF9710F8)
+
+val Black = Color(0xFF0C0C0C)
