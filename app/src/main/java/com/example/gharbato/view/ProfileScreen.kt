@@ -30,6 +30,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Black
+import com.example.gharbato.ui.theme.Blue
 
 class ProfileScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -77,7 +78,7 @@ fun ProfileScreen() {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(300.dp)
-                .background(color = Black),
+                .background(color = Blue),
 //                .background(
 //                    Brush.verticalGradient(
 //                        listOf(Color(0xFF6A5AE0), Color(0xFF4D8DFF))
