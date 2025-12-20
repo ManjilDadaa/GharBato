@@ -1,12 +1,8 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
 import android.R
 
-import android.graphics.Color
-import android.graphics.Outline
-import android.media.MediaCodecInfo
 import android.os.Bundle
-import android.os.Message
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -36,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -45,8 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
-import java.util.function.IntConsumer
-
 
 
 class MessageScreenActivity : ComponentActivity() {
