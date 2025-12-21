@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedCard
@@ -38,7 +40,9 @@ fun PurposeContentScreen(
     onPropertyTypeChange: (String) -> Unit
 ) {
     val propertyTypes = listOf("Apartment", "House", "Villa", "Studio")
-    Column{
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState())
+    ){
         Row {
             Text(
                 "What would you like to do?",
