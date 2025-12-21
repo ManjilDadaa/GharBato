@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
     <application
         android:allowBackup="true"
@@ -10,7 +13,34 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
 
+        <!-- Google Maps API Key - Using direct value -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs"/>
 
+
+        <activity
+            android:name=".view.PropertyDetailActivity"
+            android:exported="true"
+            android:label="@string/title_activity_property_detail"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.ListingActivity"
+            android:exported="true"
+            android:label="@string/title_activity_listing"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".SplashActivity"
             android:exported="true"
@@ -18,19 +48,44 @@
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".MessageScreenActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-
-        <activity android:name=".ForgotActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".RandomActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".DashboardActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".SignUpActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".MainActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".ProfileScreenActivity" android:exported="true" android:theme="@style/Theme.GharBato"/>
-        <activity android:name=".EditProfileActivity" android:exported="true" android:label="Edit Profile" android:theme="@style/Theme.GharBato"/>
-
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ForgotActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.DashboardActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.SignUpActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.ProfileScreenActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.EditProfileActivity"
+            android:exported="true"
+            android:label="Edit Profile"
+            android:theme="@style/Theme.GharBato" />
     </application>
 
 </manifest>

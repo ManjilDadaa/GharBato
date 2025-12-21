@@ -1,12 +1,16 @@
-package com.example.gharbato
+package com.example.gharbato.view
 
+import android.content.Context
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,54 +22,379 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.model.SampleData
+import com.example.gharbatocopy.model.PropertyModel
+import com.example.gharbatocopy.model.SampleData
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.*
 
 @Composable
 fun SearchScreen() {
+    val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedMarketType by remember { mutableStateOf("Buy") }
     var selectedPropertyType by remember { mutableStateOf("Secondary market") }
     var minPrice by remember { mutableStateOf(16) }
+    var isMapFullScreen by remember { mutableStateOf(false) }
+    var selectedProperty by remember { mutableStateOf<PropertyModel?>(null) }
 
-    Column(
+    // Track scroll state to hide/show map
+    val listState = rememberLazyListState()
+    val isScrolled = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100
+
+    // Animate map height based on scroll
+    val mapHeight by animateDpAsState(
+        targetValue = when {
+            isMapFullScreen -> 800.dp
+            isScrolled -> 0.dp
+            else -> 300.dp
+        },
+        label = "mapHeight"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F9FA))
     ) {
-        // Top Bar with Search
-        SearchTopBar(
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it }
-        )
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Bar with Search
+            SearchTopBar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it }
+            )
 
-        // Filter Chips Section
-        FilterChipsSection(
-            selectedMarketType = selectedMarketType,
-            onMarketTypeChange = { selectedMarketType = it },
-            selectedPropertyType = selectedPropertyType,
-            onPropertyTypeChange = { selectedPropertyType = it },
-            minPrice = minPrice,
-            onMinPriceChange = { minPrice = it }
+            // Map Section
+            if (mapHeight > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(mapHeight)
+                ) {
+                    // Google Map with custom price markers
+                    MapWithPriceMarkers(
+                        properties = SampleData.properties,
+                        isFullScreen = isMapFullScreen,
+                        context = context,
+                        onMarkerClick = { property ->
+                            selectedProperty = property
+                        },
+                        onMapClick = {
+                            if (!isMapFullScreen) {
+                                isMapFullScreen = true
+                            }
+                        }
+                    )
+
+                    // Close button for full screen
+                    if (isMapFullScreen) {
+                        IconButton(
+                            onClick = { isMapFullScreen = false },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(16.dp)
+                                .background(Color.White, CircleShape)
+                                .zIndex(10f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close full screen",
+                                tint = Color.Black
+                            )
+                        }
+                    }
+
+                    // Show selected property card overlay
+                    selectedProperty?.let { property ->
+                        PropertyDetailOverlay(
+                            property = property,
+                            onClose = { selectedProperty = null },
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(16.dp)
+                        )
+                    }
+                }
+            }
+
+            // Filter Chips Section
+            FilterChipsSection(
+                selectedMarketType = selectedMarketType,
+                onMarketTypeChange = { selectedMarketType = it },
+                selectedPropertyType = selectedPropertyType,
+                onPropertyTypeChange = { selectedPropertyType = it },
+                minPrice = minPrice,
+                onMinPriceChange = { minPrice = it }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Properties Count
+            Text(
+                text = "${SampleData.properties.size} Listing",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+
+            // Property List
+            PropertyList(
+                properties = SampleData.properties,
+                listState = listState
+            )
+        }
+
+        // "Save search" button
+        if (!isMapFullScreen && mapHeight > 0.dp && selectedProperty == null) {
+            Button(
+                onClick = { /* Handle save search */ },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp)
+                    .height(48.dp)
+                    .zIndex(10f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = "Save search",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+// Map with custom price markers
+@Composable
+fun MapWithPriceMarkers(
+    properties: List<PropertyModel>,
+    isFullScreen: Boolean,
+    context: Context,
+    onMarkerClick: (PropertyModel) -> Unit,
+    onMapClick: () -> Unit
+) {
+    val startLocation = properties.firstOrNull()?.latLng
+        ?: LatLng(27.7172, 85.3240)
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            startLocation,
+            if (isFullScreen) 12f else 11f
         )
+    }
+
+    GoogleMap(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable { onMapClick() },
+        cameraPositionState = cameraPositionState,
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = false,
+            mapToolbarEnabled = false
+        )
+    ) {
+        // Add custom price markers for each property
+        properties.forEach { property ->
+            Marker(
+                state = MarkerState(position = property.latLng),
+                title = property.price,
+                snippet = property.location,
+                icon = CustomMarkerHelper.createPriceMarker(context, property.price),
+                onClick = {
+                    onMarkerClick(property)
+                    true // Return true to prevent default behavior
+                }
+            )
+        }
+    }
+
+    // Zoom controls overlay
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .zIndex(1f)
+    ) {
+        FloatingActionButton(
+            onClick = {
+                cameraPositionState.move(
+                    com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                )
+            },
+            modifier = Modifier.size(40.dp),
+            containerColor = Color.White
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Zoom In",
+                tint = Color.Black
+            )
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Properties Count
-        Text(
-            text = "${SampleData.properties.size} Listing",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
+        FloatingActionButton(
+            onClick = {
+                cameraPositionState.move(
+                    com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                )
+            },
+            modifier = Modifier.size(40.dp),
+            containerColor = Color.White
+        ) {
+            Icon(
+                imageVector = Icons.Default.Remove,
+                contentDescription = "Zoom Out",
+                tint = Color.Black
+            )
+        }
+    }
+}
 
-        // Property List
-        PropertyList(properties = SampleData.properties)
+// Property detail overlay when marker is clicked
+@Composable
+fun PropertyDetailOverlay(
+    property: PropertyModel,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .wrapContentHeight(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                // Property Image
+                Image(
+                    painter = rememberAsyncImagePainter(property.imageUrl),
+                    contentDescription = property.title,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Property Details
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = property.price,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = property.location,
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        PropertyInfoChip(
+                            icon = Icons.Default.Home,
+                            text = property.sqft
+                        )
+                        PropertyInfoChip(
+                            icon = Icons.Default.Info,
+                            text = "${property.bedrooms} BD"
+                        )
+                        PropertyInfoChip(
+                            icon = Icons.Default.Star,
+                            text = "${property.bathrooms} BA"
+                        )
+                    }
+                }
+
+                // Close button
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // View Details Button
+            Button(
+                onClick = { /* Navigate to property details */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text("View Details", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun PropertyInfoChip(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Surface(
+        color = Color(0xFFF5F5F5),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.Gray,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = text,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+        }
     }
 }
 
@@ -80,7 +409,6 @@ fun SearchTopBar(
         shadowElevation = 2.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Search Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -89,14 +417,6 @@ fun SearchTopBar(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
-                    contentDescription = "Back",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { /* Handle back */ }
-                )
-
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Icon(
@@ -116,7 +436,6 @@ fun SearchTopBar(
                             fontSize = 16.sp
                         )
                     }
-                    // You can add TextField here for actual input
                     Text(
                         text = searchQuery,
                         fontSize = 16.sp,
@@ -161,7 +480,6 @@ fun FilterChipsSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Buy/Rent Chip
             item {
                 FilterChip(
                     selected = selectedMarketType == "Buy",
@@ -183,11 +501,10 @@ fun FilterChipsSection(
                 )
             }
 
-            // Property Type Chip
             item {
                 FilterChip(
                     selected = true,
-                    onClick = { /* Handle property type selection */ },
+                    onClick = { /* Handle property type */ },
                     label = { Text(selectedPropertyType) },
                     trailingIcon = {
                         Icon(
@@ -203,11 +520,10 @@ fun FilterChipsSection(
                 )
             }
 
-            // Bedrooms Chip
             item {
                 FilterChip(
                     selected = true,
-                    onClick = { /* Handle bedrooms selection */ },
+                    onClick = { /* Handle bedrooms */ },
                     label = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text("9+", color = Color.White, fontWeight = FontWeight.Bold)
@@ -220,12 +536,11 @@ fun FilterChipsSection(
                 )
             }
 
-            // Price Range
             item {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = Color(0xFFF5F5F5),
-                    modifier = Modifier.clickable { /* Handle price selection */ }
+                    modifier = Modifier.clickable { /* Handle price */ }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -240,7 +555,6 @@ fun FilterChipsSection(
                 }
             }
 
-            // Sort By Chip
             item {
                 FilterChip(
                     selected = false,
@@ -260,8 +574,12 @@ fun FilterChipsSection(
 }
 
 @Composable
-fun PropertyList(properties: List<PropertyModel>) {
+fun PropertyList(
+    properties: List<PropertyModel>,
+    listState: LazyListState
+) {
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -282,7 +600,6 @@ fun PropertyCard(property: PropertyModel) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
-            // Property Image
             Box {
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
@@ -293,7 +610,6 @@ fun PropertyCard(property: PropertyModel) {
                     contentScale = ContentScale.Crop
                 )
 
-                // Favorite and More Icons
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -317,7 +633,7 @@ fun PropertyCard(property: PropertyModel) {
                     Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
-                        onClick = { /* Handle more options */ },
+                        onClick = { /* Handle more */ },
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
@@ -331,7 +647,6 @@ fun PropertyCard(property: PropertyModel) {
                     }
                 }
 
-                // Property details overlay at bottom
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -390,7 +705,6 @@ fun PropertyCard(property: PropertyModel) {
                 }
             }
 
-            // Property Info
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -438,7 +752,6 @@ fun PropertyCard(property: PropertyModel) {
                         }
                     }
 
-                    // Chat Button
                     Surface(
                         shape = CircleShape,
                         color = Color(0xFF4CAF50),

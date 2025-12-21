@@ -6,7 +6,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,20 +32,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.IntervalTree
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.view.MainActivity
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,11 +110,12 @@ fun ForgotBody() {
                     fontSize = 15.sp
                 )
             )
+            Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
                   unfocusedIndicatorColor = if (emailError) Color.Red else Color.Gray,
-                    focusedIndicatorColor = if (emailError) Color.Red else Color.Blue,
+                    focusedIndicatorColor = if (emailError) Color.Red else Blue,
                 ),
                 isError = emailError,
                 shape = RoundedCornerShape(10.dp),
