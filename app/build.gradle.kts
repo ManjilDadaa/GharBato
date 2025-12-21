@@ -64,34 +64,42 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     //
     implementation("com.github.arpitkatiyar1999:Country-Picker:3.0.1")
-        // Kotlin extensions for Android framework - provides .dp, .sp units and Kotlin-friendly APIs
+    // Kotlin extensions for Android framework - provides .dp, .sp units and Kotlin-friendly APIs
     implementation("androidx.core:core-ktx:1.12.0")
 
-        // Lifecycle management - handles onCreate, onDestroy and provides lifecycleScope for coroutines
+    // Lifecycle management - handles onCreate, onDestroy and provides lifecycleScope for coroutines
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
 
-        // Enables Jetpack Compose in Activities - allows setContent { } to display Compose UI
+    // Enables Jetpack Compose in Activities - allows setContent { } to display Compose UI
     implementation("androidx.activity:activity-compose:1.8.2")
 
-        // Version management for Compose libraries - ensures all Compose dependencies are compatible
+    // Version management for Compose libraries - ensures all Compose dependencies are compatible
     implementation(platform("androidx.compose:compose-bom:2024.02.00"))
 
-        // Core Compose UI - provides basic composables like Box, Column, Row, Text, Image
+    // Core Compose UI - provides basic composables like Box, Column, Row, Text, Image
     implementation("androidx.compose.ui:ui")
 
-        // Graphics support - provides Color, Brush, Shape for custom drawing and styling
+    // Graphics support - provides Color, Brush, Shape for custom drawing and styling
     implementation("androidx.compose.ui:ui-graphics")
 
-        // Preview support - enables @Preview annotation to see UI in Android Studio without running app
+    // Preview support - enables @Preview annotation to see UI in Android Studio without running app
     implementation("androidx.compose.ui:ui-tooling-preview")
 
-        // Material Design 3 components - provides Button, Card, TextField, Chip and modern Material theming
+    // Material Design 3 components - provides Button, Card, TextField, Chip and modern Material theming
     implementation("androidx.compose.material3:material3")
 
-        // Extended Material icons - provides Icons.Default.Search, LocationOn, FavoriteBorder, etc.
+    // Extended Material icons - provides Icons.Default.Search, LocationOn, FavoriteBorder, etc.
     implementation("androidx.compose.material:material-icons-extended")
 
-        // Image loading from URLs - loads and caches images from internet efficiently with rememberAsyncImagePainter()
+    // Image loading from URLs - loads and caches images from internet efficiently with rememberAsyncImagePainter()
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+    implementation("com.google.maps.android:maps-compose:4.3.3") // Maps for Compose
+    implementation("com.google.android.gms:play-services-maps:18.2.0") // Google Maps SDK
+    implementation("com.google.android.gms:play-services-location:21.1.0") // Location services
+    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
+    implementation("com.google.maps.android:maps-compose:4.4.1")
+
+
 
 }

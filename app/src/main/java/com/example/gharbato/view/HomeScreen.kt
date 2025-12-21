@@ -38,9 +38,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
-import com.example.gharbato.model.SampleData.properties
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
+import com.example.gharbatocopy.model.SampleData.properties
 import kotlin.collections.iterator
 
 @Composable
