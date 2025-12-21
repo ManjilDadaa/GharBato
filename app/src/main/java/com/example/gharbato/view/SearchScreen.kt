@@ -1,6 +1,7 @@
 package com.example.gharbato.view
 
 import android.content.Context
+import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -591,10 +592,17 @@ fun PropertyList(
 
 @Composable
 fun PropertyCard(property: PropertyModel) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle property click */ },
+            .clickable {
+                // Navigate to Property Detail
+                val intent = Intent(context, PropertyDetailActivity::class.java)
+                // TODO: Pass property ID via intent extras
+                context.startActivity(intent)
+
+            },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
