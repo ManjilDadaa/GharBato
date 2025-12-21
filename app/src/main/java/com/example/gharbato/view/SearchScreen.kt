@@ -1,12 +1,14 @@
 package com.example.gharbato.view
-
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,9 +23,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.model.SampleData
+import com.example.gharbatocopy.model.PropertyModel
+import com.example.gharbatocopy.model.SampleData
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 
 @Composable
 fun SearchScreen() {
@@ -31,40 +41,190 @@ fun SearchScreen() {
     var selectedMarketType by remember { mutableStateOf("Buy") }
     var selectedPropertyType by remember { mutableStateOf("Secondary market") }
     var minPrice by remember { mutableStateOf(16) }
+    var isMapFullScreen by remember { mutableStateOf(false) } // Track if map is full screen
 
-    Column(
+    // Track scroll state to hide/show map
+    val listState = rememberLazyListState()
+    val isScrolled = listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 100
+
+    // Animate map height based on scroll
+    val mapHeight by animateDpAsState(
+        targetValue = when {
+            isMapFullScreen -> 800.dp // Full screen map
+            isScrolled -> 0.dp // Hidden when scrolled
+            else -> 300.dp // Default height
+        },
+        label = "mapHeight"
+    )
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFFF8F9FA))
     ) {
-        // Top Bar with Search
-        SearchTopBar(
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it }
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Top Bar with Search - always visible
+            SearchTopBar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it }
+            )
+
+            // Map Section - collapsible
+            if (mapHeight > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(mapHeight)
+                        .clickable {
+                            if (!isMapFullScreen) {
+                                isMapFullScreen = true // Open full screen on click
+                            }
+                        }
+                ) {
+                    // Placeholder for Google Map - you'll replace this with actual Google Map
+                    MapPlaceholder(
+                        properties = SampleData.properties,
+                        isFullScreen = isMapFullScreen
+                    )
+
+                    // Close button for full screen map
+                    if (isMapFullScreen) {
+                        IconButton(
+                            onClick = { isMapFullScreen = false },
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(16.dp)
+                                .background(Color.White, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close full screen",
+                                tint = Color.Black
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Filter Chips Section
+            FilterChipsSection(
+                selectedMarketType = selectedMarketType,
+                onMarketTypeChange = { selectedMarketType = it },
+                selectedPropertyType = selectedPropertyType,
+                onPropertyTypeChange = { selectedPropertyType = it },
+                minPrice = minPrice,
+                onMinPriceChange = { minPrice = it }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Properties Count
+            Text(
+                text = "${SampleData.properties.size} Listing",
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+
+            // Property List
+            PropertyList(
+                properties = SampleData.properties,
+                listState = listState
+            )
+        }
+
+        // "Save search" button - floating over map
+        if (!isMapFullScreen && mapHeight > 0.dp) {
+            Button(
+                onClick = { /* Handle save search */ },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 24.dp)
+                    .height(48.dp)
+                    .zIndex(10f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(24.dp)
+            ) {
+                Text(
+                    text = "Save search",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
+}
+
+// Placeholder map - replace this with actual Google Map implementation
+@Composable
+fun MapPlaceholder(
+    properties: List<PropertyModel>,
+    isFullScreen: Boolean
+) {
+    val startLocation = properties.firstOrNull()?.latLng
+        ?: LatLng(27.7172, 85.3240) // Kathmandu fallback
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(
+            startLocation,
+            if (isFullScreen) 12f else 10f
         )
+    }
 
-        // Filter Chips Section
-        FilterChipsSection(
-            selectedMarketType = selectedMarketType,
-            onMarketTypeChange = { selectedMarketType = it },
-            selectedPropertyType = selectedPropertyType,
-            onPropertyTypeChange = { selectedPropertyType = it },
-            minPrice = minPrice,
-            onMinPriceChange = { minPrice = it }
+    GoogleMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        uiSettings = MapUiSettings(
+            zoomControlsEnabled = false,
+            myLocationButtonEnabled = true
         )
+    ) {
+        properties.forEach { property ->
+            Marker(
+                state = MarkerState(position = property.latLng),
+                title = property.price,
+                snippet = property.location
+            )
+        }
+    }
+}
 
-        Spacer(modifier = Modifier.height(8.dp))
 
-        // Properties Count
-        Text(
-            text = "${SampleData.properties.size} Listing",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            fontWeight = FontWeight.Bold,
-            fontSize = 18.sp
-        )
-
-        // Property List
-        PropertyList(properties = SampleData.properties)
+// Price marker bubble for map
+@Composable
+fun PriceMarker(price: String) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF4CAF50),
+        shadowElevation = 4.dp,
+        modifier = Modifier.padding(4.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = price,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            // Small triangle pointer
+//            Box(
+//                modifier = Modifier
+//                    .size(8.dp)
+//                    .offset(y = 3.dp)
+//                    .background(
+//                        Color(0xFF4CAF50),
+//                        shape = androidx.compose.ui.graphics.graphicsLayer {
+//                            rotationZ = 45f
+//                        }.shape
+//                    )
+//            )
+        }
     }
 }
 
@@ -88,13 +248,13 @@ fun SearchTopBar(
                     .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBackIosNew,
-                    contentDescription = "Back",
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clickable { /* Handle back */ }
-                )
+//                Icon(
+//                    imageVector = Icons.Default.ArrowBackIosNew,
+//                    contentDescription = "Back",
+//                    modifier = Modifier
+//                        .size(24.dp)
+//                        .clickable { /* Handle back */ }
+//                )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -115,7 +275,6 @@ fun SearchTopBar(
                             fontSize = 16.sp
                         )
                     }
-                    // You can add TextField here for actual input
                     Text(
                         text = searchQuery,
                         fontSize = 16.sp,
@@ -259,8 +418,12 @@ fun FilterChipsSection(
 }
 
 @Composable
-fun PropertyList(properties: List<PropertyModel>) {
+fun PropertyList(
+    properties: List<PropertyModel>,
+    listState: LazyListState
+) {
     LazyColumn(
+        state = listState, // Connect to scroll state
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
