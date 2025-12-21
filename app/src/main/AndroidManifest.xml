@@ -78,6 +78,12 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.HelpCenterActivity"
+            android:exported="true"
+            android:label="Help Center"
+            android:theme="@style/Theme.GharBato" />
+
+        <activity
             android:name=".view.ProfileScreenActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
