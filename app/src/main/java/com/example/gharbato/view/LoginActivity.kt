@@ -59,7 +59,7 @@ import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
 
-class MainActivity : ComponentActivity() {
+class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

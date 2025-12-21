@@ -34,7 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.view.MainActivity
+import com.example.gharbato.view.LoginActivity
 import kotlinx.coroutines.delay
 
 class SplashActivity : ComponentActivity() {
@@ -78,7 +78,7 @@ fun SplashBody() {
         // Wait for total 3 seconds before navigating
         delay(1200)
         val intent = Intent(context,
-            MainActivity::class.java)
+            LoginActivity::class.java)
         context.startActivity(intent)
         activity.finish()
     }

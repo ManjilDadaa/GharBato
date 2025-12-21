@@ -475,7 +475,7 @@ fun SignUpBody(){
                                                     ).show()
                                                 }
                                             }
-                                            val intent = Intent(context, MainActivity::class.java)
+                                            val intent = Intent(context, LoginActivity::class.java)
                                             context.startActivity(intent)
                                             activity.finish()
                                         } else {
@@ -604,7 +604,7 @@ fun SignUpBody(){
                                     indication = null,
                                     interactionSource = remember { MutableInteractionSource() }
                                 ) {
-                                    val intent = Intent(context, MainActivity::class.java)
+                                    val intent = Intent(context, LoginActivity::class.java)
                                     context.startActivity(intent)
                                     activity.finish()
                                 }
