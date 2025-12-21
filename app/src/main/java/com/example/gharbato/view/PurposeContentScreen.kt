@@ -47,7 +47,7 @@ fun PurposeContentScreen(
             Text(
                 "What would you like to do?",
                 style = TextStyle(
-                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray,
                     fontSize = 18.sp
                 ),
                 modifier = Modifier.padding(start = 10.dp, top = 20.dp, end = 10.dp, bottom = 5.dp)
