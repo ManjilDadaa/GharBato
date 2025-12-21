@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.view.MainActivity
+import com.example.gharbato.view.LoginActivity
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,7 +67,7 @@ fun ForgotBody() {
             title = {},
             navigationIcon = {
                 IconButton(onClick = {
-                    val intent =Intent(context, MainActivity::class.java)
+                    val intent =Intent(context, LoginActivity::class.java)
                     context.startActivity(intent)
                 }) {
                     Icon(
@@ -147,7 +147,7 @@ fun ForgotBody() {
                                     Toast.makeText(context, "Password reset link sent successfully", Toast.LENGTH_LONG).show()
                                     if (success) {
                                         // Navigate back to login screen
-                                        context.startActivity(Intent(context, MainActivity::class.java))
+                                        context.startActivity(Intent(context, LoginActivity::class.java))
                                     }
                                 }
                             }
@@ -186,7 +186,7 @@ fun ForgotBody() {
                     onClick = { offset ->
                         annotatedString.getStringAnnotations(tag = "SignIn", start = offset, end = offset)
                             .firstOrNull()?.let {
-                                val intent = Intent(context, MainActivity::class.java)
+                                val intent = Intent(context, LoginActivity::class.java)
                                 context.startActivity(intent)
                             }
                     }
