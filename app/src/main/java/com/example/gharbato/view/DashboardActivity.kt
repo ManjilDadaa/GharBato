@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import com.example.gharbato.MessageScreen
 import com.example.gharbato.R
 import com.example.gharbato.SavedScreen
-import com.example.gharbato.SearchScreen
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
