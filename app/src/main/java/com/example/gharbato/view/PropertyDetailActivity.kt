@@ -109,6 +109,7 @@ class PropertyDetailActivity : ComponentActivity() {
 @Composable
 fun PropertyDetailScreen(property: PropertyModel) {
     val context = LocalContext.current
+    val activity = context as? ComponentActivity
     var currentImageIndex by remember { mutableStateOf(0) }
     var isFavorite by remember { mutableStateOf(false) }
     Scaffold { paddingValues ->
@@ -141,7 +142,9 @@ fun PropertyDetailScreen(property: PropertyModel) {
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             IconButton(
-                                onClick = { },
+                                onClick = {
+                                    activity?.finish()
+                                },
                                 modifier = Modifier
                                     .size(40.dp)
                                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
