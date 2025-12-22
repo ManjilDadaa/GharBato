@@ -51,7 +51,6 @@ class SplashActivity : ComponentActivity() {
 fun SplashScreen() {
     val context = LocalContext.current
 
-    // Animation states
     val logoAlpha = remember { Animatable(0f) }
     val logoScale = remember { Animatable(0.5f) }
     val logoRotation = remember { Animatable(-10f) }
@@ -59,7 +58,6 @@ fun SplashScreen() {
     val textSlideUp = remember { Animatable(30f) }
 
     LaunchedEffect(Unit) {
-        // Start logo animations
         launch {
             logoAlpha.animateTo(
                 targetValue = 1f,
@@ -113,10 +111,8 @@ fun SplashScreen() {
             )
         }
 
-        // Wait before navigation
         delay(1800)
 
-        // Navigate to LoginActivity
         val intent = Intent(context, LoginActivity::class.java)
         context.startActivity(intent)
         (context as ComponentActivity).finish()
@@ -138,7 +134,6 @@ fun SplashScreen() {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Logo with animations
             Image(
                 painter = painterResource(id = R.drawable.gharbato_logo),
                 contentDescription = "Gharbato Logo",
