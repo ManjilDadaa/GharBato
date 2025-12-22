@@ -1,6 +1,5 @@
 package com.example.gharbato.view
 
-import android.R.attr.onClick
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
