@@ -36,6 +36,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen() {
     val context = LocalContext.current
@@ -60,118 +61,123 @@ fun SearchScreen() {
         label = "mapHeight"
     )
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
             // Top Bar with Search
             SearchTopBar(
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it }
             )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color(0xFFF8F9FA))
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // Map Section
+                if (mapHeight > 0.dp) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(mapHeight)
+                    ) {
+                        // Google Map with custom price markers
+                        MapWithPriceMarkers(
+                            properties = SampleData.properties,
+                            isFullScreen = isMapFullScreen,
+                            context = context,
+                            onMarkerClick = { property ->
+                                selectedProperty = property
+                            },
+                            onMapClick = {
+                                if (!isMapFullScreen) {
+                                    isMapFullScreen = true
+                                }
+                            }
+                        )
 
-            // Map Section
-            if (mapHeight > 0.dp) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(mapHeight)
-                ) {
-                    // Google Map with custom price markers
-                    MapWithPriceMarkers(
-                        properties = SampleData.properties,
-                        isFullScreen = isMapFullScreen,
-                        context = context,
-                        onMarkerClick = { property ->
-                            selectedProperty = property
-                        },
-                        onMapClick = {
-                            if (!isMapFullScreen) {
-                                isMapFullScreen = true
+                        // Close button for full screen
+                        if (isMapFullScreen) {
+                            IconButton(
+                                onClick = { isMapFullScreen = false },
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(16.dp)
+                                    .background(Color.White, CircleShape)
+                                    .zIndex(10f)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Close full screen",
+                                    tint = Color.Black
+                                )
                             }
                         }
-                    )
 
-                    // Close button for full screen
-                    if (isMapFullScreen) {
-                        IconButton(
-                            onClick = { isMapFullScreen = false },
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(16.dp)
-                                .background(Color.White, CircleShape)
-                                .zIndex(10f)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = "Close full screen",
-                                tint = Color.Black
+                        // Show selected property card overlay
+                        selectedProperty?.let { property ->
+                            PropertyDetailOverlay(
+                                property = property,
+                                onClose = { selectedProperty = null },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(16.dp)
                             )
                         }
                     }
-
-                    // Show selected property card overlay
-                    selectedProperty?.let { property ->
-                        PropertyDetailOverlay(
-                            property = property,
-                            onClose = { selectedProperty = null },
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(16.dp)
-                        )
-                    }
                 }
+
+                // Filter Chips Section
+                FilterChipsSection(
+                    selectedMarketType = selectedMarketType,
+                    onMarketTypeChange = { selectedMarketType = it },
+                    selectedPropertyType = selectedPropertyType,
+                    onPropertyTypeChange = { selectedPropertyType = it },
+                    minPrice = minPrice,
+                    onMinPriceChange = { minPrice = it }
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Properties Count
+                Text(
+                    text = "${SampleData.properties.size} Listing",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+
+                // Property List
+                PropertyList(
+                    properties = SampleData.properties,
+                    listState = listState
+                )
             }
 
-            // Filter Chips Section
-            FilterChipsSection(
-                selectedMarketType = selectedMarketType,
-                onMarketTypeChange = { selectedMarketType = it },
-                selectedPropertyType = selectedPropertyType,
-                onPropertyTypeChange = { selectedPropertyType = it },
-                minPrice = minPrice,
-                onMinPriceChange = { minPrice = it }
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Properties Count
-            Text(
-                text = "${SampleData.properties.size} Listing",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-
-            // Property List
-            PropertyList(
-                properties = SampleData.properties,
-                listState = listState
-            )
-        }
-
-        // "Save search" button
-        if (!isMapFullScreen && mapHeight > 0.dp && selectedProperty == null) {
-            Button(
-                onClick = { /* Handle save search */ },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp)
-                    .height(48.dp)
-                    .zIndex(10f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                ),
-                shape = RoundedCornerShape(24.dp)
-            ) {
-                Text(
-                    text = "Save search",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            // "Save search" button
+            if (!isMapFullScreen && mapHeight > 0.dp && selectedProperty == null) {
+                Button(
+                    onClick = { /* Handle save search */ },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 24.dp)
+                        .height(48.dp)
+                        .zIndex(10f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2196F3)
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+                    Text(
+                        text = "Save search",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
         }
     }
@@ -216,7 +222,7 @@ fun MapWithPriceMarkers(
                 icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                 onClick = {
                     onMarkerClick(property)
-                    true // Return true to prevent default behavior
+                    true
                 }
             )
         }
@@ -271,6 +277,8 @@ fun PropertyDetailOverlay(
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -360,7 +368,10 @@ fun PropertyDetailOverlay(
 
             // View Details Button
             Button(
-                onClick = { /* Navigate to property details */ },
+                onClick = {
+                    val intent = Intent(context, PropertyDetailActivity::class.java)
+                    context.startActivity(intent)
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF2196F3)
@@ -593,15 +604,13 @@ fun PropertyList(
 @Composable
 fun PropertyCard(property: PropertyModel) {
     val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
-                // Navigate to Property Detail
                 val intent = Intent(context, PropertyDetailActivity::class.java)
-                // TODO: Pass property ID via intent extras
                 context.startActivity(intent)
-
             },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),

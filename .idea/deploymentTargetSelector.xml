@@ -5,19 +5,10 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="ProfileScreenActivity">
+      <SelectionState runConfigName="SplashActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="HelpCenterActivity (1)">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="HelpCenterActivity (2)">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="ProfileScreenActivity (1)">
-        <option name="selectionMode" value="DROPDOWN" />
-      </SelectionState>
-      <SelectionState runConfigName="HelpCenterActivity (3)">
+      <SelectionState runConfigName="DashboardActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
