@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
         android:allowBackup="true"
@@ -12,12 +13,21 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
+        <activity
+            android:name=".view.FullMapActivity"
+            android:exported="true"
+            android:label="@string/title_activity_full_map"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <!-- Google Maps API Key - Using direct value -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs"/>
-
+            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
             android:name=".view.PropertyDetailActivity"
@@ -65,6 +75,7 @@
             android:name=".ForgotActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.DashboardActivity"
             android:exported="true"
@@ -103,6 +114,7 @@
             android:exported="true"
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
+
     </application>
 
 </manifest>
