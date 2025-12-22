@@ -79,9 +79,16 @@
         <activity
             android:name=".view.DashboardActivity"
             android:exported="true"
+            android:theme="@style/Theme.GharBato" /><activity
+
+            android:name=".view.ApplicationSettingsActivity"
+            android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
             android:name=".view.SignUpActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" /><activity
+            android:name=".view.ContactUsActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
@@ -90,6 +97,10 @@
             android:theme="@style/Theme.GharBato" />
         <activity
             android:name=".view.HelpCenterActivity"
+            android:exported="true"
+            android:label="Help Center"
+            android:theme="@style/Theme.GharBato" /><activity
+            android:name=".view.TermsAndPoliciesActivity"
             android:exported="true"
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
