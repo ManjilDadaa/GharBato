@@ -174,7 +174,7 @@ fun ForgotBody() {
                     pushStringAnnotation(tag = "SignIn", annotation = "SignIn")
                     withStyle(
                         style = SpanStyle(
-                            color = Gray,
+                            color = Blue,
                         )
                     ) {
                         append("Sign In")
