@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -34,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepositoryImpl
+import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -43,8 +43,12 @@ import com.google.maps.android.compose.*
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
-        PropertyViewModelFactory(PropertyRepositoryImpl())
+        PropertyViewModelFactory(
+            PropertyRepositoryImpl(),
+            SavedPropertiesRepositoryImpl()
+        )
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,7 +67,10 @@ class PropertyDetailActivity : ComponentActivity() {
             uiState.selectedProperty?.let { property ->
                 PropertyDetailScreen(
                     property = property,
-                    onBack = { finish() }
+                    onBack = { finish() },
+                    onFavoriteToggle = { prop ->
+                        viewModel.toggleFavorite(prop)
+                    }
                 )
             } ?: run {
                 // Loading or Error State
@@ -86,7 +93,8 @@ class PropertyDetailActivity : ComponentActivity() {
 @Composable
 fun PropertyDetailScreen(
     property: PropertyModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onFavoriteToggle: (PropertyModel) -> Unit
 ) {
     val context = LocalContext.current
     var isFavorite by remember { mutableStateOf(false) }
@@ -104,6 +112,7 @@ fun PropertyDetailScreen(
                         imageUrl = property.imageUrl,
                         isFavorite = isFavorite,
                         onFavoriteClick = { isFavorite = !isFavorite },
+
                         onBackClick = onBack
                     )
                 }
@@ -227,7 +236,7 @@ fun PropertyImageSection(
                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.Black
                 )

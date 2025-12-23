@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepository
+import com.example.gharbato.repository.SavedPropertiesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,8 @@ data class PropertyUiState(
 )
 
 class PropertyViewModel(
-    private val repository: PropertyRepository
+    private val repository: PropertyRepository,
+    private val savedPropertiesRepository: SavedPropertiesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PropertyUiState())
@@ -37,8 +39,14 @@ class PropertyViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val properties = repository.getAllProperties()
+                // Check which properties are saved
+                val propertiesWithFavoriteStatus = properties.map { property ->
+                    property.copy(
+                        isFavorite = savedPropertiesRepository.isPropertySaved(property.id)
+                    )
+                }
                 _uiState.value = _uiState.value.copy(
-                    properties = properties,
+                    properties = propertiesWithFavoriteStatus,
                     isLoading = false,
                     error = null
                 )
@@ -47,6 +55,22 @@ class PropertyViewModel(
                     isLoading = false,
                     error = e.message
                 )
+            }
+        }
+    }
+
+    fun toggleFavorite(property: PropertyModel) {
+        viewModelScope.launch {
+            try {
+                if (property.isFavorite) {
+                    savedPropertiesRepository.removeSavedProperty(property.id)
+                } else {
+                    savedPropertiesRepository.saveProperty(property)
+                }
+                // Refresh properties to update favorite status
+                loadProperties()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
@@ -88,8 +112,13 @@ class PropertyViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val properties = repository.searchProperties(query)
+                val propertiesWithFavoriteStatus = properties.map { property ->
+                    property.copy(
+                        isFavorite = savedPropertiesRepository.isPropertySaved(property.id)
+                    )
+                }
                 _uiState.value = _uiState.value.copy(
-                    properties = properties,
+                    properties = propertiesWithFavoriteStatus,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -111,8 +140,13 @@ class PropertyViewModel(
                     minPrice = _uiState.value.minPrice,
                     bedrooms = 9
                 )
+                val propertiesWithFavoriteStatus = properties.map { property ->
+                    property.copy(
+                        isFavorite = savedPropertiesRepository.isPropertySaved(property.id)
+                    )
+                }
                 _uiState.value = _uiState.value.copy(
-                    properties = properties,
+                    properties = propertiesWithFavoriteStatus,
                     isLoading = false
                 )
             } catch (e: Exception) {
@@ -129,8 +163,11 @@ class PropertyViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true)
             try {
                 val property = repository.getPropertyById(id)
+                val propertyWithFavoriteStatus = property?.copy(
+                    isFavorite = savedPropertiesRepository.isPropertySaved(property.id)
+                )
                 _uiState.value = _uiState.value.copy(
-                    selectedProperty = property,
+                    selectedProperty = propertyWithFavoriteStatus,
                     isLoading = false
                 )
             } catch (e: Exception) {
