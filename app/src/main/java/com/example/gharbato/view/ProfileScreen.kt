@@ -38,8 +38,6 @@ import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Black
 import com.example.gharbato.ui.theme.Blue
 
-import kotlin.jvm.java
-
 class ProfileScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,20 +82,6 @@ fun ProfileScreen() {
                         fontWeight = FontWeight.Bold
                     )
                 },
-                navigationIcon = {
-                    IconButton(onClick = {
-// Navigate to HomeScreenActivity when back button is clicked
-                        val homeIntent = Intent(context, DashboardActivity::class.java)
-                        context.startActivity(homeIntent)
-                        (context as ComponentActivity).finish() // Close the current activity
-                    }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back to Home",
-                            tint = Color(0xFF2C2C2C)
-                        )
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.White
                 ),
@@ -119,14 +103,14 @@ fun ProfileScreen() {
                 .background(Color(0xFFF8F9FB))
                 .verticalScroll(rememberScrollState())
         ) {
-// Profile Header Section
+            // Profile Header Section
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-// Profile Image with Edit Icon
+                // Profile Image with Edit Icon
                 Box(contentAlignment = Alignment.BottomEnd) {
                     Image(
                         painter = if (imageUri != null)
@@ -140,12 +124,12 @@ fun ProfileScreen() {
                         contentScale = ContentScale.Crop
                     )
 
-// Edit Icon Button
+                    // Edit Icon Button
                     Box(
                         modifier = Modifier
                             .size(22.dp)
                             .clip(CircleShape)
-                            .background (Blue)
+                            .background(Blue)
                             .border(2.dp, Color.White, CircleShape)
                             .clickable {
                                 context.startActivity(
@@ -175,7 +159,7 @@ fun ProfileScreen() {
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-// Show/Hide contact info
+                    // Show/Hide contact info
                     Text(
                         if (showContactInfo) "Hide contact info" else "Show contact info",
                         fontSize = 13.sp,
@@ -187,7 +171,7 @@ fun ProfileScreen() {
                 }
             }
 
-// Contact Info Section (Expandable)
+            // Contact Info Section (Expandable)
             if (showContactInfo) {
                 Column(
                     modifier = Modifier
@@ -216,7 +200,7 @@ fun ProfileScreen() {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-// Profile Settings Section
+            // Profile Settings Section
             SectionHeader("Profile Settings")
 
             CleanMenuItem(
@@ -224,29 +208,31 @@ fun ProfileScreen() {
                 title = "My Activities",
                 subtitle = "View your account activities",
                 iconColor = Blue
-            ) {}
+            ) {
+                context.startActivity(Intent(context, MyActivitiesActivity::class.java))
+            }
 
             CleanMenuItem(
                 icon = R.drawable.baseline_create_24,
-                title = "Privacy & Security",
+                title = "Trust and Verification",
                 subtitle = "Manage your account security",
                 iconColor = Blue
-            ) {}
+            ) {
+                context.startActivity(Intent(context, TrustAndVerificationActivity::class.java))
+            }
 
-// Adding Application Settings here
             CleanMenuItem(
-                icon = R.drawable.baseline_settings_24, // Assuming there's an icon for settings in your drawable
+                icon = R.drawable.baseline_settings_24,
                 title = "Application Settings",
                 subtitle = "Configure your app settings",
-                iconColor = Blue // Blue color applied to the icon
+                iconColor = Blue
             ) {
-
                 context.startActivity(Intent(context, ApplicationSettingsActivity::class.java))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-// Support Section
+            // Support Section
             SectionHeader("Support")
 
             CleanMenuItem(
@@ -278,7 +264,7 @@ fun ProfileScreen() {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-// Logout Button
+            // Logout Button
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -289,14 +275,11 @@ fun ProfileScreen() {
                         val loginIntent = Intent(context, LoginActivity::class.java)
                         context.startActivity(loginIntent)
                         (context as ComponentActivity).finish()
-
                     }
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         painter = painterResource(R.drawable.baseline_logout_24),
                         contentDescription = null,
@@ -320,9 +303,7 @@ fun ProfileScreen() {
 
 @Composable
 fun ContactInfoRow(icon: Int, label: String, value: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
@@ -333,11 +314,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
         Spacer(modifier = Modifier.width(12.dp))
 
         Column {
-            Text(
-                label,
-                fontSize = 12.sp,
-                color = Color(0xFF999999)
-            )
+            Text(label, fontSize = 12.sp, color = Color(0xFF999999))
             Text(
                 value,
                 fontSize = 14.sp,
@@ -348,14 +325,20 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
     }
 }
 
+// ✅ Updated SectionHeader to accept modifier
 @Composable
-fun SectionHeader(title: String) {
+fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
-        title,
+        text = title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         color = Color(0xFF2C2C2C),
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+        modifier = modifier.padding(
+            start = 12.dp,  // 👈 moved slightly left
+            end = 20.dp,
+            top = 12.dp,
+            bottom = 12.dp
+        )
     )
 }
 
@@ -380,7 +363,6 @@ fun CleanMenuItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-// Icon with rounded square background
             Box(
                 modifier = Modifier
                     .size(44.dp)
