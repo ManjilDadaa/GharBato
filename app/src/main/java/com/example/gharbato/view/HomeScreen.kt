@@ -187,11 +187,9 @@ fun HomeScreen() {
                 }
             }
             items(properties) { property ->
-<<<<<<< Updated upstream
                 PropertyCard(property = property, onClick = {})
-=======
-                    PropertyCard(property = property)
->>>>>>> Stashed changes
+
+
             }
         }
     }

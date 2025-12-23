@@ -68,7 +68,7 @@ fun ForgotBody() {
             title = {},
             navigationIcon = {
                 IconButton(onClick = {
-                    val intent =Intent(context, MainActivity::class.java)
+                    val intent =Intent(context, LoginActivity::class.java)
                     context.startActivity(intent)
                 }) {
                     Icon(
@@ -148,7 +148,7 @@ fun ForgotBody() {
                                     Toast.makeText(context, "Password reset link sent successfully", Toast.LENGTH_LONG).show()
                                     if (success) {
                                         // Navigate back to login screen
-                                        context.startActivity(Intent(context, MainActivity::class.java))
+                                        context.startActivity(Intent(context, LoginActivity::class.java))
                                     }
                                 }
                             }
@@ -187,7 +187,7 @@ fun ForgotBody() {
                     onClick = { offset ->
                         annotatedString.getStringAnnotations(tag = "SignIn", start = offset, end = offset)
                             .firstOrNull()?.let {
-                                val intent = Intent(context, MainActivity::class.java)
+                                val intent = Intent(context, LoginActivity::class.java)
                                 context.startActivity(intent)
                             }
                     }
