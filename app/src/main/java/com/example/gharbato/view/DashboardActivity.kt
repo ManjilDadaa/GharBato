@@ -41,13 +41,10 @@ import androidx.compose.ui.unit.dp
 import com.example.gharbato.MessageScreen
 import com.example.gharbato.R
 import com.example.gharbato.SavedScreen
-<<<<<<< Updated upstream
 import com.example.gharbato.ui.view.SearchScreen
-=======
 import com.example.gharbato.ui.theme.Blue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
->>>>>>> Stashed changes
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
