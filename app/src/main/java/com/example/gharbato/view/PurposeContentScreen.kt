@@ -13,16 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,18 +33,21 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
 @Composable
-fun PurposeContentScreen() {
-
-    var selectedIndex by remember { mutableIntStateOf(-1) }
-    var selectedType by remember { mutableStateOf("") }
+fun PurposeContentScreen(
+    selectedPurpose: String,
+    onPurposeChange: (String) -> Unit,
+    selectedPropertyType: String,
+    onPropertyTypeChange: (String) -> Unit
+) {
     val propertyTypes = listOf("Apartment", "House", "Villa", "Studio")
-
-    Column{
+    Column(
+        modifier = Modifier.verticalScroll(rememberScrollState())
+    ){
         Row {
             Text(
                 "What would you like to do?",
                 style = TextStyle(
-                    fontWeight = FontWeight.Bold,
+                    color = Color.DarkGray,
                     fontSize = 18.sp
                 ),
                 modifier = Modifier.padding(start = 10.dp, top = 20.dp, end = 10.dp, bottom = 5.dp)
@@ -61,13 +61,13 @@ fun PurposeContentScreen() {
         ){
             listOf("Sell", "Rent", "Book").forEachIndexed { index, title ->
                 OutlinedCard(
-                    onClick = {selectedIndex = index},
+                    onClick = { onPurposeChange(title) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(80.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (selectedIndex == index) Blue else Color.Transparent,
-                        contentColor = if (selectedIndex == index) Color.White else Color.Black
+                        containerColor = if (selectedPurpose == title) Blue else Color.Transparent,
+                        contentColor = if (selectedPurpose == title) Color.White else Color.Black
                     ),
                 ) {
                     Row(
@@ -77,10 +77,9 @@ fun PurposeContentScreen() {
                             .fillMaxSize()
                             .padding(horizontal = 16.dp)
                     ) {
-                        // Left side: Icon + Text
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start, //
+                            horizontalArrangement = Arrangement.Start,
                             modifier = Modifier.weight(1f)
                         ) {
                             Icon(
@@ -94,7 +93,7 @@ fun PurposeContentScreen() {
                                 ),
                                 contentDescription = null,
                                 modifier = Modifier.size(28.dp),
-                                tint = if (selectedIndex == index) Color.White else Gray
+                                tint = if (selectedPurpose == title) Color.White else Gray
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
@@ -119,7 +118,7 @@ fun PurposeContentScreen() {
                                         else -> ""
                                     },
                                     fontSize = 13.sp,
-                                    color = if (selectedIndex == index)
+                                    color = if (selectedPurpose == title)
                                         Color.White.copy(alpha = 0.85f)
                                     else
                                         Gray
@@ -127,8 +126,7 @@ fun PurposeContentScreen() {
                             }
                         }
 
-                        // Right side: Checkmark (outside the inner Row)
-                        if (selectedIndex == index) {
+                        if (selectedPurpose == title) {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_check_24),
                                 contentDescription = "Selected",
@@ -156,14 +154,15 @@ fun PurposeContentScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 maxItemsInEachRow = 2
             ) {
-                propertyTypes.forEachIndexed { index, type ->
-                    OutlinedCard(onClick = {selectedType = type},
+                propertyTypes.forEach { type ->
+                    OutlinedCard(
+                        onClick = { onPropertyTypeChange(type) },
                         modifier = Modifier
                             .height(55.dp)
                             .weight(1f),
                         colors = CardDefaults.cardColors(
-                            containerColor = if(selectedType == type) Blue else Color.Transparent,
-                            contentColor = if(selectedType == type) Color.White else Color.Black
+                            containerColor = if(selectedPropertyType == type) Blue else Color.Transparent,
+                            contentColor = if(selectedPropertyType == type) Color.White else Color.Black
                         )
                     ) {
                         Box(
@@ -173,8 +172,7 @@ fun PurposeContentScreen() {
                             Text(
                                 text = type,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (selectedType == type)
+                                color = if (selectedPropertyType == type)
                                     Color.White
                                 else
                                     Color.Black

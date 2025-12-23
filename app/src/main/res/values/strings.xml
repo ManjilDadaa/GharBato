@@ -6,4 +6,7 @@
     <string name="title_activity_splash">SplashActivity</string>
     <string name="title_activity_forgot">ForgotActivity</string>
     <string name="title_activity_listing">ListingActivity</string>
+    <string name="title_activity_property_detail">PropertyDetailActivity</string>
+    <string name="title_activity_full_map">FullMapActivity</string>
+    <string name="sdk_location">/Users/bishowdip/Library/Android/sdk</string>
 </resources>

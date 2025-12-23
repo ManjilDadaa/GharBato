@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -56,7 +58,7 @@ import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
 
-class MainActivity : ComponentActivity() {
+class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -86,304 +88,338 @@ fun LoginBody(){
         containerColor = Color.White
     ) {
         padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .imePadding()
         ) {
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Ghar Bato",
-                    style = TextStyle(
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp,
-                        color = Blue
-                    ),
-                    modifier = Modifier
-                        .padding(top = 150.dp)
-                )
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text("Sign in to continue to Gharbato",
-                    style = TextStyle(
-                        color = Gray,
-                        fontSize = 20.sp
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(30.dp))
-
-            Text("Email",
-                style = TextStyle(
-                    color = Color.DarkGray,
-                    fontSize = 17.sp
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp)
-            )
-
-            OutlinedTextField(
-                value = email,
-                onValueChange = { data ->
-                    email = data
-                },
-
-                isError = isErrorEmail,
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
-                placeholder = {Text("Enter your email",
-                    modifier = Modifier.padding(start = 3.dp))},
-
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                singleLine = true,
-
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_email_24),
-                        contentDescription = null
-                    )
-                },
-
-                modifier = Modifier
-                    .padding(start = 20.dp, end = 20.dp, top = 10.dp)
-                    .height(60.dp)
-                    .fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-            Text("Password",
-                style = TextStyle(
-                    color = Color.DarkGray,
-                    fontSize = 17.sp
-                ),
-                modifier = Modifier
-                    .padding(start = 20.dp)
-            )
-
-            OutlinedTextField(
-                value = password,
-                onValueChange = { data ->
-                    password = data
-                },
-
-                isError = isErrorPassword,
-
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Password
-                ),
-                placeholder = {Text("Enter your password",
-                    modifier = Modifier.padding(start = 3.dp))},
-
-
-                singleLine = true,
-                colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent,
-                    focusedIndicatorColor = Blue
-                ),
-
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_lock_24),
-                        contentDescription = null
-                    )
-                },
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            visibility = !visibility
-                        }
-                    ) {
-                        Icon(
-                            painter =
-                            if (visibility){
-                                painterResource(R.drawable.baseline_visibility_off_24)
-                            }
-                            else{
-                                painterResource(R.drawable.baseline_visibility_24)
-                            },
-                            contentDescription = null
-
-                        )
-                    }
-                },
-
-                visualTransformation = if (!visibility){ PasswordVisualTransformation()}
-                else {VisualTransformation.None},
-
-                modifier = Modifier
-                    .padding(start = 20.dp, end = 20.dp, top = 10.dp)
-                    .height(60.dp)
-                    .fillMaxWidth()
-            )
-
-            Row(
-                horizontalArrangement = Arrangement.End,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end =20.dp, top = 10.dp)
-            ) {
-                Text("Forgot Password? ",
-                    style = TextStyle(
-                        color = Gray
-                    ),
-                    modifier = Modifier
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ){
-                            val intent = Intent(context, ForgotActivity::class.java)
-                            context.startActivity(intent)
-                        }
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
-                    .padding(top = 20.dp, start = 20.dp, end = 20.dp)) {
-                Button(onClick = {
-                    if (email.equals("") || password.equals("")){
-                        isErrorEmail = true
-                        isErrorPassword = true
-                        Toast.makeText(context, "Please enter all fields", Toast.LENGTH_LONG).show()
-                    }
-                    else {
-                        userViewModel.login(email, password) { success, message ->
-                            if (success) {
-                                Toast.makeText(
-                                    context, message, Toast.LENGTH_LONG
-                                ).show()
-                                val intent = Intent(context, DashboardActivity::class.java)
-                                context.startActivity(intent)
-                                activity.finish()
-                            } else {
-                                Toast.makeText(
-                                    context, message, Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
-                    }
-                },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(45.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue,
-                    )
-
+            item {
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Log in", style = TextStyle(
-                        fontSize = 17.sp
-                    ))
-                }
-
-
-            }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                HorizontalDivider(thickness = 2.dp,
-                    modifier = Modifier.padding(20.dp)
-                        .weight(1f)
-                )
-
-                Text("Or continue with",
-                    style = TextStyle(
-                        color = Gray
-                    )
-                )
-
-                HorizontalDivider(thickness = 2.dp,
-                    modifier = Modifier.padding(20.dp)
-                        .weight(1f)
-                )
-            }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-
-                Card(
-                    modifier = Modifier
-                        .height(50.dp)
-                        .padding(horizontal = 20.dp)
-                        .fillMaxWidth()
-                        .clickable{},
-                    shape = RoundedCornerShape(15.dp)
-                ) {
-
-                    Row(
+                    Text(
+                        "Ghar Bato",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 30.sp,
+                            color = Blue
+                        ),
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(R.drawable.googlee),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp)
-                        )
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Text("Continue with Google", style = TextStyle(
-                            fontSize = 15.sp
-                        ))
-                    }
-                }
-            }
-
-            Row(horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 15.dp)
-
-            ) {
-                Text("Don't have an account?",
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        color = Color.DarkGray
+                            .padding(top = 150.dp)
                     )
-                )
-                Spacer(modifier = Modifier.width(7.dp))
-                Text("Sign up",
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "Sign in to continue to Gharbato",
+                        style = TextStyle(
+                            color = Gray,
+                            fontSize = 20.sp
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
+
+                Text(
+                    "Email",
                     style = TextStyle(
-                        fontSize = 15.sp,
-                        color = Blue
+                        color = Color.DarkGray,
+                        fontSize = 17.sp
                     ),
                     modifier = Modifier
-                        .clickable(
-                            indication = null,
-                            interactionSource = remember { MutableInteractionSource() }
-                        ){
-                            val intent = Intent(context, SignUpActivity::class.java)
-                            context.startActivity(intent)
-
-                        }
+                        .padding(start = 20.dp)
                 )
+
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { data ->
+                        email = data
+                    },
+
+                    isError = isErrorEmail,
+
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Email
+                    ),
+                    placeholder = {
+                        Text(
+                            "Enter your email",
+                            modifier = Modifier.padding(start = 3.dp)
+                        )
+                    },
+
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Blue
+                    ),
+
+                    singleLine = true,
+
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_email_24),
+                            contentDescription = null
+                        )
+                    },
+
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp, top = 10.dp)
+                        .height(60.dp)
+                        .fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    "Password",
+                    style = TextStyle(
+                        color = Color.DarkGray,
+                        fontSize = 17.sp
+                    ),
+                    modifier = Modifier
+                        .padding(start = 20.dp)
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { data ->
+                        password = data
+                    },
+
+                    isError = isErrorPassword,
+
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password
+                    ),
+                    placeholder = {
+                        Text(
+                            "Enter your password",
+                            modifier = Modifier.padding(start = 3.dp)
+                        )
+                    },
+
+
+                    singleLine = true,
+                    colors = TextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.Transparent,
+                        focusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Blue
+                    ),
+
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_lock_24),
+                            contentDescription = null
+                        )
+                    },
+                    trailingIcon = {
+                        IconButton(
+                            onClick = {
+                                visibility = !visibility
+                            }
+                        ) {
+                            Icon(
+                                painter =
+                                    if (visibility) {
+                                        painterResource(R.drawable.baseline_visibility_off_24)
+                                    } else {
+                                        painterResource(R.drawable.baseline_visibility_24)
+                                    },
+                                contentDescription = null
+
+                            )
+                        }
+                    },
+
+                    visualTransformation = if (!visibility) {
+                        PasswordVisualTransformation()
+                    } else {
+                        VisualTransformation.None
+                    },
+
+                    modifier = Modifier
+                        .padding(start = 20.dp, end = 20.dp, top = 10.dp)
+                        .height(60.dp)
+                        .fillMaxWidth()
+                )
+
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 20.dp, top = 10.dp)
+                ) {
+                    Text(
+                        "Forgot Password? ",
+                        style = TextStyle(
+                            color = Gray
+                        ),
+                        modifier = Modifier
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                val intent = Intent(context, ForgotActivity::class.java)
+                                context.startActivity(intent)
+                            }
+                    )
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top = 20.dp, start = 20.dp, end = 20.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (email.equals("") || password.equals("")) {
+                                isErrorEmail = true
+                                isErrorPassword = true
+                                Toast.makeText(
+                                    context,
+                                    "Please enter all fields",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                userViewModel.login(email, password) { success, message ->
+                                    if (success) {
+                                        Toast.makeText(
+                                            context, message, Toast.LENGTH_SHORT
+                                        ).show()
+                                        val intent = Intent(context, DashboardActivity::class.java)
+                                        context.startActivity(intent)
+                                        activity.finish()
+                                    } else {
+                                        Toast.makeText(
+                                            context, message, Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(45.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Blue,
+                        )
+
+                    ) {
+                        Text(
+                            "Log in", style = TextStyle(
+                                fontSize = 17.sp
+                            )
+                        )
+                    }
+
+
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    HorizontalDivider(
+                        thickness = 2.dp,
+                        modifier = Modifier.padding(20.dp)
+                            .weight(1f)
+                    )
+
+                    Text(
+                        "Or continue with",
+                        style = TextStyle(
+                            color = Gray
+                        )
+                    )
+
+                    HorizontalDivider(
+                        thickness = 2.dp,
+                        modifier = Modifier.padding(20.dp)
+                            .weight(1f)
+                    )
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+
+                    Card(
+                        modifier = Modifier
+                            .height(50.dp)
+                            .padding(horizontal = 20.dp)
+                            .fillMaxWidth()
+                            .clickable {},
+                        shape = RoundedCornerShape(15.dp)
+                    ) {
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.googlee),
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                "Continue with Google", style = TextStyle(
+                                    fontSize = 15.sp
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 15.dp)
+
+                ) {
+                    Text(
+                        "Don't have an account?",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Color.DarkGray
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(7.dp))
+                    Text(
+                        "Sign up",
+                        style = TextStyle(
+                            fontSize = 15.sp,
+                            color = Blue
+                        ),
+                        modifier = Modifier
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                val intent = Intent(context, SignUpActivity::class.java)
+                                context.startActivity(intent)
+
+                            }
+                    )
+                }
+
+
             }
-
-
         }
     }
 }

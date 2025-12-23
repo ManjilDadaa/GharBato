@@ -1,4 +1,6 @@
-package com.example.gharbato.model
+package com.example.gharbato.data.model
+
+import com.google.android.gms.maps.model.LatLng
 
 data class PropertyModel(
     val id: Int,
@@ -9,10 +11,14 @@ data class PropertyModel(
     val bedrooms: Int,
     val bathrooms: Int,
     val imageUrl: String,
-    val location: String
-
+    val location: String,
+    val latLng: LatLng,
+    val propertyType: String = "Apartment",
+    val floor: String = "3rd Floor",
+    val furnishing: String = "Fully Furnished",
+    val parking: Boolean = true,
+    val petsAllowed: Boolean = false
 )
-
 
 
 // Sample data
@@ -27,7 +33,8 @@ object SampleData {
             bedrooms = 2,
             bathrooms = 2,
             imageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-            location = "Kathmandu"
+            location = "Kathmandu",
+            latLng = LatLng(27.7172, 85.3240)
         ),
         PropertyModel(
             id = 2,
@@ -38,7 +45,8 @@ object SampleData {
             bedrooms = 3,
             bathrooms = 3,
             imageUrl = "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
-            location = "Lalitpur"
+            location = "Lalitpur",
+            latLng = LatLng(27.6710, 85.3240)
         ),
         PropertyModel(
             id = 3,
@@ -49,7 +57,8 @@ object SampleData {
             bedrooms = 3,
             bathrooms = 2,
             imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-            location = "Bhaktapur"
+            location = "Bhaktapur",
+            latLng = LatLng(27.6710, 85.4298)
         ),
         PropertyModel(
             id = 4,
@@ -60,7 +69,8 @@ object SampleData {
             bedrooms = 2,
             bathrooms = 2,
             imageUrl = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-            location = "Pokhara"
+            location = "Pokhara",
+            latLng = LatLng(28.2096, 83.9856)
         ),
         PropertyModel(
             id = 5,
@@ -71,7 +81,8 @@ object SampleData {
             bedrooms = 3,
             bathrooms = 2,
             imageUrl = "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
-            location = "Kathmandu"
+            location = "Kathmandu",
+            latLng = LatLng(27.7000, 85.3200)
         )
     )
 }
