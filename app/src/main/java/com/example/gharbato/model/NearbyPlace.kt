@@ -1,5 +1,6 @@
 package com.example.gharbato.model
 
+import com.example.gharbato.data.model.PlaceType
 import com.google.android.gms.maps.model.LatLng
 
 data class NearbyPlace(
@@ -7,24 +8,6 @@ data class NearbyPlace(
     val name: String,
     val location: LatLng,
     val type: PlaceType,
-    val distance: Double, // in meters
-    val formattedDistance: String // "450m" or "1.2km"
+    val distance: Double,
+    val formattedDistance: String
 )
-
-enum class PlaceType {
-    SCHOOL,
-    HOSPITAL,
-    STORE,
-    PARK,
-    RESTAURANT,
-    TRANSPORT;
-
-    fun getDisplayName(): String = when (this) {
-        SCHOOL -> "Schools"
-        HOSPITAL -> "Hospitals"
-        STORE -> "Stores"
-        PARK -> "Parks"
-        RESTAURANT -> "Restaurants"
-        TRANSPORT -> "Transport"
-    }
-}

@@ -38,9 +38,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
+import com.example.gharbato.data.model.SampleData.properties
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
-import com.example.gharbatocopy.model.SampleData.properties
+import com.example.gharbato.ui.view.PropertyCard
 import kotlin.collections.iterator
 
 @Composable
@@ -134,7 +135,7 @@ fun HomeScreen(){
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(properties) { property ->
-                PropertyCard(property = property)
+                PropertyCard(property = property, onClick = {})
             }
         }
     }

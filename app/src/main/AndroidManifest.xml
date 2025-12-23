@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
-            android:name=".view.FullMapActivity"
+            android:name=".ui.view.FullMapActivity"
             android:exported="true"
             android:label="@string/title_activity_full_map"
             android:theme="@style/Theme.GharBato">
@@ -30,7 +30,7 @@
             android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
-            android:name=".view.PropertyDetailActivity"
+            android:name=".ui.view.PropertyDetailActivity"
             android:exported="true"
             android:label="@string/title_activity_property_detail"
             android:theme="@style/Theme.GharBato">
