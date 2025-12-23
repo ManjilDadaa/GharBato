@@ -115,6 +115,7 @@
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
 
+
     </application>
 
 </manifest>

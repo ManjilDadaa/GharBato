@@ -187,7 +187,11 @@ fun HomeScreen() {
                 }
             }
             items(properties) { property ->
-                PropertyCard(property = property, onClick = {})
+                PropertyCard(
+                    property = property,
+                    onClick = {},
+                    onFavoriteClick = {}
+                )
             }
         }
     }

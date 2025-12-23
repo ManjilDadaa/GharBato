@@ -100,6 +100,7 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.1.0") // Location services
     implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation("com.google.maps.android:maps-compose:4.4.1")
+    implementation("io.coil-kt:coil-compose:2.4.0")
 
 
 
