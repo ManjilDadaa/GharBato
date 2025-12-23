@@ -92,9 +92,11 @@ fun MessageScreen(){
     LaunchedEffect(Unit) {
         userViewModel.getAllUsers { success, userList, message ->
             if (success && userList != null) {
+                android.util.Log.d("MessageScreen", "Fetched ${userList.size} users: ${userList.map { it.fullName }}")
                 users = userList
                 errorMessage = ""
             } else {
+                android.util.Log.e("MessageScreen", "Error fetching users: $message")
                 errorMessage = message
             }
             isLoading = false
@@ -104,11 +106,14 @@ fun MessageScreen(){
     // Search users when query changes
     LaunchedEffect(searchText) {
         if (isLoading) return@LaunchedEffect
+        android.util.Log.d("MessageScreen", "Searching users with query: '$searchText'")
         userViewModel.searchUsers(searchText) { success, userList, message ->
             if (success && userList != null) {
+                android.util.Log.d("MessageScreen", "Search returned ${userList.size} users: ${userList.map { it.fullName }}")
                 users = userList
                 errorMessage = ""
             } else {
+                android.util.Log.e("MessageScreen", "Search error: $message")
                 errorMessage = message
             }
         }
