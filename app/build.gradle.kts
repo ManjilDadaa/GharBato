@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,12 +15,45 @@ android {
 
     defaultConfig {
         applicationId = "com.example.gharbato"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProps = Properties().apply {
+            val files = listOf(
+                rootProject.file("local.properties"),
+                project.file("local.properties"),
+            )
+            files.filter { it.exists() }.forEach { file ->
+                file.inputStream().use { load(it) }
+            }
+        }
+
+        val zegoAppId = (
+            project.findProperty("ZEGO_APP_ID")
+                ?: localProps.getProperty("ZEGO_APP_ID")
+                ?: System.getenv("ZEGO_APP_ID")
+                ?: System.getProperty("ZEGO_APP_ID")
+                ?: "554967872"
+            ).toString().trim()
+
+        val zegoAppSign = (
+            project.findProperty("ZEGO_APP_SIGN")
+                ?: localProps.getProperty("ZEGO_APP_SIGN")
+                ?: System.getenv("ZEGO_APP_SIGN")
+                ?: System.getProperty("ZEGO_APP_SIGN")
+                ?: "d244d75c0f12cb4eb2c41d74adb071467ba16e82eb9ef2625e06453bd4347873"
+            ).toString().trim()
+
+        val zegoAppSignEscaped = zegoAppSign
+            .replace("\\\\", "\\\\\\\\")
+            .replace("\"", "\\\\\"")
+
+        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
+        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
     }
 
     buildTypes {
@@ -39,6 +74,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -101,6 +137,6 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation("com.google.maps.android:maps-compose:4.4.1")
 
-
-
+    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 }

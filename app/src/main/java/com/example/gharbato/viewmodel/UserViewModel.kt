@@ -30,4 +30,12 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         repo.forgotPassword(email,callback)
     }
 
+    fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit){
+        repo.getAllUsers(callback)
+    }
+
+    fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit){
+        repo.searchUsers(query, callback)
+    }
+
 }

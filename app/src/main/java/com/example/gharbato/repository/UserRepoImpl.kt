@@ -5,8 +5,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 class UserRepoImpl : UserRepo{
 
@@ -85,5 +88,49 @@ class UserRepoImpl : UserRepo{
                     callback(false, "${it.exception?.message}")
                 }
             }
+    }
+
+    override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userList = mutableListOf<UserModel>()
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+                    if (userModel != null) {
+                        userList.add(userModel.copy(userId = userSnapshot.key ?: ""))
+                    }
+                }
+                callback(true, userList, "Users fetched successfully")
+            }
+            
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
+    }
+
+    override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userList = mutableListOf<UserModel>()
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+                    if (userModel != null) {
+                        val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
+                        if (query.isBlank() || 
+                            userWithId.fullName.contains(query, ignoreCase = true) ||
+                            userWithId.email.contains(query, ignoreCase = true) ||
+                            userWithId.phoneNo.contains(query, ignoreCase = true)) {
+                            userList.add(userWithId)
+                        }
+                    }
+                }
+                callback(true, userList, "Search completed successfully")
+            }
+            
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
     }
 }
