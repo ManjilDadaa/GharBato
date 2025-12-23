@@ -74,11 +74,10 @@ fun SearchScreen(
                 onSearchQueryChange = { viewModel.updateSearchQuery(it) }
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
