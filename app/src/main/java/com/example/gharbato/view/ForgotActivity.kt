@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.Gray
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -173,7 +174,7 @@ fun ForgotBody() {
                     pushStringAnnotation(tag = "SignIn", annotation = "SignIn")
                     withStyle(
                         style = SpanStyle(
-                            color = Blue,
+                            color = Gray,
                         )
                     ) {
                         append("Sign In")
