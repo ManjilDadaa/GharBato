@@ -58,11 +58,11 @@ fun SavedScreen(
                 )
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+//                .padding(bottom = paddingValues.calculateBottomPadding())
                 .background(Color(0xFFF8F9FA))
         ) {
             when {

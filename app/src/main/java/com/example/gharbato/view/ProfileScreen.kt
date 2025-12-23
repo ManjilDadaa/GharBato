@@ -117,7 +117,6 @@ fun ProfileScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FB))
-                .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
 // Profile Header Section
