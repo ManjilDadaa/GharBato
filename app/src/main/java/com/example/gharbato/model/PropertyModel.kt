@@ -1,4 +1,4 @@
-package com.example.gharbatocopy.model
+package com.example.gharbato.data.model
 
 import com.google.android.gms.maps.model.LatLng
 
@@ -12,10 +12,13 @@ data class PropertyModel(
     val bathrooms: Int,
     val imageUrl: String,
     val location: String,
-    val latLng: LatLng
-
+    val latLng: LatLng,
+    val propertyType: String = "Apartment",
+    val floor: String = "3rd Floor",
+    val furnishing: String = "Fully Furnished",
+    val parking: Boolean = true,
+    val petsAllowed: Boolean = false
 )
-
 
 
 // Sample data

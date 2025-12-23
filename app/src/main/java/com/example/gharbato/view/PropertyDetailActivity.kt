@@ -1,71 +1,25 @@
-package com.example.gharbato.view
+package com.example.gharbato.ui.view
 
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AcUnit
-import androidx.compose.material.icons.filled.Apartment
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Kitchen
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.LocalLaundryService
-import androidx.compose.material.icons.filled.LocationCity
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.SupportAgent
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,772 +28,288 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbatocopy.model.PropertyModel
-import com.example.gharbatocopy.model.SampleData
+import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.data.repository.PropertyRepositoryImpl
+import com.example.gharbato.viewmodel.PropertyViewModel
+import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 
 class PropertyDetailActivity : ComponentActivity() {
+
+    private val viewModel: PropertyViewModel by viewModels {
+        PropertyViewModelFactory(PropertyRepositoryImpl())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Get property ID from intent
+        val propertyId = intent.getIntExtra("propertyId", -1)
+
+        if (propertyId != -1) {
+            viewModel.getPropertyById(propertyId)
+        }
+
         setContent {
-            // Get property ID from intent and find property
-            val property = SampleData.properties.firstOrNull() // Replace with actual property from intent
-            property?.let {
-                PropertyDetailScreen(property = it)
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+            uiState.selectedProperty?.let { property ->
+                PropertyDetailScreen(
+                    property = property,
+                    onBack = { finish() }
+                )
+            } ?: run {
+                // Loading or Error State
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text("Property not found")
+                    }
+                }
             }
         }
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
-
 @Composable
-fun PropertyDetailScreen(property: PropertyModel) {
+fun PropertyDetailScreen(
+    property: PropertyModel,
+    onBack: () -> Unit
+) {
     val context = LocalContext.current
-    val activity = context as? ComponentActivity
-    var currentImageIndex by remember { mutableStateOf(0) }
     var isFavorite by remember { mutableStateOf(false) }
+
     Scaffold { paddingValues ->
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(paddingValues)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
                 // Image Gallery Section
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(300.dp)
-                    ) {
-                        // Main Image
-                        Image(
-                            painter = rememberAsyncImagePainter(property.imageUrl),
-                            contentDescription = "Property Image",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // Top Bar with Back, Favorite, More
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            IconButton(
-                                onClick = {
-                                    activity?.finish()
-                                },
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = "Back",
-                                    tint = Color.Black
-                                )
-                            }
-
-                            Row {
-                                IconButton(
-                                    onClick = { isFavorite = !isFavorite },
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                        contentDescription = "Favorite",
-                                        tint = if (isFavorite) Color.Red else Color.Black
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(8.dp))
-
-                                IconButton(
-                                    onClick = { /* Handle more */ },
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More",
-                                        tint = Color.Black
-                                    )
-                                }
-                            }
-                        }
-
-                        // Image Counter
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(16.dp),
-                            color = Color.Black.copy(alpha = 0.7f),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Text(
-                                text = "1/5",
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    PropertyImageSection(
+                        imageUrl = property.imageUrl,
+                        isFavorite = isFavorite,
+                        onFavoriteClick = { isFavorite = !isFavorite },
+                        onBackClick = onBack
+                    )
                 }
 
-                // Status Chips (Featured, Verified, Owner)
+                // Status Chips
                 item {
-                    LazyRow(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        item {
-                            StatusChip(
-                                text = "Featured",
-                                icon = Icons.Default.Star,
-                                backgroundColor = Color(0xFFFFECB3),
-                                textColor = Color(0xFFFF6F00)
-                            )
-                        }
-                        item {
-                            StatusChip(
-                                text = "Verified",
-                                icon = Icons.Default.CheckCircle,
-                                backgroundColor = Color(0xFFE8F5E9),
-                                textColor = Color(0xFF4CAF50)
-                            )
-                        }
-                        item {
-                            StatusChip(
-                                text = "Owner",
-                                backgroundColor = Color(0xFFE3F2FD),
-                                textColor = Color(0xFF2196F3)
-                            )
-                        }
-                    }
+                    StatusChipsRow()
                 }
 
                 // Price Section
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = property.price,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = "Info",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Price Suggestion
-                        Surface(
-                            color = Color(0xFFF5F5F5),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text(
-                                    text = "Make an offer",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedTextField(
-                                    value = "",
-                                    onValueChange = {},
-                                    placeholder = { Text("e.g., NPR 12,000/month") },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        unfocusedContainerColor = Color.White
-                                    ),
-                                    trailingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Send,
-                                            contentDescription = "Send",
-                                            tint = Color.Gray
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
+                    PriceSection(property = property)
                 }
 
-                // Property Type and Details
+                // Property Details
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        PropertyDetailItem(label = property.sqft, value = "Area")
-                        PropertyDetailItem(
-                            label = "${property.bedrooms} Bedroom",
-                            value = "Apartment"
-                        )
-                        PropertyDetailItem(label = "${property.bathrooms} Bath", value = "Bathroom")
-                    }
+                    PropertyDetailsSection(property = property)
                 }
 
-                // Building Name and Location
+                // Building Info
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Text(
-                            text = property.developer,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2196F3)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = "Location",
-                                tint = Color.Gray,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = property.location,
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Nearby Landmarks
-                        NearbyPlace(
-                            name = "City Center",
-                            distance = "2.5 km",
-                            icon = Icons.Default.LocationCity
-                        )
-                        NearbyPlace(
-                            name = "School",
-                            distance = "500 m",
-                            icon = Icons.Default.School
-                        )
-                        NearbyPlace(
-                            name = "Hospital",
-                            distance = "1.2 km",
-                            icon = Icons.Default.LocalHospital
-                        )
-                    }
+                    BuildingInfoSection(property = property)
                 }
-                // Find this section in PropertyDetailActivity.kt and replace it:
 
-// Map Preview
+                // Map Preview
                 item {
-                    val context = LocalContext.current
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(200.dp)
-                            .padding(16.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable {
-                                // Open Full Map Activity
-                                val intent = Intent(context, FullMapActivity::class.java).apply {
-                                    putExtra("latitude", property.latLng.latitude)
-                                    putExtra("longitude", property.latLng.longitude)
-                                    putExtra("propertyName", property.developer)
-                                }
-                                context.startActivity(intent)
+                    MapPreviewSection(
+                        property = property,
+                        onClick = {
+                            val intent = Intent(context, FullMapActivity::class.java).apply {
+                                putExtra("latitude", property.latLng.latitude)
+                                putExtra("longitude", property.latLng.longitude)
+                                putExtra("propertyName", property.developer)
                             }
-                    ) {
-                        // Mini Map Preview
-                        GoogleMap(
-                            modifier = Modifier.fillMaxSize(),
-                            cameraPositionState = rememberCameraPositionState {
-                                position = CameraPosition.fromLatLngZoom(property.latLng, 13f)
-                            },
-                            uiSettings = MapUiSettings(
-                                zoomControlsEnabled = false,
-                                myLocationButtonEnabled = false,
-                                mapToolbarEnabled = false,
-                                scrollGesturesEnabled = false,
-                                zoomGesturesEnabled = false
-                            )
-                        ) {
-                            // Property marker
-                            Marker(
-                                state = MarkerState(position = property.latLng),
-                                title = property.developer,
-                                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
-                            )
+                            context.startActivity(intent)
                         }
-
-                        // Overlay with "View on Map" button
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.1f))
-                        )
-
-                        // View on Map Button
-                        Surface(
-                            modifier = Modifier.align(Alignment.Center),
-                            color = Color.White,
-                            shape = RoundedCornerShape(24.dp),
-                            shadowElevation = 4.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Map,
-                                    contentDescription = "Map",
-                                    tint = Color(0xFF2196F3),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "View on Map",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2196F3)
-                                )
-                            }
-                        }
-                    }
+                    )
                 }
 
                 // Contact Owner Section
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Contact Property Owner",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(
-                                        modifier = Modifier.size(50.dp),
-                                        color = Color(0xFFE0E0E0),
-                                        shape = CircleShape
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = "Owner",
-                                            modifier = Modifier.padding(12.dp),
-                                            tint = Color.Gray
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(12.dp))
-
-                                    Column {
-                                        Text(
-                                            text = property.developer,
-                                            fontSize = 16.sp,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        Text(
-                                            text = "Property Owner",
-                                            fontSize = 12.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                }
-
-                                IconButton(
-                                    onClick = { /* Handle call */ },
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .background(Color(0xFF4CAF50), CircleShape)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Phone,
-                                        contentDescription = "Call",
-                                        tint = Color.White
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "Quick Messages",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // Quick Message Buttons
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                QuickMessageButton("Call me back", Modifier.weight(1f))
-                                QuickMessageButton("Still available?", Modifier.weight(1f))
-                            }
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            QuickMessageButton("Schedule a visit", Modifier.fillMaxWidth())
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Stats
-                            Text(
-                                text = "Updated: Today, 5:30 PM",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                            Text(
-                                text = "156 views, 12 today",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                            Text(
-                                text = "98 unique visitors",
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        }
-                    }
+                    ContactOwnerSection(property = property)
                 }
 
                 // Notes Section
                 item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .clickable { /* Add note */ },
-                        color = Color(0xFFF5F5F5),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = "Note",
-                                    tint = Color.Gray
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Personal Notes",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                            Text(
-                                text = "Add",
-                                fontSize = 14.sp,
-                                color = Color(0xFF2196F3),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                    NotesSection()
                 }
 
-                // Property Details Section
+                // Property Details Info
                 item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Property Details",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        PropertyDetailRow("Property Type", "Apartment")
-                        PropertyDetailRow("Total Area", property.sqft)
-                        PropertyDetailRow("Bedrooms", "${property.bedrooms}")
-                        PropertyDetailRow("Bathrooms", "${property.bathrooms}")
-                        PropertyDetailRow("Floor", "3rd Floor")
-                        PropertyDetailRow("Furnishing", "Fully Furnished")
-                        PropertyDetailRow("Parking", "Available")
-                        PropertyDetailRow("Pets Allowed", "No")
-                    }
+                    PropertyDetailsInfoSection(property = property)
                 }
 
-                // Rental Terms Section
+                // Rental Terms
                 item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Rental Terms",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        DealConditionRow("Utilities", "Included (electricity extra)")
-                        DealConditionRow("Commission", "No commission")
-                        DealConditionRow("Advance Payment", "1 month rent")
-                        DealConditionRow("Security Deposit", "2 months rent")
-                        DealConditionRow("Minimum Lease", "12 months")
-                        DealConditionRow("Available From", "Immediate")
-                    }
+                    RentalTermsSection()
                 }
 
-                // Amenities Section
+                // Amenities
                 item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Amenities",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        AmenityItem("Air Conditioning", Icons.Default.AcUnit)
-                        AmenityItem("WiFi Internet", Icons.Default.Wifi)
-                        AmenityItem("Washing Machine", Icons.Default.LocalLaundryService)
-                        AmenityItem("Refrigerator", Icons.Default.Kitchen)
-                        AmenityItem("Security", Icons.Default.Security)
-                        AmenityItem("Elevator", Icons.Default.Apartment)
-                    }
+                    AmenitiesSection()
                 }
 
                 // Report Section
                 item {
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp)
-                            .clickable { /* Report listing */ },
-                        color = Color(0xFFFCE4EC),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = "Report",
-                                tint = Color(0xFFD32F2F),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Report this listing",
-                                fontSize = 16.sp,
-                                color = Color(0xFFD32F2F),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                    ReportSection()
                 }
 
-                // Agent Helper Section
+                // Agent Helper
                 item {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = "Need Help Finding Property?",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Illustration placeholder
-                            Box(
-                                modifier = Modifier
-                                    .size(100.dp)
-                                    .background(Color.White, CircleShape)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.SupportAgent,
-                                    contentDescription = "Agent",
-                                    modifier = Modifier
-                                        .size(60.dp)
-                                        .align(Alignment.Center),
-                                    tint = Color(0xFF2196F3)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = "Our agents can help you find the perfect property,\nschedule visits, and handle all paperwork",
-                                fontSize = 14.sp,
-                                color = Color.Gray,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Button(
-                                onClick = { /* Handle request */ },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFF2196F3)
-                                ),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Text(
-                                    text = "Request Agent Assistance",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                    AgentHelperSection()
                 }
 
-                // Similar Properties Section
+                // Similar Properties
                 item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Similar Properties",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Similar property cards
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            SimilarPropertyCard(
-                                price = "from 15.2 lakh",
-                                details = "2 BHK • 1800 sq.ft",
-                                location = "Lalitpur",
-                                imageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
-                                modifier = Modifier.weight(1f)
-                            )
-                            SimilarPropertyCard(
-                                price = "from 10.5 lakh",
-                                details = "1 BHK • 1200 sq.ft",
-                                location = "Bhaktapur",
-                                imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400",
-                                modifier = Modifier.weight(1f)
-                            )
-                        }
-                    }
+                    SimilarPropertiesSection()
                 }
 
-                // Bottom spacing for floating buttons
+                // Bottom spacing
                 item {
                     Spacer(modifier = Modifier.height(100.dp))
                 }
             }
 
-            // Bottom Floating Action Buttons
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                color = Color.White,
-                shadowElevation = 8.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = { /* Handle call */ },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = "Call",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Call", fontWeight = FontWeight.Bold, color = Color.White)
-                    }
+            // Bottom Action Buttons
+            BottomActionButtons()
+        }
+    }
+}
 
-                    Button(
-                        onClick = { /* Handle message */ },
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2196F3)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Email,
-                            contentDescription = "Message",
-                            tint = Color.White
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Message", fontWeight = FontWeight.Bold, color = Color.White)
-                    }
+@Composable
+fun PropertyImageSection(
+    imageUrl: String,
+    isFavorite: Boolean,
+    onFavoriteClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp)
+    ) {
+        Image(
+            painter = rememberAsyncImagePainter(imageUrl),
+            contentDescription = "Property Image",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.Black
+                )
+            }
+
+            Row {
+                IconButton(
+                    onClick = onFavoriteClick,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (isFavorite) Color.Red else Color.Black
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                IconButton(
+                    onClick = { /* Handle more */ },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "More",
+                        tint = Color.Black
+                    )
                 }
             }
+        }
+
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            color = Color.Black.copy(alpha = 0.7f),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(
+                text = "1/5",
+                color = Color.White,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun StatusChipsRow() {
+    LazyRow(
+        modifier = Modifier.padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        item {
+            StatusChip(
+                text = "Featured",
+                icon = Icons.Default.Star,
+                backgroundColor = Color(0xFFFFECB3),
+                textColor = Color(0xFFFF6F00)
+            )
+        }
+        item {
+            StatusChip(
+                text = "Verified",
+                icon = Icons.Default.CheckCircle,
+                backgroundColor = Color(0xFFE8F5E9),
+                textColor = Color(0xFF4CAF50)
+            )
+        }
+        item {
+            StatusChip(
+                text = "Owner",
+                backgroundColor = Color(0xFFE3F2FD),
+                textColor = Color(0xFF2196F3)
+            )
         }
     }
 }
@@ -879,6 +349,74 @@ fun StatusChip(
 }
 
 @Composable
+fun PriceSection(property: PropertyModel) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = property.price,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Default.Info,
+                contentDescription = "Info",
+                tint = Color.Gray,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Surface(
+            color = Color(0xFFF5F5F5),
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = "Make an offer",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = "",
+                    onValueChange = {},
+                    placeholder = { Text("e.g., NPR 12,000/month") },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = Color.White
+                    ),
+                    trailingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = Color.Gray
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PropertyDetailsSection(property: PropertyModel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        PropertyDetailItem(label = property.sqft, value = "Area")
+        PropertyDetailItem(label = "${property.bedrooms} Bedroom", value = "Apartment")
+        PropertyDetailItem(label = "${property.bathrooms} Bath", value = "Bathroom")
+    }
+}
+
+@Composable
 fun PropertyDetailItem(label: String, value: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -892,6 +430,39 @@ fun PropertyDetailItem(label: String, value: String) {
             fontSize = 12.sp,
             color = Color.Gray
         )
+    }
+}
+
+@Composable
+fun BuildingInfoSection(property: PropertyModel) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Text(
+            text = property.developer,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF2196F3)
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.LocationOn,
+                contentDescription = "Location",
+                tint = Color.Gray,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = property.location,
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        NearbyPlace("City Center", "2.5 km", Icons.Default.LocationCity)
+        NearbyPlace("School", "500 m", Icons.Default.School)
+        NearbyPlace("Hospital", "1.2 km", Icons.Default.LocalHospital)
     }
 }
 
@@ -924,9 +495,170 @@ fun NearbyPlace(name: String, distance: String, icon: ImageVector) {
 }
 
 @Composable
+fun MapPreviewSection(
+    property: PropertyModel,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .padding(16.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+    ) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = rememberCameraPositionState {
+                position = CameraPosition.fromLatLngZoom(property.latLng, 13f)
+            },
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                mapToolbarEnabled = false,
+                scrollGesturesEnabled = false,
+                zoomGesturesEnabled = false
+            )
+        ) {
+            Marker(
+                state = MarkerState(position = property.latLng),
+                title = property.developer,
+                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.1f))
+        )
+
+        Surface(
+            modifier = Modifier.align(Alignment.Center),
+            color = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            shadowElevation = 4.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = "Map",
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "View on Map",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2196F3)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ContactOwnerSection(property: PropertyModel) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = "Contact Property Owner",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        modifier = Modifier.size(50.dp),
+                        color = Color(0xFFE0E0E0),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Owner",
+                            modifier = Modifier.padding(12.dp),
+                            tint = Color.Gray
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column {
+                        Text(
+                            text = property.developer,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Property Owner",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = { /* Handle call */ },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(Color(0xFF4CAF50), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = "Call",
+                        tint = Color.White
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Quick Messages", fontSize = 14.sp, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                QuickMessageButton("Call me back", Modifier.weight(1f))
+                QuickMessageButton("Still available?", Modifier.weight(1f))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            QuickMessageButton("Schedule a visit", Modifier.fillMaxWidth())
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Updated: Today, 5:30 PM", fontSize = 12.sp, color = Color.Gray)
+            Text("156 views, 12 today", fontSize = 12.sp, color = Color.Gray)
+            Text("98 unique visitors", fontSize = 12.sp, color = Color.Gray)
+        }
+    }
+}
+
+@Composable
 fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier.clickable { /* Handle quick message */ },
+        modifier = modifier.clickable { /* Handle message */ },
         color = Color(0xFFE3F2FD),
         shape = RoundedCornerShape(8.dp)
     ) {
@@ -942,6 +674,68 @@ fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun NotesSection() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clickable { /* Add note */ },
+        color = Color(0xFFF5F5F5),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Note",
+                    tint = Color.Gray
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Personal Notes",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Text(
+                text = "Add",
+                fontSize = 14.sp,
+                color = Color(0xFF2196F3),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+fun PropertyDetailsInfoSection(property: PropertyModel) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "Property Details",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        PropertyDetailRow("Property Type", property.propertyType)
+        PropertyDetailRow("Total Area", property.sqft)
+        PropertyDetailRow("Bedrooms", "${property.bedrooms}")
+        PropertyDetailRow("Bathrooms", "${property.bathrooms}")
+        PropertyDetailRow("Floor", property.floor)
+        PropertyDetailRow("Furnishing", property.furnishing)
+        PropertyDetailRow("Parking", if (property.parking) "Available" else "Not Available")
+        PropertyDetailRow("Pets Allowed", if (property.petsAllowed) "Yes" else "No")
+    }
+}
+
+@Composable
 fun PropertyDetailRow(label: String, value: String) {
     Row(
         modifier = Modifier
@@ -949,11 +743,7 @@ fun PropertyDetailRow(label: String, value: String) {
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = label,
-            fontSize = 14.sp,
-            color = Color.Gray
-        )
+        Text(text = label, fontSize = 14.sp, color = Color.Gray)
         Text(
             text = value,
             fontSize = 14.sp,
@@ -964,24 +754,42 @@ fun PropertyDetailRow(label: String, value: String) {
 }
 
 @Composable
-fun DealConditionRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
+fun RentalTermsSection() {
+    Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = label,
-            fontSize = 14.sp,
-            color = Color.Gray
+            text = "Rental Terms",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        PropertyDetailRow("Utilities", "Included (electricity extra)")
+        PropertyDetailRow("Commission", "No commission")
+        PropertyDetailRow("Advance Payment", "1 month rent")
+        PropertyDetailRow("Security Deposit", "2 months rent")
+        PropertyDetailRow("Minimum Lease", "12 months")
+        PropertyDetailRow("Available From", "Immediate")
+    }
+}
+
+@Composable
+fun AmenitiesSection() {
+    Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = value,
-            fontSize = 14.sp,
-            color = Color.Black,
-            fontWeight = FontWeight.Medium
+            text = "Amenities",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        AmenityItem("Air Conditioning", Icons.Default.AcUnit)
+        AmenityItem("WiFi Internet", Icons.Default.Wifi)
+        AmenityItem("Washing Machine", Icons.Default.LocalLaundryService)
+        AmenityItem("Refrigerator", Icons.Default.Kitchen)
+        AmenityItem("Security", Icons.Default.Security)
+        AmenityItem("Elevator", Icons.Default.Apartment)
     }
 }
 
@@ -1000,11 +808,136 @@ fun AmenityItem(name: String, icon: ImageVector) {
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
+        Text(text = name, fontSize = 14.sp, color = Color.Black)
+    }
+}
+
+@Composable
+fun ReportSection() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clickable { /* Report */ },
+        color = Color(0xFFFCE4EC),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = "Report",
+                tint = Color(0xFFD32F2F),
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Report this listing",
+                fontSize = 16.sp,
+                color = Color(0xFFD32F2F),
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun AgentHelperSection() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Need Help Finding Property?",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .background(Color.White, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SupportAgent,
+                    contentDescription = "Agent",
+                    modifier = Modifier
+                        .size(60.dp)
+                        .align(Alignment.Center),
+                    tint = Color(0xFF2196F3)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = "Our agents can help you find the perfect property,\nschedule visits, and handle all paperwork",
+                fontSize = 14.sp,
+                color = Color.Gray,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = { /* Request agent */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Text(
+                    text = "Request Agent Assistance",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SimilarPropertiesSection() {
+    Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = name,
-            fontSize = 14.sp,
-            color = Color.Black
+            text = "Similar Properties",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            SimilarPropertyCard(
+                price = "from 15.2 lakh",
+                details = "2 BHK • 1800 sq.ft",
+                location = "Lalitpur",
+                imageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
+                modifier = Modifier.weight(1f)
+            )
+            SimilarPropertyCard(
+                price = "from 10.5 lakh",
+                details = "1 BHK • 1200 sq.ft",
+                location = "Bhaktapur",
+                imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400",
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }
 
@@ -1017,7 +950,7 @@ fun SimilarPropertyCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.clickable { /* Navigate to property */ },
+        modifier = modifier.clickable { /* Navigate */ },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -1061,8 +994,58 @@ fun SimilarPropertyCard(
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun PropertyDetailActivityPreview() {
-    PropertyDetailScreen(property = SampleData.properties.first())
+fun BoxScope.BottomActionButtons() {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .align(Alignment.BottomCenter),
+        color = Color.White,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Button(
+                onClick = { /* Handle call */ },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Call",
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Call", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            Button(
+                onClick = { /* Handle message */ },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Email,
+                    contentDescription = "Message",
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Message", fontWeight = FontWeight.Bold, color = Color.White)
+            }
+        }
+    }
 }
