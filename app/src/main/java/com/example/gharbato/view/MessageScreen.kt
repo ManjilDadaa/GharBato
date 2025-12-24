@@ -88,53 +88,29 @@ fun MessageScreen(){
     
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
     
-    // Load users using repository pattern
+    // Load only registered users from database
     LaunchedEffect(Unit) {
-        android.util.Log.d("MessageScreen", "Starting to fetch users...")
+        android.util.Log.d("MessageScreen", "Loading registered users from database...")
+        
         userViewModel.getAllUsers { success, userList, message ->
-            android.util.Log.d("MessageScreen", "Fetch completed - success: $success, userList size: ${userList?.size}, message: $message")
-            if (success && userList != null) {
-                android.util.Log.d("MessageScreen", "Fetched ${userList.size} users: ${userList.map { it.fullName }}")
-                users = userList
-                errorMessage = ""
-                
-                // If no users found, add sample users for testing
-                if (userList.isEmpty()) {
-                    android.util.Log.d("MessageScreen", "No users found, adding sample users for testing")
-                    users = listOf(
-                        UserModel(
-                            userId = "sample_user_1",
-                            email = "user1@example.com",
-                            fullName = "User One",
-                            phoneNo = "1234567890",
-                            selectedCountry = "US"
-                        ),
-                        UserModel(
-                            userId = "sample_user_2", 
-                            email = "user2@example.com",
-                            fullName = "User Two",
-                            phoneNo = "0987654321",
-                            selectedCountry = "UK"
-                        )
-                    )
-                    errorMessage = "Showing sample users (no real users found in database)"
-                }
-            } else {
-                android.util.Log.e("MessageScreen", "Error fetching users: $message")
-                errorMessage = message
-                
-                // Add sample users even on error
-                users = listOf(
-                    UserModel(
-                        userId = "sample_user_1",
-                        email = "user1@example.com", 
-                        fullName = "User One",
-                        phoneNo = "1234567890",
-                        selectedCountry = "US"
-                    )
-                )
-            }
+            android.util.Log.d("MessageScreen", "Database fetch completed - success: $success, userList size: ${userList?.size}")
+            
+            // Always set loading to false
             isLoading = false
+            
+            if (success && userList != null) {
+                users = userList
+                if (userList.isEmpty()) {
+                    errorMessage = "No registered users found in database"
+                } else {
+                    errorMessage = "Found ${userList.size} registered users"
+                }
+                android.util.Log.d("MessageScreen", "Loaded ${userList.size} registered users: ${userList.map { it.fullName }}")
+            } else {
+                users = emptyList()
+                errorMessage = "Error loading users: $message"
+                android.util.Log.e("MessageScreen", "Failed to load users: $message")
+            }
         }
     }
     
@@ -142,15 +118,23 @@ fun MessageScreen(){
     LaunchedEffect(searchText) {
         if (isLoading) return@LaunchedEffect
         android.util.Log.d("MessageScreen", "Searching users with query: '$searchText'")
-        userViewModel.searchUsers(searchText) { success, userList, message ->
-            if (success && userList != null) {
-                android.util.Log.d("MessageScreen", "Search returned ${userList.size} users: ${userList.map { it.fullName }}")
-                users = userList
-                errorMessage = ""
-            } else {
-                android.util.Log.e("MessageScreen", "Search error: $message")
-                errorMessage = message
+        
+        try {
+            kotlinx.coroutines.withTimeout(3000) {
+                userViewModel.searchUsers(searchText) { success, userList, message ->
+                    if (success && userList != null) {
+                        android.util.Log.d("MessageScreen", "Search returned ${userList.size} users: ${userList.map { it.fullName }}")
+                        users = userList
+                        errorMessage = ""
+                    } else {
+                        android.util.Log.e("MessageScreen", "Search error: $message")
+                        errorMessage = message
+                    }
+                }
             }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            android.util.Log.e("MessageScreen", "Search timeout, keeping current users")
+            errorMessage = "Search timeout"
         }
     }
     
@@ -200,14 +184,17 @@ fun MessageScreen(){
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Loading users...", color = Gray)
                 }
-            } else if (errorMessage.isNotEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Error: $errorMessage", color = Color.Red)
-                }
             } else {
+                // Always show user list when not loading
+                if (errorMessage.isNotEmpty() && users.isEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Error: $errorMessage", color = Color.Red)
+                    }
+                }
+                
                 LazyColumn {
                     // "Me" entry for self-chat
                     item {
