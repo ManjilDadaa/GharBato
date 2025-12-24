@@ -100,6 +100,7 @@ fun ProfileScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(Color(0xFFF8F9FB))
                 .verticalScroll(rememberScrollState())
         ) {
@@ -325,7 +326,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
     }
 }
 
-// ✅ Updated SectionHeader to accept modifier
+
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
