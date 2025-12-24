@@ -21,5 +21,8 @@ interface UserRepo {
 
     fun forgotPassword(email: String, callback: (Boolean, String) -> Unit)
 
+    fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit)
+    
+    fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
 
 }
