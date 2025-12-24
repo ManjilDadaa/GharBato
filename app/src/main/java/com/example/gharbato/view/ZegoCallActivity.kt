@@ -151,6 +151,7 @@ class ZegoCallActivity : FragmentActivity() {
 // Call invitation listener to be added to Application class
 object CallInvitationManager {
     private var isListening = false
+    private var pendingInvitation: Map<String, Any>? = null
 
     fun startListening(context: android.content.Context) {
         if (isListening) return
@@ -162,7 +163,7 @@ object CallInvitationManager {
 
         callRef.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
             override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                val invitation = snapshot.getValue(Map::class.java) as? Map<String, Any>?
+                val invitation = snapshot.getValue(object : com.google.firebase.database.GenericTypeIndicator<Map<String, Any>>() {})
                 if (invitation != null) {
                     val callId = invitation["callId"] as? String ?: ""
                     val callerId = invitation["callerId"] as? String ?: ""
@@ -172,17 +173,25 @@ object CallInvitationManager {
                     // Remove the invitation after processing
                     callRef.removeValue()
 
-                    // Start incoming call activity
-                    val intent = ZegoCallActivity.newIntent(
-                        activity = context as android.app.Activity,
-                        callId = callId,
-                        userId = currentUserId,
-                        userName = "Me",
-                        isVideoCall = isVideoCall,
-                        targetUserId = callerId,
-                        isIncomingCall = true
-                    )
-                    context.startActivity(intent)
+                    // Store the invitation for later processing
+                    pendingInvitation = invitation
+                    
+                    // Try to start the call activity with a proper intent
+                    try {
+                        val intent = android.content.Intent(context, ZegoCallActivity::class.java).apply {
+                            putExtra(ZegoCallActivity.EXTRA_CALL_ID, callId)
+                            putExtra(ZegoCallActivity.EXTRA_USER_ID, currentUserId)
+                            putExtra(ZegoCallActivity.EXTRA_USER_NAME, "Me")
+                            putExtra(ZegoCallActivity.EXTRA_IS_VIDEO_CALL, isVideoCall)
+                            putExtra(ZegoCallActivity.EXTRA_TARGET_USER_ID, callerId)
+                            putExtra(ZegoCallActivity.EXTRA_IS_INCOMING_CALL, true)
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        // Handle case where context cannot start activity
+                        pendingInvitation = null
+                    }
                 }
             }
 
@@ -190,5 +199,11 @@ object CallInvitationManager {
                 // Handle error
             }
         })
+    }
+    
+    fun getPendingInvitation(): Map<String, Any>? {
+        val invitation = pendingInvitation
+        pendingInvitation = null
+        return invitation
     }
 }

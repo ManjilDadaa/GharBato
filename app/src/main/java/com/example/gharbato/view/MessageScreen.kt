@@ -90,14 +90,49 @@ fun MessageScreen(){
     
     // Load users using repository pattern
     LaunchedEffect(Unit) {
+        android.util.Log.d("MessageScreen", "Starting to fetch users...")
         userViewModel.getAllUsers { success, userList, message ->
+            android.util.Log.d("MessageScreen", "Fetch completed - success: $success, userList size: ${userList?.size}, message: $message")
             if (success && userList != null) {
                 android.util.Log.d("MessageScreen", "Fetched ${userList.size} users: ${userList.map { it.fullName }}")
                 users = userList
                 errorMessage = ""
+                
+                // If no users found, add sample users for testing
+                if (userList.isEmpty()) {
+                    android.util.Log.d("MessageScreen", "No users found, adding sample users for testing")
+                    users = listOf(
+                        UserModel(
+                            userId = "sample_user_1",
+                            email = "user1@example.com",
+                            fullName = "User One",
+                            phoneNo = "1234567890",
+                            selectedCountry = "US"
+                        ),
+                        UserModel(
+                            userId = "sample_user_2", 
+                            email = "user2@example.com",
+                            fullName = "User Two",
+                            phoneNo = "0987654321",
+                            selectedCountry = "UK"
+                        )
+                    )
+                    errorMessage = "Showing sample users (no real users found in database)"
+                }
             } else {
                 android.util.Log.e("MessageScreen", "Error fetching users: $message")
                 errorMessage = message
+                
+                // Add sample users even on error
+                users = listOf(
+                    UserModel(
+                        userId = "sample_user_1",
+                        email = "user1@example.com", 
+                        fullName = "User One",
+                        phoneNo = "1234567890",
+                        selectedCountry = "US"
+                    )
+                )
             }
             isLoading = false
         }
@@ -176,38 +211,56 @@ fun MessageScreen(){
                 LazyColumn {
                     // "Me" entry for self-chat
                     item {
+                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+                        val myId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
+                        val myName = auth.currentUser?.email ?: "Me"
+                        
                         MessageUserItem(
                             imageRes = R.drawable.outline_person_24,
-                            name = "Me"
-                        ) {
-                            val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-                            val myId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-                            val myName = auth.currentUser?.email ?: "Me"
-
-                            activity.startActivity(
-                                MessageDetailsActivity.newIntent(
-                                    activity = activity,
-                                    otherUserId = myId,
-                                    otherUserName = myName,
+                            name = "Me",
+                            userId = myId,
+                            userName = myName,
+                            onMessageClick = {
+                                activity.startActivity(
+                                    MessageDetailsActivity.newIntent(
+                                        activity = activity,
+                                        otherUserId = myId,
+                                        otherUserName = myName,
+                                    )
                                 )
-                            )
-                        }
+                            },
+                            onVideoCallClick = {
+                                startVideoCall(activity, myId, myName)
+                            },
+                            onVoiceCallClick = {
+                                startVoiceCall(activity, myId, myName)
+                            }
+                        )
                     }
                     
                     // Firebase users
                     items(users) { user ->
                         MessageUserItem(
                             imageRes = R.drawable.outline_person_24,
-                            name = user.fullName.ifBlank { user.email }
-                        ) {
-                            activity.startActivity(
-                                MessageDetailsActivity.newIntent(
-                                    activity = activity,
-                                    otherUserId = user.userId,
-                                    otherUserName = user.fullName.ifBlank { user.email },
+                            name = user.fullName.ifBlank { user.email },
+                            userId = user.userId,
+                            userName = user.fullName.ifBlank { user.email },
+                            onMessageClick = {
+                                activity.startActivity(
+                                    MessageDetailsActivity.newIntent(
+                                        activity = activity,
+                                        otherUserId = user.userId,
+                                        otherUserName = user.fullName.ifBlank { user.email },
+                                    )
                                 )
-                            )
-                        }
+                            },
+                            onVideoCallClick = {
+                                startVideoCall(activity, user.userId, user.fullName.ifBlank { user.email })
+                            },
+                            onVoiceCallClick = {
+                                startVoiceCall(activity, user.userId, user.fullName.ifBlank { user.email })
+                            }
+                        )
                     }
                 }
             }
@@ -219,12 +272,16 @@ fun MessageScreen(){
 fun MessageUserItem(
     imageRes : Int,
     name : String,
-    onclick: () -> Unit
+    userId: String,
+    userName: String,
+    onMessageClick: () -> Unit,
+    onVideoCallClick: () -> Unit,
+    onVoiceCallClick: () -> Unit
 
 ){
     Row (
         modifier = Modifier.fillMaxWidth()
-            .clickable(onClick = onclick)
+            .clickable(onClick = onMessageClick)
             .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
     ){
@@ -236,7 +293,7 @@ fun MessageUserItem(
 
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Column (modifier = Modifier.fillMaxWidth()
+        Column (modifier = Modifier.weight(1f)
            ) {
             Text(
                 text = name,
@@ -251,6 +308,29 @@ fun MessageUserItem(
             )
 
         }
+        
+        // Call buttons
+        Row {
+            // Voice call button
+            Icon(
+                painter = painterResource(R.drawable.outline_call_24),
+                contentDescription = "Voice Call",
+                modifier = Modifier.size(24.dp)
+                    .clickable(onClick = onVoiceCallClick)
+                    .padding(4.dp),
+                tint = Blue
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            // Video call button
+            Icon(
+                painter = painterResource(R.drawable.outline_videocam_24),
+                contentDescription = "Video Call",
+                modifier = Modifier.size(24.dp)
+                    .clickable(onClick = onVideoCallClick)
+                    .padding(4.dp),
+                tint = Blue
+            )
+        }
     }
 }
 
@@ -260,6 +340,45 @@ fun MessageUserItem(
 
 
 
+
+// Helper functions for starting calls
+private fun startVideoCall(activity: Activity, targetUserId: String, targetUserName: String) {
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
+    val currentUserName = auth.currentUser?.email ?: "Me"
+    
+    val callId = "call_${System.currentTimeMillis()}"
+    
+    val intent = ZegoCallActivity.newIntent(
+        activity = activity,
+        callId = callId,
+        userId = currentUserId,
+        userName = currentUserName,
+        isVideoCall = true,
+        targetUserId = targetUserId,
+        isIncomingCall = false
+    )
+    activity.startActivity(intent)
+}
+
+private fun startVoiceCall(activity: Activity, targetUserId: String, targetUserName: String) {
+    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
+    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
+    val currentUserName = auth.currentUser?.email ?: "Me"
+    
+    val callId = "call_${System.currentTimeMillis()}"
+    
+    val intent = ZegoCallActivity.newIntent(
+        activity = activity,
+        callId = callId,
+        userId = currentUserId,
+        userName = currentUserName,
+        isVideoCall = false,
+        targetUserId = targetUserId,
+        isIncomingCall = false
+    )
+    activity.startActivity(intent)
+}
 
 @Preview(showBackground = true)
 @Composable
