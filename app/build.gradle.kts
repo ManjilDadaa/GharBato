@@ -140,6 +140,9 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
     implementation("com.google.maps.android:maps-compose:4.4.1")
     implementation("io.coil-kt:coil-compose:2.4.0")
+//    // for PhoneAuth
+    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
+    implementation("com.google.firebase:firebase-auth")
 
     implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
     implementation("androidx.fragment:fragment-ktx:1.8.5")

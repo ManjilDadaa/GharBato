@@ -109,26 +109,26 @@ fun validatePassword(password: String): PasswordValidation {
 }
 
 // Get max phone length based on country code
-fun getMaxPhoneLength(countryCode: String): Int {
-    return when (countryCode.lowercase()) {
-        "np" -> 10  // Nepal
-        "in" -> 10  // India
-        "us", "ca" -> 10  // USA, Canada
-        "gb" -> 11  // UK
-        "au" -> 10  // Australia
-        "cn" -> 11  // China
-        "br" -> 11  // Brazil
-        "de", "fr" -> 10  // Germany, France
-        "jp" -> 11  // Japan
-        "my" -> 11  // Malaysia
-        "sg" -> 8   // Singapore
-        "ae" -> 9   // UAE
-        "sa" -> 9   // Saudi Arabia
-        "pk" -> 10  // Pakistan
-        "bd" -> 11  // Bangladesh
-        else -> 15  // Default max length
-    }
-}
+//fun getMaxPhoneLength(countryCode: String): Int {
+//    return when (countryCode.lowercase()) {
+//        "np" -> 10  // Nepal
+//        "in" -> 10  // India
+//        "us", "ca" -> 10  // USA, Canada
+//        "gb" -> 11  // UK
+//        "au" -> 10  // Australia
+//        "cn" -> 11  // China
+//        "br" -> 11  // Brazil
+//        "de", "fr" -> 10  // Germany, France
+//        "jp" -> 11  // Japan
+//        "my" -> 11  // Malaysia
+//        "sg" -> 8   // Singapore
+//        "ae" -> 9   // UAE
+//        "sa" -> 9   // Saudi Arabia
+//        "pk" -> 10  // Pakistan
+//        "bd" -> 11  // Bangladesh
+//        else -> 15  // Default max length
+//    }
+//}
 
 @Composable
 fun PasswordRequirementItem(text: String, isMet: Boolean) {
@@ -162,7 +162,7 @@ fun SignUpBody() {
 
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var phoneNo by remember { mutableStateOf("") }
+//    var phoneNo by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passVisibility by remember { mutableStateOf(false) }
@@ -172,8 +172,8 @@ fun SignUpBody() {
     var showPasswordRequirements by remember { mutableStateOf(false) }
 
     // Phone validation states
-    var selectedCountry by remember { mutableStateOf("Nepal") }
-    var maxPhoneLength by remember { mutableStateOf(10) }
+//    var selectedCountry by remember { mutableStateOf("Nepal") }
+//    var maxPhoneLength by remember { mutableStateOf(10) }
 
     val context = LocalContext.current
     val activity = context as Activity
@@ -275,47 +275,62 @@ fun SignUpBody() {
                         }
                     )
 
-                    Text(
-                        "Phone Number",
-                        style = TextStyle(fontSize = 15.sp, color = Color.DarkGray),
-                        modifier = Modifier.padding(start = 20.dp, top = 15.dp)
-                    )
-
-                    CountryPickerOutlinedTextField(
-                        mobileNumber = phoneNo,
-                        onMobileNumberChange = { data ->
-                            // Only allow digits and restrict to max length
-                            val digitsOnly = data.filter { it.isDigit() }
-                            if (digitsOnly.length <= maxPhoneLength) {
-                                phoneNo = digitsOnly
-                            }
-                        },
-                        countryListDisplayType = CountryListDisplayType.BottomSheet,
-                        onCountrySelected = { country ->
-                            selectedCountry = country.countryName
-                            maxPhoneLength = getMaxPhoneLength(country.countryCode)
-
-                            // Trim phone number if it exceeds new max length
-                            if (phoneNo.length > maxPhoneLength) {
-                                phoneNo = phoneNo.take(maxPhoneLength)
-                            }
-                        },
-                        defaultCountryCode = "np",
-                        colors = TextFieldDefaults.colors(
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Blue
-                        ),
-                        placeholder = {
-                            Text("Enter phone number")
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
-                            .height(56.dp),
-                        singleLine = true,
-                        shape = RoundedCornerShape(5.dp),
-                    )
+//                    Text(
+//                        "Phone Number",
+//                        style = TextStyle(fontSize = 15.sp, color = Color.DarkGray),
+//                        modifier = Modifier.padding(start = 20.dp, top = 15.dp)
+//                    )
+//
+//                    CountryPickerOutlinedTextField(
+//                        mobileNumber = phoneNo,
+//                        onMobileNumberChange = { data ->
+//                            // Only allow digits and restrict to max length
+//                            val digitsOnly = data.filter { it.isDigit() }
+//                            if (digitsOnly.length <= maxPhoneLength) {
+//                                phoneNo = digitsOnly
+//                            }
+//                        },
+//                        countryListDisplayType = CountryListDisplayType.BottomSheet,
+//                        onCountrySelected = { country ->
+//                            selectedCountry = country.countryName
+//                            maxPhoneLength = getMaxPhoneLength(country.countryCode)
+//
+//                            // Trim phone number if it exceeds new max length
+//                            if (phoneNo.length > maxPhoneLength) {
+//                                phoneNo = phoneNo.take(maxPhoneLength)
+//                            }
+//                        },
+//                        defaultCountryCode = "np",
+//                        colors = TextFieldDefaults.colors(
+//                            unfocusedContainerColor = Color.Transparent,
+//                            focusedContainerColor = Color.Transparent,
+//                            focusedIndicatorColor = Blue
+//                        ),
+//                        placeholder = {
+//                            Text("Enter phone number")
+//                        },
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(start = 20.dp, end = 20.dp, top = 8.dp)
+//                            .height(56.dp),
+//                        singleLine = true,
+//                        shape = RoundedCornerShape(5.dp),
+//                    )
+//
+//                    Button(onClick = {
+//                        userViewModel.sendOtp(phoneNo, activity) {
+//                            success, message, verificationId ->
+//                            if (success) {
+//                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+//                                val intent = Intent(context, OTPVerificationActivity::class.java)
+//                                context.startActivity(intent)
+//                            } else {
+//                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+//                            }
+//                        }
+//                    }) {
+//                        Text("Request OTP")
+//                    }
 
                     Text(
                         "Password",
@@ -497,12 +512,12 @@ fun SignUpBody() {
                                 !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
                                     Toast.makeText(context, "Please enter a valid email", Toast.LENGTH_SHORT).show()
                                 }
-                                phoneNo.isBlank() -> {
-                                    Toast.makeText(context, "Please enter your phone number", Toast.LENGTH_SHORT).show()
-                                }
-                                phoneNo.length < 8 -> {
-                                    Toast.makeText(context, "Phone number is too short", Toast.LENGTH_SHORT).show()
-                                }
+//                                phoneNo.isBlank() -> {
+//                                    Toast.makeText(context, "Please enter your phone number", Toast.LENGTH_SHORT).show()
+//                                }
+//                                phoneNo.length < 8 -> {
+//                                    Toast.makeText(context, "Phone number is too short", Toast.LENGTH_SHORT).show()
+//                                }
                                 password.isBlank() -> {
                                     Toast.makeText(context, "Please enter a password", Toast.LENGTH_SHORT).show()
                                 }
@@ -524,16 +539,16 @@ fun SignUpBody() {
                                         email,
                                         password,
                                         fullname,
-                                        phoneNo,
-                                        selectedCountry
+//                                        phoneNo,
+//                                        selectedCountry
                                     ) { success, message, userId ->
                                         if (success) {
                                             val model = UserModel(
                                                 userId = userId,
                                                 email = email,
-                                                phoneNo = phoneNo,
+//                                                phoneNo = phoneNo,
                                                 fullName = fullname,
-                                                selectedCountry = selectedCountry
+//                                                selectedCountry = selectedCountry
                                             )
                                             userViewModel.addUserToDatabase(
                                                 userId,

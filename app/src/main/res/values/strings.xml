@@ -9,4 +9,5 @@
     <string name="title_activity_property_detail">PropertyDetailActivity</string>
     <string name="title_activity_full_map">FullMapActivity</string>
     <string name="sdk_location">/Users/bishowdip/Library/Android/sdk</string>
+    <string name="title_activity_otpverification">OTPVerificationActivity</string>
 </resources>
