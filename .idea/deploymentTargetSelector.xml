@@ -5,20 +5,28 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity (4)">
+      <SelectionState runConfigName="TrustAndVerificationActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity (5)">
+      <SelectionState runConfigName="TrustAndVerificationActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="MessageScreenActivity">
+      <SelectionState runConfigName="ProfileScreenActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="MessageScreenActivity (1)">
+      <SelectionState runConfigName="MyActivitiesActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="MessageScreenActivity (2)">
+      <SelectionState runConfigName="MyActivitiesActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
+        <DropdownSelection timestamp="2025-12-23T14:33:31.767741100Z">
+          <Target type="DEFAULT_BOOT">
+            <handle>
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\Admin\.android\avd\Pixel_7_Pro.avd" />
+            </handle>
+          </Target>
+        </DropdownSelection>
+        <DialogSelection />
       </SelectionState>
     </selectionStates>
   </component>

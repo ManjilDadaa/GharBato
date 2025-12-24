@@ -90,6 +90,9 @@
         <activity
             android:name=".view.ForgotActivity"
             android:exported="true"
+            android:theme="@style/Theme.GharBato" /><activity
+            android:name=".view.MyActivitiesActivity"
+            android:exported="true"
             android:theme="@style/Theme.GharBato" />
 
         <activity
@@ -124,12 +127,16 @@
         <activity
             android:name=".view.ProfileScreenActivity"
             android:exported="true"
+            android:theme="@style/Theme.GharBato" /><activity
+            android:name=".view.TrustAndVerificationActivity"
+            android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
             android:name=".view.EditProfileActivity"
             android:exported="true"
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
+
 
     </application>
 

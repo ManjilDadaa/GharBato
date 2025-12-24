@@ -72,6 +72,7 @@ fun HomeScreen() {
     val context = LocalContext.current
     val activity = context as Activity
     Scaffold(
+        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
@@ -106,7 +107,7 @@ fun HomeScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FB))
-                .padding(padding),
+                .padding(top = padding.calculateTopPadding()),
         ) {
             item {
                 OutlinedTextField(
@@ -187,9 +188,7 @@ fun HomeScreen() {
                 }
             }
             items(properties) { property ->
-                PropertyCard(property = property, onClick = {})
-
-
+                PropertyCard(property = property, onClick = {}, onFavoriteClick = {})
             }
         }
     }

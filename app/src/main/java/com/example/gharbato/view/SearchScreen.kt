@@ -32,6 +32,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepositoryImpl
+import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.view.CustomMarkerHelper
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -42,7 +43,10 @@ import com.google.maps.android.compose.*
 @Composable
 fun SearchScreen(
     viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(PropertyRepositoryImpl())
+        factory = PropertyViewModelFactory(
+            PropertyRepositoryImpl(),
+            SavedPropertiesRepositoryImpl()
+        )
     )
 ) {
     val context = LocalContext.current
@@ -70,11 +74,10 @@ fun SearchScreen(
                 onSearchQueryChange = { viewModel.updateSearchQuery(it) }
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -170,12 +173,15 @@ fun SearchScreen(
                             val intent = Intent(context, PropertyDetailActivity::class.java)
                             intent.putExtra("propertyId", property.id)
                             context.startActivity(intent)
+                        },
+                        onFavoriteClick = { property ->
+                            viewModel.toggleFavorite(property)
                         }
                     )
                 }
             }
 
-            // Save Search Button
+            // Save Search Button (outside Column, inside Box)
             if (!isMapFullScreen && mapHeight > 0.dp && uiState.selectedProperty == null) {
                 Button(
                     onClick = { /* Handle save */ },
@@ -219,69 +225,70 @@ fun MapSection(
         )
     }
 
-    GoogleMap(
-        modifier = Modifier
-            .fillMaxSize()
-            .clickable { onMapClick() },
-        cameraPositionState = cameraPositionState,
-        uiSettings = MapUiSettings(
-            zoomControlsEnabled = false,
-            myLocationButtonEnabled = false,
-            mapToolbarEnabled = false
-        )
-    ) {
-        properties.forEach { property ->
-            Marker(
-                state = MarkerState(position = property.latLng),
-                title = property.price,
-                snippet = property.location,
-                icon = CustomMarkerHelper.createPriceMarker(context, property.price),
+    Box(modifier = Modifier.fillMaxSize()) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                mapToolbarEnabled = false
+            )
+        ) {
+            properties.forEach { property ->
+                Marker(
+                    state = MarkerState(position = property.latLng),
+                    title = property.price,
+                    snippet = property.location,
+                    icon = CustomMarkerHelper.createPriceMarker(context, property.price),
+                    onClick = {
+                        onMarkerClick(property)
+                        true
+                    }
+                )
+            }
+        }
+
+        // Zoom Controls
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(16.dp)
+                .zIndex(1f)
+        ) {
+            FloatingActionButton(
                 onClick = {
-                    onMarkerClick(property)
-                    true
-                }
-            )
-        }
-    }
-
-    // Zoom Controls
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .zIndex(1f)
-    ) {
-        FloatingActionButton(
-            onClick = {
-                cameraPositionState.move(
-                    com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                    cameraPositionState.move(
+                        com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                    )
+                },
+                modifier = Modifier.size(40.dp),
+                containerColor = Color.White
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Zoom In",
+                    tint = Color.Black
                 )
-            },
-            modifier = Modifier.size(40.dp),
-            containerColor = Color.White
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Zoom In",
-                tint = Color.Black
-            )
-        }
+            }
 
-        Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-        FloatingActionButton(
-            onClick = {
-                cameraPositionState.move(
-                    com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+            FloatingActionButton(
+                onClick = {
+                    cameraPositionState.move(
+                        com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                    )
+                },
+                modifier = Modifier.size(40.dp),
+                containerColor = Color.White
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = "Zoom Out",
+                    tint = Color.Black
                 )
-            },
-            modifier = Modifier.size(40.dp),
-            containerColor = Color.White
-        ) {
-            Icon(
-                imageVector = Icons.Default.Remove,
-                contentDescription = "Zoom Out",
-                tint = Color.Black
-            )
+            }
         }
     }
 }
@@ -461,7 +468,8 @@ fun FilterChipsSection(
 fun PropertyList(
     properties: List<PropertyModel>,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    onPropertyClick: (PropertyModel) -> Unit
+    onPropertyClick: (PropertyModel) -> Unit,
+    onFavoriteClick: (PropertyModel) -> Unit
 ) {
     LazyColumn(
         state = listState,
@@ -471,7 +479,8 @@ fun PropertyList(
         items(properties) { property ->
             PropertyCard(
                 property = property,
-                onClick = { onPropertyClick(property) }
+                onClick = { onPropertyClick(property) },
+                onFavoriteClick = { onFavoriteClick(property) }
             )
         }
     }
@@ -480,7 +489,8 @@ fun PropertyList(
 @Composable
 fun PropertyCard(
     property: PropertyModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onFavoriteClick: (PropertyModel) -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -492,6 +502,7 @@ fun PropertyCard(
     ) {
         Column {
             Box {
+                // Property Image
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
                     contentDescription = property.title,
@@ -501,43 +512,55 @@ fun PropertyCard(
                     contentScale = ContentScale.Crop
                 )
 
+                // Top Action Buttons (Favorite & More)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
+                    // Favorite Button
                     IconButton(
-                        onClick = { /* Handle favorite */ },
+                        onClick = { onFavoriteClick(property) },
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.FavoriteBorder,
-                            contentDescription = "Favorite",
-                            tint = Color.Gray,
+                            imageVector = if (property.isFavorite) {
+                                Icons.Default.Favorite
+                            } else {
+                                Icons.Default.FavoriteBorder
+                            },
+                            contentDescription = if (property.isFavorite) {
+                                "Remove from favorites"
+                            } else {
+                                "Add to favorites"
+                            },
+                            tint = if (property.isFavorite) Color.Red else Color.Gray,
                             modifier = Modifier.size(20.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
+                    // More Options Button
                     IconButton(
-                        onClick = { /* Handle more */ },
+                        onClick = { /* Handle more options */ },
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More",
+                            contentDescription = "More options",
                             tint = Color.Gray,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                 }
 
+                // Property Stats Overlay (Bottom Left)
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -548,6 +571,7 @@ fun PropertyCard(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Square Feet
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = null,
@@ -564,6 +588,7 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
+                    // Bedrooms
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
@@ -580,6 +605,7 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
+                    // Bathrooms
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
@@ -596,12 +622,14 @@ fun PropertyCard(
                 }
             }
 
+            // Property Details Section
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
+                    // Property Information
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = property.developer,
@@ -617,6 +645,7 @@ fun PropertyCard(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Price
                         Text(
                             text = property.price,
                             fontSize = 18.sp,
@@ -624,6 +653,7 @@ fun PropertyCard(
                             color = Color(0xFF4CAF50)
                         )
 
+                        // Location
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(top = 4.dp)
@@ -643,6 +673,7 @@ fun PropertyCard(
                         }
                     }
 
+                    // Chat Button
                     Surface(
                         shape = CircleShape,
                         color = Color(0xFF4CAF50),

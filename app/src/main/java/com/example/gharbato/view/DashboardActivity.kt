@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.Interaction
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -68,8 +70,6 @@ fun DashboardBody(){
 
     val context = LocalContext.current
     val activity = context as Activity
-    // topAppBar scroll behavior
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     //Bottom NavigationBar data class and its requirements
     data class NavItem(val label : String, val icon : Int)
@@ -80,7 +80,7 @@ fun DashboardBody(){
         NavItem("Search", R.drawable.outline_search_24),
         NavItem("Messages", R.drawable.round_message_24),
         NavItem("Saved", R.drawable.outline_favorite_border_24),
-        NavItem("Person", R.drawable.outline_person_24)
+        NavItem("Profile", R.drawable.outline_person_24)
     )
     Scaffold(
         containerColor = Color.White,
@@ -91,11 +91,6 @@ fun DashboardBody(){
 
             ) {
                 listNav.forEachIndexed { index, item ->
-                    val borderWidth by animateDpAsState(
-                        targetValue = if (selectedIndex == index) 2.dp else 0.dp,
-                        animationSpec = tween(durationMillis = 300),
-                        label = "border_animation_$index"
-                    )
                     NavigationBarItem(
                         icon = {
                             Icon(painter = painterResource(item.icon),
@@ -113,8 +108,6 @@ fun DashboardBody(){
                             selectedIconColor = Blue,
                             selectedTextColor = Blue,
                             indicatorColor = Color.Transparent,
-//                            unselectedIconColor = unselectedColor,
-//                            unselectedTextColor = unselectedColor
                         ),
                         interactionSource = remember { NoRippleInteractionSource() }
 
@@ -126,7 +119,7 @@ fun DashboardBody(){
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(bottom = padding.calculateBottomPadding())
         ) {
             when(selectedIndex){
                 0 -> HomeScreen()

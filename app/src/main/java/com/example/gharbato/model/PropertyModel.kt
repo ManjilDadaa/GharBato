@@ -17,7 +17,8 @@ data class PropertyModel(
     val floor: String = "3rd Floor",
     val furnishing: String = "Fully Furnished",
     val parking: Boolean = true,
-    val petsAllowed: Boolean = false
+    val petsAllowed: Boolean = false,
+    var isFavorite: Boolean = false
 )
 
 
