@@ -100,6 +100,7 @@ fun ProfileScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(padding)
                 .background(Color(0xFFF8F9FB))
                 .verticalScroll(rememberScrollState())
         ) {
