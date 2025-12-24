@@ -325,7 +325,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
     }
 }
 
-// ✅ Updated SectionHeader to accept modifier
+
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
