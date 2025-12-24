@@ -13,7 +13,20 @@
           "package_name": "com.example.gharbato"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1054227769178-v93vtm0g5olb0orsvjhgl68c6n5dclgq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.gharbato",
+            "certificate_hash": "a719076c113080e5f772be6e9a3cabcd9010324d"
+          }
+        },
+        {
+          "client_id": "1054227769178-furvftv3akb1g2potb97htd6s2ot9kqv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBbLotI631680JpjYQodXuj62puEhheVJ4"
@@ -21,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1054227769178-furvftv3akb1g2potb97htd6s2ot9kqv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
