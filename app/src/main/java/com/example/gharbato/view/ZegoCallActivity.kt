@@ -59,6 +59,7 @@ class ZegoCallActivity : FragmentActivity() {
             return
         }
 
+        // Set up the container first
         val containerId = View.generateViewId()
         val container = FrameLayout(this).apply {
             id = containerId
@@ -69,6 +70,21 @@ class ZegoCallActivity : FragmentActivity() {
         }
         setContentView(container)
 
+        // Add a delay to ensure the activity is fully created before initializing Zego
+        container.post {
+            initializeCall(containerId, callId, userId, userName, isVideoCall, targetUserId, isIncomingCall)
+        }
+    }
+
+    private fun initializeCall(
+        containerId: Int,
+        callId: String,
+        userId: String,
+        userName: String,
+        isVideoCall: Boolean,
+        targetUserId: String,
+        isIncomingCall: Boolean
+    ) {
         try {
             val config = if (isVideoCall) {
                 ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
@@ -170,13 +186,10 @@ object CallInvitationManager {
                     val callerName = invitation["callerName"] as? String ?: "Unknown"
                     val isVideoCall = invitation["isVideoCall"] as? Boolean ?: true
 
-                    // Remove the invitation after processing
-                    callRef.removeValue()
-
-                    // Store the invitation for later processing
+                    // Store the invitation first before removing
                     pendingInvitation = invitation
                     
-                    // Try to start the call activity with a proper intent
+                    // Try to start the call activity with proper intent
                     try {
                         val intent = android.content.Intent(context, ZegoCallActivity::class.java).apply {
                             putExtra(ZegoCallActivity.EXTRA_CALL_ID, callId)
@@ -186,11 +199,18 @@ object CallInvitationManager {
                             putExtra(ZegoCallActivity.EXTRA_TARGET_USER_ID, callerId)
                             putExtra(ZegoCallActivity.EXTRA_IS_INCOMING_CALL, true)
                             addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                            addFlags(android.content.Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT)
                         }
                         context.startActivity(intent)
+                        
+                        // Remove the invitation only after successfully starting activity
+                        callRef.removeValue()
                     } catch (e: Exception) {
                         // Handle case where context cannot start activity
                         pendingInvitation = null
+                        // Remove the invitation to prevent repeated attempts
+                        callRef.removeValue()
                     }
                 }
             }
