@@ -9,7 +9,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -28,11 +27,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -60,7 +57,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
@@ -77,9 +73,6 @@ import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.runtime.LaunchedEffect
 
 
 class SignUpActivity : ComponentActivity() {
@@ -152,6 +145,7 @@ fun SignUpBody() {
     val context = LocalContext.current
     val activity = context as Activity
     val listState = rememberLazyListState()
+
     // Basic fields
     var fullname by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -172,10 +166,6 @@ fun SignUpBody() {
     var isOtpSent by remember { mutableStateOf(false) }
     var isPhoneVerified by remember { mutableStateOf(false) }
 
-    // Email verification fields
-    var isEmailVerificationSent by remember { mutableStateOf(false) }
-    var isCheckingEmail by remember { mutableStateOf(false) }
-
     // Validation states
     var passwordValidation by remember { mutableStateOf(PasswordValidation()) }
     var showPasswordRequirements by remember { mutableStateOf(false) }
@@ -183,16 +173,6 @@ fun SignUpBody() {
 
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-
-
-    LaunchedEffect(isEmailVerificationSent) {
-        if (isEmailVerificationSent) {
-            bringIntoViewRequester.bringIntoView()
-        }
-    }
-
 
     Scaffold(
         containerColor = Color.White,
@@ -278,7 +258,6 @@ fun SignUpBody() {
                         countryListDisplayType = CountryListDisplayType.BottomSheet,
                         onCountrySelected = { country ->
                             selectedCountry = country.countryName
-                            // Extract country code from dial code (remove the + prefix)
                             selectedCountryCode = country.countryPhoneNumberCode.removePrefix("+")
                             maxPhoneLength = getMaxPhoneLength(country.countryCode)
                             if (phoneNo.length > maxPhoneLength) {
@@ -528,18 +507,27 @@ fun SignUpBody() {
                                                     selectedCountry = selectedCountry
                                                 )
                                                 userViewModel.addUserToDatabase(userId, model) { dbSuccess, dbMessage ->
-                                                    isLoading = false
                                                     if (dbSuccess) {
-                                                        // Send email verification and show verification section
+                                                        // Send email verification
                                                         userViewModel.sendEmailVerification { emailSent, emailMsg ->
+                                                            isLoading = false
                                                             if (emailSent) {
-                                                                isEmailVerificationSent = true
-                                                                Toast.makeText(context, "Account created! Please verify your email.", Toast.LENGTH_LONG).show()
+                                                                Toast.makeText(
+                                                                    context,
+                                                                    "Account created! Please verify your email.",
+                                                                    Toast.LENGTH_SHORT
+                                                                ).show()
+                                                                // Redirect to Email Verification Activity
+                                                                val intent = Intent(context, EmailVerificationActivity::class.java)
+                                                                intent.putExtra("USER_EMAIL", email)
+                                                                context.startActivity(intent)
+                                                                activity.finish()
                                                             } else {
                                                                 Toast.makeText(context, emailMsg, Toast.LENGTH_SHORT).show()
                                                             }
                                                         }
                                                     } else {
+                                                        isLoading = false
                                                         Toast.makeText(context, dbMessage, Toast.LENGTH_LONG).show()
                                                     }
                                                 }
@@ -567,130 +555,22 @@ fun SignUpBody() {
                             }
                         }
 
-                        // Email Verification Section (shown after account creation)
-                        if (isEmailVerificationSent) {
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(20.dp)
-                                .bringIntoViewRequester(bringIntoViewRequester),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                                Icon(
-                                    painterResource(R.drawable.outline_email_24),
-                                    null,
-                                    tint = Blue,
-                                    modifier = Modifier.size(48.dp)
-                                )
-
-                                Spacer(Modifier.height(16.dp))
-
-                                Text(
-                                    "Verify Your Email",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                Spacer(Modifier.height(8.dp))
-
-                                Text(
-                                    "We've sent a verification link to",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray,
-                                    textAlign = TextAlign.Center
-                                )
-
-                                Text(
-                                    email,
-                                    fontSize = 14.sp,
-                                    color = Blue,
-                                    fontWeight = FontWeight.Medium
-                                )
-
-                                Spacer(Modifier.height(16.dp))
-
-                                Text(
-                                    "Click the link in your email to verify your account",
-                                    fontSize = 13.sp,
-                                    color = Color.Gray,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 20.dp)
-                                )
-
-                                Spacer(Modifier.height(24.dp))
-
-                                // Check Verification Button
-                                Button(
-                                    onClick = {
-                                        isCheckingEmail = true
-                                        userViewModel.checkEmailVerified { isVerified ->
-                                            isCheckingEmail = false
-                                            if (isVerified) {
-                                                Toast.makeText(context, "Email verified! ✓", Toast.LENGTH_SHORT).show()
-                                                context.startActivity(Intent(context, LoginActivity::class.java))
-                                                activity.finish()
-                                            } else {
-                                                Toast.makeText(context, "Email not verified yet. Check your inbox.", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    },
-                                    enabled = !isCheckingEmail,
-                                    modifier = Modifier.fillMaxWidth().height(45.dp),
-                                    shape = RoundedCornerShape(5.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
-                                ) {
-                                    if (isCheckingEmail) {
-                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                                    } else {
-                                        Text("I've Verified My Email", fontSize = 16.sp)
-                                    }
+                        // Already have account
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("Already have an account?", fontSize = 15.sp, color = Color.DarkGray)
+                            Spacer(Modifier.width(7.dp))
+                            Text(
+                                "Sign in",
+                                fontSize = 15.sp,
+                                color = Blue,
+                                modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+                                    context.startActivity(Intent(context, LoginActivity::class.java))
+                                    activity.finish()
                                 }
-
-                                Spacer(Modifier.height(12.dp))
-
-                                // Resend Email
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Text("Didn't receive email?", color = Color.Gray, fontSize = 14.sp)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        "Resend",
-                                        color = Blue,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.clickable {
-                                            userViewModel.sendEmailVerification { sent, msg ->
-                                                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                            }
-                                        }
-                                    )
-                                }
-
-                                Spacer(Modifier.height(12.dp))
-
-                            }
-                        }
-
-                        // Already have account (only show if email verification not sent)
-                        if (!isEmailVerificationSent) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 20.dp),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text("Already have an account?", fontSize = 15.sp, color = Color.DarkGray)
-                                Spacer(Modifier.width(7.dp))
-                                Text(
-                                    "Sign in",
-                                    fontSize = 15.sp,
-                                    color = Blue,
-                                    modifier = Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
-                                        context.startActivity(Intent(context, LoginActivity::class.java))
-                                        activity.finish()
-                                    }
-                                )
-                            }
+                            )
                         }
                     }
                 }
