@@ -334,7 +334,8 @@ private fun startVideoCall(activity: Activity, targetUserId: String, targetUserN
     val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
     val currentUserName = auth.currentUser?.email ?: "Me"
     
-    val callId = "call_${System.currentTimeMillis()}"
+    // Use current user ID as room ID for direct call
+    val callId = currentUserId
     
     val intent = ZegoCallActivity.newIntent(
         activity = activity,
@@ -342,7 +343,7 @@ private fun startVideoCall(activity: Activity, targetUserId: String, targetUserN
         userId = currentUserId,
         userName = currentUserName,
         isVideoCall = true,
-        targetUserId = targetUserId,
+        targetUserId = "", // Not needed for direct ZegoCloud
         isIncomingCall = false
     )
     activity.startActivity(intent)
@@ -353,7 +354,8 @@ private fun startVoiceCall(activity: Activity, targetUserId: String, targetUserN
     val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
     val currentUserName = auth.currentUser?.email ?: "Me"
     
-    val callId = "call_${System.currentTimeMillis()}"
+    // Use current user ID as room ID for direct call
+    val callId = currentUserId
     
     val intent = ZegoCallActivity.newIntent(
         activity = activity,
@@ -361,7 +363,7 @@ private fun startVoiceCall(activity: Activity, targetUserId: String, targetUserN
         userId = currentUserId,
         userName = currentUserName,
         isVideoCall = false,
-        targetUserId = targetUserId,
+        targetUserId = "", // Not needed for direct ZegoCloud
         isIncomingCall = false
     )
     activity.startActivity(intent)
