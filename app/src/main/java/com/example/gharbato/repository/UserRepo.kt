@@ -34,8 +34,12 @@ interface UserRepo {
                   callback: (Boolean, String) -> Unit
     )
 
+    fun sendEmailVerification(callback: (Boolean, String) -> Unit)
+
+    fun checkEmailVerified(callback: (Boolean) -> Unit)
+
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit)
-    
+
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
 
 }

@@ -50,6 +50,15 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
             callback(success, message)
         }
     }
+    fun sendEmailVerification(callback: (Boolean, String) -> Unit){
+        repo.sendEmailVerification(callback)
+    }
+    fun checkEmailVerified(callback: (Boolean) -> Unit){
+        repo.checkEmailVerified(callback)
+    }
+
+
+
 
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit){
         repo.getAllUsers(callback)

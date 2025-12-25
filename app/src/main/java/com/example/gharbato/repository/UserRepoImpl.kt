@@ -11,33 +11,31 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
-
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import java.util.concurrent.TimeUnit
 
-class UserRepoImpl : UserRepo{
+class UserRepoImpl : UserRepo {
 
-    val auth : FirebaseAuth = FirebaseAuth.getInstance()
-    val database : FirebaseDatabase = FirebaseDatabase.getInstance()
-    val ref : DatabaseReference = database.getReference("Users")
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+    val ref: DatabaseReference = database.getReference("Users")
 
     override fun login(
         email: String,
         password: String,
         callback: (Boolean, String) -> Unit
     ) {
-        auth.signInWithEmailAndPassword(email,password)
+        auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener {
-                if (it.isSuccessful){
-                    callback(true,"Login Successful")
-                }
-                else{
+                if (it.isSuccessful) {
+                    callback(true, "Login Successful")
+                } else {
                     val exception = it.exception
-                    when(exception){
+                    when (exception) {
                         is FirebaseAuthInvalidUserException -> {
-                            callback(false,it.exception?.message.toString())
+                            callback(false, it.exception?.message.toString())
                         }
                         is FirebaseAuthInvalidCredentialsException -> {
                             callback(false, "Invalid email or password")
@@ -51,18 +49,15 @@ class UserRepoImpl : UserRepo{
     override fun signUp(
         email: String,
         password: String,
-        fullName : String,
-        phoneNo: String,
-        country : String,
+        fullName: String,
         callback: (Boolean, String, String) -> Unit
     ) {
-        auth.createUserWithEmailAndPassword(email,password)
+        auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener {
-                if (it.isSuccessful){
-                    callback(true,"Registration Successful", "${auth.currentUser?.uid}")
-                }
-                else{
-                    callback(false, "${it.exception?.message}","" )
+                if (it.isSuccessful) {
+                    callback(true, "Registration Successful", "${auth.currentUser?.uid}")
+                } else {
+                    callback(false, "${it.exception?.message}", "")
                 }
             }
     }
@@ -73,11 +68,10 @@ class UserRepoImpl : UserRepo{
         callback: (Boolean, String) -> Unit
     ) {
         ref.child(userId).setValue(model).addOnCompleteListener {
-            if (it.isSuccessful){
-                callback(true,"User registered successfully")
-            }
-            else{
-                callback(false,"${it.exception?.message}")
+            if (it.isSuccessful) {
+                callback(true, "User registered successfully")
+            } else {
+                callback(false, "${it.exception?.message}")
             }
         }
     }
@@ -140,7 +134,7 @@ class UserRepoImpl : UserRepo{
             })
             .build()
 
-        // Actually trigger the verification
+        //  Actually trigger the verification
         PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
@@ -166,6 +160,37 @@ class UserRepoImpl : UserRepo{
                     }
                 }
             }
+    }
+
+    override fun sendEmailVerification(callback: (Boolean, String) -> Unit) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.sendEmailVerification()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        callback(true, "Verification email sent to ${user.email}")
+                    } else {
+                        callback(false, task.exception?.message ?: "Failed to send verification email")
+                    }
+                }
+        } else {
+            callback(false, "No user logged in")
+        }
+    }
+
+    override fun checkEmailVerified(callback: (Boolean) -> Unit) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.reload().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(user.isEmailVerified)
+                } else {
+                    callback(false)
+                }
+            }
+        } else {
+            callback(false)
+        }
     }
 
     override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
