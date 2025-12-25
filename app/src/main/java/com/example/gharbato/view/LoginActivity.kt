@@ -55,6 +55,7 @@ fun LoginBody() {
     var password by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity = context as Activity
@@ -283,15 +284,37 @@ fun LoginBody() {
                                 Toast.LENGTH_SHORT
                             ).show()
                         } else {
+                            isLoading = true
                             userViewModel.login(email, password) { success, message ->
                                 if (success) {
-                                    Toast.makeText(
-                                        context, message, Toast.LENGTH_SHORT
-                                    ).show()
-                                    val intent = Intent(context, DashboardActivity::class.java)
-                                    context.startActivity(intent)
-                                    activity.finish()
+                                    // Check if email is verified
+                                    userViewModel.checkEmailVerified { isVerified ->
+                                        isLoading = false
+                                        if (isVerified) {
+                                            // Email verified - proceed to dashboard
+                                            Toast.makeText(
+                                                context,
+                                                "Welcome back!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            val intent = Intent(context, DashboardActivity::class.java)
+                                            context.startActivity(intent)
+                                            activity.finish()
+                                        } else {
+                                            // Email not verified - redirect to verification screen
+                                            Toast.makeText(
+                                                context,
+                                                "Please verify your email to continue",
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                            val intent = Intent(context, EmailVerificationActivity::class.java)
+                                            intent.putExtra("USER_EMAIL", email)
+                                            context.startActivity(intent)
+                                            activity.finish()
+                                        }
+                                    }
                                 } else {
+                                    isLoading = false
                                     Toast.makeText(
                                         context, message, Toast.LENGTH_LONG
                                     ).show()
@@ -299,6 +322,7 @@ fun LoginBody() {
                             }
                         }
                     },
+                    enabled = !isLoading,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
@@ -313,13 +337,20 @@ fun LoginBody() {
                         containerColor = Blue
                     )
                 ) {
-                    Text(
-                        "Log in",
-                        style = TextStyle(
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
-                    )
+                    } else {
+                        Text(
+                            "Log in",
+                            style = TextStyle(
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(28.dp))
