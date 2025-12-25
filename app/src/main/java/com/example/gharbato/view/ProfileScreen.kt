@@ -9,10 +9,16 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,9 +46,9 @@ class ProfileScreenActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
-
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE)
 
@@ -50,7 +56,7 @@ fun ProfileScreen() {
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var imageUri by remember { mutableStateOf<String?>(null) }
-
+    var showContactInfo by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         val lifecycleOwner = context as ComponentActivity
@@ -66,188 +72,338 @@ fun ProfileScreen() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FB))
-    ) {
-
-
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(300.dp)
-                .background(color = Blue),
-//                .background(
-//                    Brush.verticalGradient(
-//                        listOf(Color(0xFF6A5AE0), Color(0xFF4D8DFF))
-//                    )
-//                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-                Image(
-                    painter = if (imageUri != null)
-                        rememberAsyncImagePainter(Uri.parse(imageUri))
-                    else painterResource(R.drawable.billu),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Text(
-                    name,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    email,
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
-
-                Text(
-                    phone,
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.85f)
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Button(
-                    onClick = {},
-                    shape = RoundedCornerShape(30.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White,
-                        contentColor = Color(0xFF4D8DFF)
-                    ),
-                    modifier = Modifier.fillMaxWidth(0.65f)
-                ) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
                     Text(
-                        "Sell a Property",
-                        fontWeight = FontWeight.SemiBold
+                        "Profile",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                ),
+                actions = {
+                    IconButton(onClick = { }) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_notifications_24),
+                            contentDescription = "Notifications",
+                            tint = Blue
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF8F9FB))
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Profile Header Section
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Profile Image with Edit Icon
+                Box(contentAlignment = Alignment.BottomEnd) {
+                    Image(
+                        painter = if (imageUri != null)
+                            rememberAsyncImagePainter(Uri.parse(imageUri))
+                        else painterResource(R.drawable.billu),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(CircleShape)
+                            .background(Blue),
+                        contentScale = ContentScale.Crop
+                    )
+
+                    // Edit Icon Button
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(Blue)
+                            .border(2.dp, Color.White, CircleShape)
+                            .clickable {
+                                context.startActivity(
+                                    Intent(context, EditProfileActivity::class.java)
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Profile",
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Black
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Show/Hide contact info
+                    Text(
+                        if (showContactInfo) "Hide contact info" else "Show contact info",
+                        fontSize = 13.sp,
+                        color = Color(0xFF4D8DFF),
+                        modifier = Modifier.clickable {
+                            showContactInfo = !showContactInfo
+                        }
                     )
                 }
             }
+
+            // Contact Info Section (Expandable)
+            if (showContactInfo) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 16.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .padding(16.dp)
+                ) {
+                    ContactInfoRow(
+                        icon = R.drawable.baseline_email_24,
+                        label = "Email",
+                        value = email
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ContactInfoRow(
+                        icon = R.drawable.baseline_email_24,
+                        label = "Phone",
+                        value = phone
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Profile Settings Section
+            SectionHeader("Profile Settings")
+
+            CleanMenuItem(
+                icon = R.drawable.baseline_watch_24,
+                title = "My Activities",
+                subtitle = "View your account activities",
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, MyActivitiesActivity::class.java))
+            }
+
+            CleanMenuItem(
+                icon = R.drawable.baseline_create_24,
+                title = "Trust and Verification",
+                subtitle = "Manage your account security",
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, TrustAndVerificationActivity::class.java))
+            }
+
+            CleanMenuItem(
+                icon = R.drawable.baseline_settings_24,
+                title = "Application Settings",
+                subtitle = "Configure your app settings",
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, ApplicationSettingsActivity::class.java))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Support Section
+            SectionHeader("Support")
+
+            CleanMenuItem(
+                icon = R.drawable.outline_adb_24,
+                title = "Help Center",
+                subtitle = null,
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, HelpCenterActivity::class.java))
+            }
+
+            CleanMenuItem(
+                icon = R.drawable.baseline_email_24,
+                title = "Terms & Policies",
+                subtitle = null,
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, TermsAndPoliciesActivity::class.java))
+            }
+
+            CleanMenuItem(
+                icon = R.drawable.baseline_email_24,
+                title = "Contact Us",
+                subtitle = null,
+                iconColor = Blue
+            ) {
+                context.startActivity(Intent(context, ContactUsActivity::class.java))
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Logout Button
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White)
+                    .clickable {
+                        val loginIntent = Intent(context, LoginActivity::class.java)
+                        context.startActivity(loginIntent)
+                        (context as ComponentActivity).finish()
+                    }
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_logout_24),
+                        contentDescription = null,
+                        tint = Color(0xFFE53935),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Logout",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFE53935)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(24.dp))
+@Composable
+fun ContactInfoRow(icon: Int, label: String, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            tint = Color(0xFF4D8DFF),
+            modifier = Modifier.size(20.dp)
+        )
 
+        Spacer(modifier = Modifier.width(12.dp))
 
-
-        SectionTitle("Account")
-
-        ProfileItem(
-            icon = R.drawable.baseline_create_24,
-            title = "Edit Profile"
-        ) {
-            context.startActivity(
-                Intent(context, EditProfileActivity::class.java)
+        Column {
+            Text(label, fontSize = 12.sp, color = Color(0xFF999999))
+            Text(
+                value,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF2C2C2C)
             )
         }
-
-        ProfileItem(
-            icon = R.drawable.baseline_watch_24,
-            title = "My Activities"
-        ) {}
-
-        ProfileItem(
-            icon = R.drawable.baseline_logout_24,
-            title = "Logout",
-            titleColor = Color.Red
-        ) {}
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-
-
-        SectionTitle("Help & Support")
-
-        ProfileItem(
-            icon = R.drawable.outline_adb_24,
-            title = "Help Center"
-        ) {}
-
-        ProfileItem(
-            icon = R.drawable.baseline_email_24,
-            title = "Contact Us"
-        ) {}
     }
 }
 
 
-
 @Composable
-fun SectionTitle(title: String) {
+fun SectionHeader(title: String, modifier: Modifier = Modifier) {
     Text(
-        title,
-        modifier = Modifier.padding(start = 20.dp, bottom = 8.dp),
-        color = Color.Gray,
-        fontSize = 13.sp,
-        fontWeight = FontWeight.SemiBold
+        text = title,
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF2C2C2C),
+        modifier = modifier.padding(
+            start = 12.dp,  // 👈 moved slightly left
+            end = 20.dp,
+            top = 12.dp,
+            bottom = 12.dp
+        )
     )
 }
 
 @Composable
-fun ProfileItem(
+fun CleanMenuItem(
     icon: Int,
     title: String,
-    titleColor: Color = Color.Black,
+    subtitle: String?,
+    iconColor: Color,
     onClick: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+            .padding(horizontal = 20.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .clickable { onClick() }
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
         ) {
-
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFFF1F3F6)),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(iconColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painter = painterResource(icon),
                     contentDescription = null,
-                    tint = Color(0xFF4D8DFF),
+                    tint = Color.White,
                     modifier = Modifier.size(22.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Text(
-                title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = titleColor,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2C2C2C)
+                )
+
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        fontSize = 12.sp,
+                        color = Color(0xFF999999)
+                    )
+                }
+            }
 
             Icon(
                 painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
                 contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(14.dp)
+                tint = Color(0xFFCCCCCC),
+                modifier = Modifier.size(16.dp)
             )
         }
     }

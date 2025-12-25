@@ -1,34 +1,41 @@
 package com.example.gharbato.repository
 
+import android.app.Activity
 import com.example.gharbato.model.UserModel
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
-
+import com.google.firebase.auth.PhoneAuthCredential
+import com.google.firebase.auth.PhoneAuthOptions
+import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import java.util.concurrent.TimeUnit
 
-class UserRepoImpl : UserRepo{
+class UserRepoImpl : UserRepo {
 
-    val auth : FirebaseAuth = FirebaseAuth.getInstance()
-    val database : FirebaseDatabase = FirebaseDatabase.getInstance()
-    val ref : DatabaseReference = database.getReference("Users")
+    val auth: FirebaseAuth = FirebaseAuth.getInstance()
+    val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+    val ref: DatabaseReference = database.getReference("Users")
 
     override fun login(
         email: String,
         password: String,
         callback: (Boolean, String) -> Unit
     ) {
-        auth.signInWithEmailAndPassword(email,password)
+        auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener {
-                if (it.isSuccessful){
-                    callback(true,"Login Successful")
-                }
-                else{
+                if (it.isSuccessful) {
+                    callback(true, "Login Successful")
+                } else {
                     val exception = it.exception
-                    when(exception){
+                    when (exception) {
                         is FirebaseAuthInvalidUserException -> {
-                            callback(false,it.exception?.message.toString())
+                            callback(false, it.exception?.message.toString())
                         }
                         is FirebaseAuthInvalidCredentialsException -> {
                             callback(false, "Invalid email or password")
@@ -42,18 +49,15 @@ class UserRepoImpl : UserRepo{
     override fun signUp(
         email: String,
         password: String,
-        fullName : String,
-        phoneNo: String,
-        country : String,
+        fullName: String,
         callback: (Boolean, String, String) -> Unit
     ) {
-        auth.createUserWithEmailAndPassword(email,password)
+        auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener {
-                if (it.isSuccessful){
-                    callback(true,"Registration Successful", "${auth.currentUser?.uid}")
-                }
-                else{
-                    callback(false, "${it.exception?.message}","" )
+                if (it.isSuccessful) {
+                    callback(true, "Registration Successful", "${auth.currentUser?.uid}")
+                } else {
+                    callback(false, "${it.exception?.message}", "")
                 }
             }
     }
@@ -64,11 +68,10 @@ class UserRepoImpl : UserRepo{
         callback: (Boolean, String) -> Unit
     ) {
         ref.child(userId).setValue(model).addOnCompleteListener {
-            if (it.isSuccessful){
-                callback(true,"User registered successfully")
-            }
-            else{
-                callback(false,"${it.exception?.message}")
+            if (it.isSuccessful) {
+                callback(true, "User registered successfully")
+            } else {
+                callback(false, "${it.exception?.message}")
             }
         }
     }
@@ -85,5 +88,178 @@ class UserRepoImpl : UserRepo{
                     callback(false, "${it.exception?.message}")
                 }
             }
+    }
+
+    override fun sendOtp(
+        phoneNumber: String,
+        activity: Activity,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        val options = PhoneAuthOptions.newBuilder(auth)
+            .setPhoneNumber(phoneNumber) // Phone number with country code
+            .setTimeout(60L, TimeUnit.SECONDS) // Timeout duration
+            .setActivity(activity) // Activity for callback binding
+            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+
+                // Called when verification is completed automatically
+                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+                    callback(true, "Verification completed automatically", null)
+                }
+
+                // Called when verification fails
+                override fun onVerificationFailed(exception: FirebaseException) {
+                    callback(
+                        false,
+                        exception.message ?: "Verification failed",
+                        null
+                    )
+                }
+
+                // Called when OTP is sent successfully
+                override fun onCodeSent(
+                    verificationId: String,
+                    token: PhoneAuthProvider.ForceResendingToken
+                ) {
+                    super.onCodeSent(verificationId, token)
+                    // Return the verification ID so user can verify OTP
+                    callback(true, "OTP sent successfully", verificationId)
+                }
+
+                // Called when auto-retrieval times out
+                override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
+                    super.onCodeAutoRetrievalTimeOut(verificationId)
+                    // Still provide verification ID for manual entry
+                    callback(true, "Enter OTP manually", verificationId)
+                }
+            })
+            .build()
+
+        //  Actually trigger the verification
+        PhoneAuthProvider.verifyPhoneNumber(options)
+    }
+
+    override fun verifyOtp(
+        verificationId: String,
+        otpCode: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val credential = PhoneAuthProvider.getCredential(verificationId, otpCode)
+
+        auth.signInWithCredential(credential)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(true, "Phone Number Verified Successfully")
+                } else {
+                    when (val exception = task.exception) {
+                        is FirebaseAuthInvalidCredentialsException -> {
+                            callback(false, "Invalid OTP code")
+                        }
+                        else -> {
+                            callback(false, exception?.message ?: "Verification failed")
+                        }
+                    }
+                }
+            }
+    }
+
+    override fun sendEmailVerification(callback: (Boolean, String) -> Unit) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.sendEmailVerification()
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        callback(true, "Verification email sent to ${user.email}")
+                    } else {
+                        callback(false, task.exception?.message ?: "Failed to send verification email")
+                    }
+                }
+        } else {
+            callback(false, "No user logged in")
+        }
+    }
+
+    override fun checkEmailVerified(callback: (Boolean) -> Unit) {
+        val user = auth.currentUser
+        if (user != null) {
+            user.reload().addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(user.isEmailVerified)
+                } else {
+                    callback(false)
+                }
+            }
+        } else {
+            callback(false)
+        }
+    }
+
+    override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
+        android.util.Log.d("UserRepoImpl", "Fetching all registered users from Firebase Database")
+
+        // Fetch registered users from Firebase Database
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                android.util.Log.d("UserRepoImpl", "Database snapshot exists: ${snapshot.exists()}, children count: ${snapshot.childrenCount}")
+                val userList = mutableListOf<UserModel>()
+
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+                    android.util.Log.d("UserRepoImpl", "User found: ${userSnapshot.key} = ${userModel}")
+
+                    if (userModel != null) {
+                        // Add the userId from the snapshot key
+                        val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
+                        userList.add(userWithId)
+                        android.util.Log.d("UserRepoImpl", "Added user: ${userWithId.fullName} (${userWithId.email})")
+                    }
+                }
+
+                android.util.Log.d("UserRepoImpl", "Returning ${userList.size} registered users")
+                callback(true, userList, "Registered users fetched successfully")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                android.util.Log.e("UserRepoImpl", "Database error: ${error.message}")
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
+    }
+
+    override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
+        android.util.Log.d("UserRepoImpl", "Searching users with query: '$query' from Firebase Database")
+
+        // Fetch registered users from Firebase Database
+        ref.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                android.util.Log.d("UserRepoImpl", "Search - Database snapshot exists: ${snapshot.exists()}, children count: ${snapshot.childrenCount}")
+                val userList = mutableListOf<UserModel>()
+
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+                    android.util.Log.d("UserRepoImpl", "Search - User found: ${userSnapshot.key} = ${userModel}")
+
+                    if (userModel != null) {
+                        val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
+
+                        // Filter based on search query
+                        if (query.isBlank() ||
+                            userWithId.fullName.contains(query, ignoreCase = true) ||
+                            userWithId.email.contains(query, ignoreCase = true) ||
+                            userWithId.phoneNo.contains(query, ignoreCase = true)) {
+                            userList.add(userWithId)
+                            android.util.Log.d("UserRepoImpl", "Search adding user: ${userWithId.fullName}")
+                        }
+                    }
+                }
+
+                android.util.Log.d("UserRepoImpl", "Search returning ${userList.size} users")
+                callback(true, userList, "Search completed successfully")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                android.util.Log.e("UserRepoImpl", "Search database error: ${error.message}")
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
     }
 }

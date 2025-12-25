@@ -7,4 +7,8 @@
     <string name="title_activity_forgot">ForgotActivity</string>
     <string name="title_activity_listing">ListingActivity</string>
     <string name="title_activity_property_detail">PropertyDetailActivity</string>
+    <string name="title_activity_full_map">FullMapActivity</string>
+    <string name="sdk_location">/Users/bishowdip/Library/Android/sdk</string>
+    <string name="title_activity_otpverification">OTPVerificationActivity</string>
+    <string name="title_activity_email_verification">EmailVerificationActivity</string>
 </resources>

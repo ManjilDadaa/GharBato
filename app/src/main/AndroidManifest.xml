@@ -1,26 +1,63 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
+        android:name=".GharBatoApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
+        <activity
+            android:name=".view.EmailVerificationActivity"
+            android:exported="true"
+            android:label="@string/title_activity_email_verification"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
-        <!-- Google Maps API Key - Using direct value -->
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.OTPVerificationActivity"
+            android:exported="true"
+            android:label="@string/title_activity_otpverification"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ui.view.FullMapActivity"
+            android:exported="true"
+            android:label="@string/title_activity_full_map"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity> <!-- Google Maps API Key - Using direct value -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs"/>
-
+            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
-            android:name=".view.PropertyDetailActivity"
+            android:name=".ui.view.PropertyDetailActivity"
             android:exported="true"
             android:label="@string/title_activity_property_detail"
             android:theme="@style/Theme.GharBato">
@@ -53,7 +90,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MessageScreenActivity"
+            android:name=".view.MessageScreenActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -62,7 +99,21 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ForgotActivity"
+            android:name=".view.MessageDetailsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GharBato" />
+
+        <activity
+            android:name=".view.ZegoCallActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.ForgotActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.MyActivitiesActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
@@ -70,7 +121,15 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.ApplicationSettingsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".view.SignUpActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.ContactUsActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
@@ -78,7 +137,21 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.HelpCenterActivity"
+            android:exported="true"
+            android:label="Help Center"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.TermsAndPoliciesActivity"
+            android:exported="true"
+            android:label="Help Center"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".view.ProfileScreenActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.TrustAndVerificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
