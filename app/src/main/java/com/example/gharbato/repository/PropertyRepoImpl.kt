@@ -1,8 +1,16 @@
 package com.example.gharbato.data.repository
 
+import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import com.cloudinary.Cloudinary
+import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.delay
+import java.io.InputStream
+import java.util.concurrent.Executors
 
 class PropertyRepositoryImpl : PropertyRepository {
 
@@ -95,6 +103,14 @@ class PropertyRepositoryImpl : PropertyRepository {
         )
     )
 
+    private val cloudinary = Cloudinary(
+        mapOf(
+            "cloud_name" to "dwqybrjf2",
+            "api_key" to "929885821451753",
+            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
+        )
+    )
+
     override suspend fun getAllProperties(): List<PropertyModel> {
         // Simulate network delay
         delay(500)
@@ -117,6 +133,50 @@ class PropertyRepositoryImpl : PropertyRepository {
                         it.developer.contains(query, ignoreCase = true)
             }
         }
+    }
+
+    override fun uploadImage(
+        context: Context,
+        imageUri: Uri,
+        callback: (String?) -> Unit
+    ) {
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                var fileName = getFileNameFromUri(context, imageUri)
+
+                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
+
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "resource_type", "image"
+                    )
+                )
+
+                var imageUrl = response["url"] as String?
+
+                imageUrl = imageUrl?.replace("http://", "https://")
+
+                Handler(Looper.getMainLooper()).post {
+                    callback(imageUrl)
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post {
+                    callback(null)
+                }
+            }
+        }
+    }
+
+    override fun getFileNameFromUri(
+        context: Context,
+        imageUri: Uri
+    ): String? {
+        TODO("Not yet implemented")
     }
 
     override suspend fun filterProperties(
