@@ -46,6 +46,8 @@ fun SavedScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -61,11 +63,11 @@ fun SavedScreen(
                 )
             )
         }
-    ) { padding ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-//                .padding(bottom = paddingValues.calculateBottomPadding())
+                .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
         ) {
             when {
@@ -110,7 +112,8 @@ fun SavedScreen(
                                 SavedPropertyCard(
                                     property = property,
                                     onCardClick = {
-                                        val intent = Intent(context, PropertyDetailActivity::class.java)
+                                        val intent =
+                                            Intent(context, PropertyDetailActivity::class.java)
                                         intent.putExtra("propertyId", property.id)
                                         context.startActivity(intent)
                                     },
@@ -137,6 +140,7 @@ fun SavedScreen(
         }
     }
 }
+
 
 @Composable
 fun EmptySavedState(
