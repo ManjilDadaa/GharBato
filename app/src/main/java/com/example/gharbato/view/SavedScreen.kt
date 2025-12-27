@@ -28,7 +28,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
+import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.SavedPropertiesViewModel
 import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
@@ -36,8 +36,11 @@ import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedScreen(
+    onNavigateToSearch: () -> Unit = {},
     viewModel: SavedPropertiesViewModel = viewModel(
-        factory = SavedPropertiesViewModelFactory(SavedPropertiesRepositoryImpl()) // ✅ Add factory
+        factory = SavedPropertiesViewModelFactory(
+            RepositoryProvider.getSavedPropertiesRepository()
+        )
     )
 ) {
     val context = LocalContext.current
@@ -78,7 +81,9 @@ fun SavedScreen(
 
                 // Empty State
                 uiState.savedProperties.isEmpty() -> {
-                    EmptySavedState()
+                    EmptySavedState(
+                        onExploreClick = onNavigateToSearch
+                    )
                 }
 
                 // List of Saved Properties
@@ -134,7 +139,9 @@ fun SavedScreen(
 }
 
 @Composable
-fun EmptySavedState() {
+fun EmptySavedState(
+    onExploreClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -180,7 +187,7 @@ fun EmptySavedState() {
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = { /* Navigate to search */ },
+            onClick = onExploreClick,
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color(0xFF2196F3)
             ),

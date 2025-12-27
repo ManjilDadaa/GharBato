@@ -48,11 +48,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
 import com.example.gharbato.data.model.SampleData.properties
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
 import com.example.gharbato.ui.view.PropertyCard
+import com.example.gharbato.ui.view.PropertyDetailActivity
 import kotlin.collections.iterator
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -72,7 +74,6 @@ fun HomeScreen() {
     val context = LocalContext.current
     val activity = context as Activity
     Scaffold(
-        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
@@ -107,7 +108,7 @@ fun HomeScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FB))
-                .padding(top = padding.calculateTopPadding()),
+                .padding(padding),
         ) {
             item {
                 OutlinedTextField(
@@ -188,7 +189,17 @@ fun HomeScreen() {
                 }
             }
             items(properties) { property ->
-                PropertyCard(property = property, onClick = {}, onFavoriteClick = {})
+                PropertyCard(
+                    property = property,
+                    onClick = {
+                        val intent = Intent(context, PropertyDetailActivity::class.java)
+                        intent.putExtra("propertyId", property.id)
+                        context.startActivity(intent)
+                    },
+                    onFavoriteClick = {
+
+                    }
+                )
             }
         }
     }
