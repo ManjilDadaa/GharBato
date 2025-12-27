@@ -20,28 +20,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
-            android:name=".view.EmailVerificationActivity"
-            android:exported="true"
-            android:label="@string/title_activity_email_verification"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".view.OTPVerificationActivity"
-            android:exported="true"
-            android:label="@string/title_activity_otpverification"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
             android:name=".ui.view.FullMapActivity"
             android:exported="true"
             android:label="@string/title_activity_full_map"
@@ -67,6 +45,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ui.view.FullSearchMapActivity"
+            android:exported="true"
+            android:label="FullSearchMapActivity"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".view.ListingActivity"
             android:exported="true"
