@@ -13,30 +13,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
 @Composable
-fun DetailsContentScreen(purpose: String, propertyType: String) {
+fun DetailsContentScreen(state: PropertyListingState,
+                         onStateChange: (PropertyListingState) -> Unit) {
 
-    var title by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    var bedrooms by remember { mutableStateOf("") }
-    var bathrooms by remember { mutableStateOf("") }
-    var area by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var kitchen by remember { mutableStateOf("") }
-    var totalRooms by remember { mutableStateOf("") }
-
-    val priceLabel = when(purpose) {
+    val priceLabel = when(state.selectedPurpose) {
         "Sell" -> "Asking Price"
         "Rent" -> "Monthly Rent"
         "Book" -> "Nightly Rate"
         else -> "Price"
     }
 
-    val pricePlaceholder = when(purpose) {
+    val pricePlaceholder = when(state.selectedPurpose) {
         "Sell" -> "250000"
         "Rent" -> "1200"
         "Book" -> "500"
@@ -79,7 +71,7 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        purpose,
+                        state.selectedPurpose,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Blue
@@ -93,7 +85,7 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        propertyType,
+                        state.selectedPropertyType,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Blue
@@ -104,10 +96,10 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
 
         // Property Title
         CustomOutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
+            value = state.title,
+            onValueChange = { onStateChange(state.copy(title = it)) },
             label = "Property Title",
-            placeholder = "e.g., Modern 2BHK $propertyType",
+            placeholder = "e.g., Modern 2BHK ${state.selectedPropertyType}",
             modifier = Modifier.fillMaxWidth(),
             maxLines = 1,
             singleLine = true
@@ -120,8 +112,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             CustomOutlinedTextField(
-                value = price,
-                onValueChange = { price = it },
+                value = state.price,
+                onValueChange = { onStateChange(state.copy(price = it))},
                 label = "$priceLabel (रु)",
                 placeholder = pricePlaceholder,
                 modifier = Modifier.weight(1f),
@@ -131,8 +123,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
             )
 
             CustomOutlinedTextField(
-                value = area,
-                onValueChange = { area = it },
+                value = state.area,
+                onValueChange = { onStateChange(state.copy(area = it)) },
                 label = "Area (sq ft)",
                 placeholder = "e.g,1200",
                 modifier = Modifier.weight(1f),
@@ -146,8 +138,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
 
         // Location
         CustomOutlinedTextField(
-            value = location,
-            onValueChange = { location = it },
+            value = state.location,
+            onValueChange = { onStateChange(state.copy(location = it)) },
             label = "Location",
             placeholder = "e.g,Thamel, Kathmandu",
             modifier = Modifier.fillMaxWidth(),
@@ -164,8 +156,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
         ) {
             // Location
             CustomOutlinedTextField(
-                value = totalRooms,
-                onValueChange = { totalRooms = it },
+                value = state.totalRooms,
+                onValueChange = { onStateChange(state.copy(totalRooms = it)) },
                 label = "Total Rooms",
                 placeholder = "e.g,10",
                 modifier = Modifier.weight(1f),
@@ -175,8 +167,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
             )
 
             CustomOutlinedTextField(
-                value = bedrooms,
-                onValueChange = { bedrooms = it },
+                value = state.bedrooms,
+                onValueChange = { onStateChange(state.copy(bedrooms = it)) },
                 label = "Bedrooms",
                 placeholder = "e.g,2",
                 modifier = Modifier.weight(1f),
@@ -193,8 +185,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             CustomOutlinedTextField(
-                value = bathrooms,
-                onValueChange = { bathrooms = it },
+                value = state.bathrooms,
+                onValueChange = { onStateChange(state.copy(bathrooms = it)) },
                 label = "Bathrooms",
                 placeholder = "e.g,2",
                 modifier = Modifier.weight(1f),
@@ -204,8 +196,8 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
             )
 
             CustomOutlinedTextField(
-                value = kitchen,
-                onValueChange = { kitchen = it },
+                value = state.kitchen,
+                onValueChange = { onStateChange(state.copy(kitchen = it)) },
                 label = "Kitchen",
                 placeholder = "e.g,1",
                 modifier = Modifier.weight(1f),
@@ -219,10 +211,10 @@ fun DetailsContentScreen(purpose: String, propertyType: String) {
 
         // Description
         CustomOutlinedTextField(
-            value = description,
-            onValueChange = { description = it },
+            value = state.description,
+            onValueChange = { onStateChange(state.copy(description = it)) },
             label = "Description",
-            placeholder = "Describe your $propertyType...",
+            placeholder = "Describe your ${state.selectedPropertyType}...",
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp),

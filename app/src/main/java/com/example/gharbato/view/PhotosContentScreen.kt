@@ -33,71 +33,14 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
 @Composable
-fun PhotosContentScreen() {
-    var imageCategories by remember {
-        mutableStateOf(
-            listOf(
-                ImageCategory(
-                    id = "cover",
-                    title = "Cover Photo",
-                    description = "Main photo that buyers will see first",
-                    icon = R.drawable.baseline_image_24,
-                    isRequired = true,
-                    maxImages = 1
-                ),
-                ImageCategory(
-                    id = "exterior",
-                    title = "Exterior Views",
-                    description = "Outside views, facade, entrance",
-                    icon = R.drawable.home,
-                    isRequired = false,
-                    maxImages = 5
-                ),
-                ImageCategory(
-                    id = "living",
-                    title = "Living Areas",
-                    description = "Living room, dining room, hall",
-                    icon = R.drawable.outline_person_24,
-                    isRequired = false,
-                    maxImages = 5
-                ),
-                ImageCategory(
-                    id = "bedrooms",
-                    title = "Bedrooms",
-                    description = "All bedroom photos",
-                    icon = R.drawable.baseline_bedroom_child_24,
-                    isRequired = true,
-                    maxImages = 10
-                ),
-                ImageCategory(
-                    id = "bathrooms",
-                    title = "Bathrooms",
-                    description = "Bathroom and toilet photos",
-                    icon = R.drawable.baseline_bathroom_24,
-                    isRequired = false,                    maxImages = 5
-                ),
-                ImageCategory(
-                    id = "kitchen",
-                    title = "Kitchen",
-                    description = "Kitchen and dining area",
-                    icon = R.drawable.baseline_kitchen_24,
-                    isRequired = false,
-                    maxImages = 5
-                ),
-                ImageCategory(
-                    id = "other",
-                    title = "Other Spaces",
-                    description = "Balcony, terrace, parking, etc.",
-                    icon = R.drawable.baseline_more_24,
-                    isRequired = false,
-                    maxImages = 8
-                )
-            )
-        )
-    }
-
+fun PhotosContentScreen(
+    imageCategories: List<ImageCategory>,
+    onCategoriesChange: (List<ImageCategory>) -> Unit
+) {
     val totalImages = imageCategories.sumOf { it.images.size }
-    val requiredCategoriesFilled = imageCategories.filter { it.isRequired }.all { it.images.isNotEmpty() }
+    val requiredCategoriesFilled = imageCategories
+        .filter { it.isRequired }
+        .all { it.images.isNotEmpty() }
 
     Column(
         modifier = Modifier
@@ -171,7 +114,10 @@ fun PhotosContentScreen() {
                             R.drawable.baseline_info_24
                     ),
                     contentDescription = null,
-                    tint = if (requiredCategoriesFilled) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                    tint = if (requiredCategoriesFilled)
+                        Color(0xFF4CAF50)
+                    else
+                        Color(0xFFFF9800),
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
@@ -181,7 +127,10 @@ fun PhotosContentScreen() {
                     else
                         "Cover Photo and Bedroom photos are required",
                     fontSize = 13.sp,
-                    color = if (requiredCategoriesFilled) Color(0xFF2E7D32) else Color(0xFFE65100)
+                    color = if (requiredCategoriesFilled)
+                        Color(0xFF2E7D32)
+                    else
+                        Color(0xFFE65100)
                 )
             }
         }
@@ -193,20 +142,38 @@ fun PhotosContentScreen() {
             ImageCategorySection(
                 category = category,
                 onImagesSelected = { uris ->
-                    imageCategories = imageCategories.toMutableList().apply {
-                        this[index] = category.copy(
-                            images = (category.images + uris)
-                                .take(category.maxImages)
-                                .toMutableList()
-                        )
+                    // Create a mutable copy of the categories list
+                    val updatedCategories = imageCategories.toMutableList()
+
+                    // Create a NEW mutable list from current images
+                    val currentImages = category.images.toMutableList()
+
+                    // Add new URIs to the NEW list
+                    uris.forEach { uri ->
+                        if (currentImages.size < category.maxImages) {
+                            currentImages.add(uri.toString())
+                        }
                     }
+
+                    // Create a NEW category object with the NEW images list
+                    updatedCategories[index] = category.copy(images = currentImages)
+
+                    // Notify parent with the completely new list
+                    onCategoriesChange(updatedCategories)
                 },
-                onImageRemoved = { uri ->
-                    imageCategories = imageCategories.toMutableList().apply {
-                        this[index] = category.copy(
-                            images = category.images.filter { it != uri }.toMutableList()
-                        )
-                    }
+                onImageRemoved = { uriString ->
+                    // Create a mutable copy of the categories list
+                    val updatedCategories = imageCategories.toMutableList()
+
+                    // Create a NEW mutable list from current images
+                    val currentImages = category.images.toMutableList()
+                    currentImages.remove(uriString)
+
+                    // Create a NEW category object with the NEW images list
+                    updatedCategories[index] = category.copy(images = currentImages)
+
+                    // Notify parent with the completely new list
+                    onCategoriesChange(updatedCategories)
                 }
             )
 
@@ -281,7 +248,7 @@ fun PhotosContentScreen() {
 fun ImageCategorySection(
     category: ImageCategory,
     onImagesSelected: (List<Uri>) -> Unit,
-    onImageRemoved: (Uri) -> Unit
+    onImageRemoved: (String) -> Unit
 ) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -352,7 +319,10 @@ fun ImageCategorySection(
                                 ) {
                                     Text(
                                         "Required",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        modifier = Modifier.padding(
+                                            horizontal = 6.dp,
+                                            vertical = 2.dp
+                                        ),
                                         fontSize = 10.sp,
                                         color = Color(0xFFFF5252),
                                         fontWeight = FontWeight.Bold
@@ -372,7 +342,10 @@ fun ImageCategorySection(
                 Text(
                     "${category.images.size}/${category.maxImages}",
                     fontSize = 13.sp,
-                    color = if (category.images.size == category.maxImages) Blue else Gray,
+                    color = if (category.images.size == category.maxImages)
+                        Blue
+                    else
+                        Gray,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -385,10 +358,13 @@ fun ImageCategorySection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(category.images) { uri ->
+                    items(
+                        items = category.images,
+                        key = { it }
+                    ) { uriString ->
                         ImageThumbnail(
-                            uri = uri,
-                            onRemove = { onImageRemoved(uri) }
+                            uriString = uriString,
+                            onRemove = { onImageRemoved(uriString) }
                         )
                     }
 
@@ -442,7 +418,7 @@ fun ImageCategorySection(
 
 @Composable
 fun ImageThumbnail(
-    uri: Uri,
+    uriString: String,
     onRemove: () -> Unit
 ) {
     Box(
@@ -451,7 +427,7 @@ fun ImageThumbnail(
             .clip(RoundedCornerShape(8.dp))
     ) {
         AsyncImage(
-            model = uri,
+            model = uriString,
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
