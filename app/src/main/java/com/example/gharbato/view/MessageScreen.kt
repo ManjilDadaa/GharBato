@@ -29,112 +29,54 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.model.UserModel
-import com.example.gharbato.repository.UserRepoImpl
-import com.example.gharbato.viewmodel.UserViewModel
-
+import com.example.gharbato.viewmodel.MessageViewModel
 
 class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { MessageScreen()
+        setContent { 
+            MessageScreen()
         }
     }
 }
 
-private fun getOrCreateLocalUserId(context: Context): String {
-    val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
-    val existing = prefs.getString("local_user_id", null)
-    if (!existing.isNullOrBlank()) return existing
-
-    val newId = "guest_${System.currentTimeMillis()}"
-    prefs.edit().putString("local_user_id", newId).apply()
-    return newId
-}
-
-data class FirebaseUser(
-    val uid: String = "",
-    val email: String = "",
-    val displayName: String = ""
-)
-
 @Composable
-fun MessageScreen(){
-    var searchText by remember { mutableStateOf("") }
-    var users by remember { mutableStateOf<List<UserModel>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf("") }
+fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
+    val searchText by messageViewModel.searchText
+    val users by messageViewModel.users
+    val isLoading by messageViewModel.isLoading
+    val errorMessage by messageViewModel.errorMessage
+    val currentUser by messageViewModel.currentUser
     val context = LocalContext.current
     val activity = context as Activity
     
-    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-    
-    // Load only registered users from database
+    // Load users on initial composition
     LaunchedEffect(Unit) {
-        android.util.Log.d("MessageScreen", "Loading registered users from database...")
-        
-        userViewModel.getAllUsers { success, userList, message ->
-            android.util.Log.d("MessageScreen", "Database fetch completed - success: $success, userList size: ${userList?.size}")
-            
-            // Always set loading to false
-            isLoading = false
-            
-            if (success && userList != null) {
-                users = userList
-                if (userList.isEmpty()) {
-                    errorMessage = "No registered users found in database"
-                } else {
-                    errorMessage = "Found ${userList.size} registered users"
-                }
-                android.util.Log.d("MessageScreen", "Loaded ${userList.size} registered users: ${userList.map { it.fullName }}")
-            } else {
-                users = emptyList()
-                errorMessage = "Error loading users: $message"
-                android.util.Log.e("MessageScreen", "Failed to load users: $message")
-            }
-        }
+        messageViewModel.loadUsers()
     }
     
-    // Search users when query changes
+    // Search users when search text changes
     LaunchedEffect(searchText) {
-        if (isLoading) return@LaunchedEffect
-        android.util.Log.d("MessageScreen", "Searching users with query: '$searchText'")
-        
-        try {
-            kotlinx.coroutines.withTimeout(3000) {
-                userViewModel.searchUsers(searchText) { success, userList, message ->
-                    if (success && userList != null) {
-                        android.util.Log.d("MessageScreen", "Search returned ${userList.size} users: ${userList.map { it.fullName }}")
-                        users = userList
-                        errorMessage = ""
-                    } else {
-                        android.util.Log.e("MessageScreen", "Search error: $message")
-                        errorMessage = message
-                    }
-                }
-            }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            android.util.Log.e("MessageScreen", "Search timeout, keeping current users")
-            errorMessage = "Search timeout"
+        if (!isLoading) {
+            messageViewModel.searchUsers()
         }
     }
     
@@ -144,27 +86,37 @@ fun MessageScreen(){
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Text(text = "Messages ",
+            Text(
+                text = "Messages ",
                 modifier = Modifier.fillMaxWidth(),
-                style = TextStyle(fontSize = 27.sp,
-                    fontWeight = FontWeight.W400))
+                style = TextStyle(
+                    fontSize = 27.sp,
+                    fontWeight = FontWeight.W400
+                )
+            )
 
             Spacer(modifier = Modifier.height(15.dp))
+            
             OutlinedTextField(
                 value = searchText,
-                onValueChange = { searchText = it},
+                onValueChange = { messageViewModel.onSearchTextChanged(it) },
                 modifier = Modifier.fillMaxWidth()
                     .height(51.dp),
-                placeholder = { Text("Search users...",
-                    fontSize = 14.sp,
-                    color = Gray)},
+                placeholder = { 
+                    Text(
+                        "Search users...",
+                        fontSize = 14.sp,
+                        color = Gray
+                    )
+                },
                 leadingIcon = {
                     Icon(
                         painter = painterResource(R.drawable.outline_search_24),
                         contentDescription = null,
                         modifier = Modifier.size(20.dp)
                     )
-                },singleLine = true,
+                },
+                singleLine = true,
                 shape = MaterialTheme.shapes.medium,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Blue,
@@ -173,6 +125,7 @@ fun MessageScreen(){
                     unfocusedContainerColor = Gray.copy(alpha = 0.15f)
                 ),
             )
+            
             Spacer(modifier = Modifier.height(20.dp))
             
             if (isLoading) {
@@ -185,7 +138,6 @@ fun MessageScreen(){
                     Text("Loading users...", color = Gray)
                 }
             } else {
-                // Always show user list when not loading
                 if (errorMessage.isNotEmpty() && users.isEmpty()) {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
@@ -198,9 +150,8 @@ fun MessageScreen(){
                 LazyColumn {
                     // "Me" entry for self-chat
                     item {
-                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-                        val myId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-                        val myName = auth.currentUser?.email ?: "Me"
+                        val myId = currentUser?.userId ?: messageViewModel.getLocalUserId(activity)
+                        val myName = currentUser?.userName ?: "Me"
                         
                         MessageUserItem(
                             imageRes = R.drawable.outline_person_24,
@@ -208,44 +159,33 @@ fun MessageScreen(){
                             userId = myId,
                             userName = myName,
                             onMessageClick = {
-                                activity.startActivity(
-                                    MessageDetailsActivity.newIntent(
-                                        activity = activity,
-                                        otherUserId = myId,
-                                        otherUserName = myName,
-                                    )
-                                )
+                                messageViewModel.navigateToChat(myId, myName, activity)
                             },
                             onVideoCallClick = {
-                                startVideoCall(activity, myId, myName)
+                                messageViewModel.initiateCall(myId, myName, true, activity)
                             },
                             onVoiceCallClick = {
-                                startVoiceCall(activity, myId, myName)
+                                messageViewModel.initiateCall(myId, myName, false, activity)
                             }
                         )
                     }
                     
                     // Firebase users
                     items(users) { user ->
+                        val displayName = user.fullName.ifBlank { user.email }
                         MessageUserItem(
                             imageRes = R.drawable.outline_person_24,
-                            name = user.fullName.ifBlank { user.email },
+                            name = displayName,
                             userId = user.userId,
-                            userName = user.fullName.ifBlank { user.email },
+                            userName = displayName,
                             onMessageClick = {
-                                activity.startActivity(
-                                    MessageDetailsActivity.newIntent(
-                                        activity = activity,
-                                        otherUserId = user.userId,
-                                        otherUserName = user.fullName.ifBlank { user.email },
-                                    )
-                                )
+                                messageViewModel.navigateToChat(user.userId, displayName, activity)
                             },
                             onVideoCallClick = {
-                                startVideoCall(activity, user.userId, user.fullName.ifBlank { user.email })
+                                messageViewModel.initiateCall(user.userId, displayName, true, activity)
                             },
                             onVoiceCallClick = {
-                                startVoiceCall(activity, user.userId, user.fullName.ifBlank { user.email })
+                                messageViewModel.initiateCall(user.userId, displayName, false, activity)
                             }
                         )
                     }
@@ -257,31 +197,32 @@ fun MessageScreen(){
 
 @Composable
 fun MessageUserItem(
-    imageRes : Int,
-    name : String,
+    imageRes: Int,
+    name: String,
     userId: String,
     userName: String,
     onMessageClick: () -> Unit,
     onVideoCallClick: () -> Unit,
     onVoiceCallClick: () -> Unit
-
-){
-    Row (
+) {
+    Row(
         modifier = Modifier.fillMaxWidth()
             .clickable(onClick = onMessageClick)
             .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ){
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Image(
             painter = painterResource(imageRes),
             contentDescription = null,
             modifier = Modifier.size(48.dp)
                 .clip(CircleShape)
-
         )
+        
         Spacer(modifier = Modifier.width(12.dp))
-        Column (modifier = Modifier.weight(1f)
-           ) {
+        
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text = name,
                 fontSize = 16.sp,
@@ -293,7 +234,6 @@ fun MessageUserItem(
                 fontSize = 14.sp,
                 color = Gray
             )
-
         }
         
         // Call buttons
@@ -321,58 +261,9 @@ fun MessageUserItem(
     }
 }
 
-
-
-
-
-
-
-
-// Helper functions for starting calls
-private fun startVideoCall(activity: Activity, targetUserId: String, targetUserName: String) {
-    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-    val currentUserName = auth.currentUser?.email ?: "Me"
-    
-    // Use current user ID as room ID for direct call
-    val callId = currentUserId
-    
-    val intent = ZegoCallActivity.newIntent(
-        activity = activity,
-        callId = callId,
-        userId = currentUserId,
-        userName = currentUserName,
-        isVideoCall = true,
-        targetUserId = "", // Not needed for direct ZegoCloud
-        isIncomingCall = false
-    )
-    activity.startActivity(intent)
-}
-
-private fun startVoiceCall(activity: Activity, targetUserId: String, targetUserName: String) {
-    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-    val currentUserName = auth.currentUser?.email ?: "Me"
-    
-    // Use current user ID as room ID for direct call
-    val callId = currentUserId
-    
-    val intent = ZegoCallActivity.newIntent(
-        activity = activity,
-        callId = callId,
-        userId = currentUserId,
-        userName = currentUserName,
-        isVideoCall = false,
-        targetUserId = "", // Not needed for direct ZegoCloud
-        isIncomingCall = false
-    )
-    activity.startActivity(intent)
-}
-
 @Preview(showBackground = true)
 @Composable
-fun Preview4(){
+fun PreviewMessageScreen() {
     MessageScreen()
-
 }
 
