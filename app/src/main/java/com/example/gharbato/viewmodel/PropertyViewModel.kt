@@ -1,5 +1,7 @@
 package com.example.gharbato.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
@@ -177,5 +179,12 @@ class PropertyViewModel(
                 )
             }
         }
+    }
+
+    fun uploadImage(context: Context,
+                    imageUri: Uri,
+                    callback: (String?) -> Unit
+    ){
+        repository.uploadImage(context , imageUri, callback)
     }
 }

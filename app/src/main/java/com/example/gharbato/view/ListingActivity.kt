@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -42,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +56,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
+import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
@@ -73,16 +76,83 @@ fun ListingBody(){
     val context = LocalContext.current
     val activity = context as Activity
 
-    var step by remember { mutableIntStateOf(1) }
+    var step by rememberSaveable { mutableIntStateOf(1) }
     val showHeader = step == 1
 
-    var selectedPurpose by remember { mutableStateOf("") }
-    var selectedPropertyType by remember { mutableStateOf("") }
+    var listingState by rememberSaveable {mutableStateOf(PropertyListingState()) }
+
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = {
+                Text(
+                    "Exit Listing?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to go back? Your progress won't be saved.",
+                    fontSize = 15.sp,
+                    color = Color.DarkGray
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showExitDialog = false
+                        val intent = Intent(context, DashboardActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Blue
+                    )
+                ) {
+                    Text("Yes, Exit")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { showExitDialog = false },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Gray.copy(0.7f)
+                    )
+                ) {
+                    Text("Stay")
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if(showConfirmDialog){
+        AlertDialog(onDismissRequest = {showConfirmDialog = false},
+            title = { Text("DO you want to submit the listing?")},
+            confirmButton = {
+                Button(onClick = {
+                }) {
+                    Text("Yes, Submit")
+                }
+            },
+            dismissButton = {
+                Button(onClick = {
+                    showConfirmDialog = false
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Scaffold (
         containerColor = Color.White
     ){
-        padding ->
+            padding ->
         Column (
             modifier = Modifier
                 .padding(padding)
@@ -93,18 +163,18 @@ fun ListingBody(){
             AnimatedVisibility(
                 visible = showHeader,
                 enter = fadeIn(
-                    animationSpec = tween(durationMillis = 600) // Slow down fade in
+                    animationSpec = tween(durationMillis = 600)
                 ) + expandVertically(
                     animationSpec = tween(
-                        durationMillis = 600, //  Slow down expansion
+                        durationMillis = 600,
                         easing = FastOutSlowInEasing
                     )
                 ),
                 exit = fadeOut(
-                    animationSpec = tween(durationMillis = 600) // Slow down fade out
+                    animationSpec = tween(durationMillis = 600)
                 ) + shrinkVertically(
                     animationSpec = tween(
-                        durationMillis = 600, //  Slow down shrinking
+                        durationMillis = 600,
                         easing = FastOutSlowInEasing
                     )
                 )
@@ -218,39 +288,46 @@ fun ListingBody(){
             ) {
                 when (step) {
                     1 -> PurposeContentScreen(
-                        selectedPurpose = selectedPurpose,
-                        selectedPropertyType = selectedPropertyType,
-                        onPropertyTypeChange = {
-                            selectedPropertyType = it
+                        selectedPurpose = listingState.selectedPurpose,
+                        selectedPropertyType = listingState.selectedPropertyType,
+                        onPropertyTypeChange = { newType ->
+                            listingState = listingState.copy(selectedPropertyType = newType)
                         },
-                        onPurposeChange = {
-                            selectedPurpose = it
+                        onPurposeChange = { newPurpose ->
+                            listingState = listingState.copy(selectedPurpose = newPurpose)
                         }
                     )
-                    2 -> DetailsContentScreen(purpose = selectedPurpose, propertyType = selectedPropertyType)
-                    3 -> PhotosContentScreen()
+                    2 -> DetailsContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
+                    3 -> PhotosContentScreen(
+                        imageCategories = listingState.imageCategories,
+                        onCategoriesChange = { newCategories ->
+                            listingState = listingState.copy(imageCategories = newCategories)
+                        }
+                    )
                 }
             }
+
             Row(
                 horizontalArrangement = Arrangement.SpaceAround,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 15.dp)
-
             ) {
                 Button(
                     onClick = {
                         val newStep = step - 1
                         if (newStep <= 0) {
-                            val intent = Intent(context, DashboardActivity::class.java)
-                            context.startActivity(intent)
-                            activity.finish()
+                            showExitDialog = true
                         } else {
                             step -= 1
                         }
                     },
-                    modifier = Modifier
-                        .weight(1f),
+                    modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Gray.copy(0.7f)
@@ -258,10 +335,17 @@ fun ListingBody(){
                 ) {
                     Text("Back")
                 }
+
                 Spacer(modifier = Modifier.width(7.dp))
+
                 Button(
                     onClick = {
-                        step += 1
+                        if (step <= 2) {
+                            step += 1
+                        }
+                        else if(step == 3){
+                            showConfirmDialog = true
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
@@ -272,7 +356,6 @@ fun ListingBody(){
                     Text("Next")
                 }
             }
-
         }
     }
 }

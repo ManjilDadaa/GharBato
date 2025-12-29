@@ -20,7 +20,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -48,16 +47,28 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
 import com.example.gharbato.data.model.SampleData.properties
+import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
 import com.example.gharbato.ui.view.PropertyCard
-import kotlin.collections.iterator
+import com.example.gharbato.ui.view.PropertyDetailActivity
+import com.example.gharbato.viewmodel.PropertyViewModel
+import com.example.gharbato.viewmodel.PropertyViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(
+            RepositoryProvider.getPropertyRepository(),
+            RepositoryProvider.getSavedPropertiesRepository()
+        )
+    )
+) {
     var search by remember { mutableStateOf("") }
 
     // variables required for multi selection FilterChips
@@ -71,8 +82,8 @@ fun HomeScreen() {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
     val context = LocalContext.current
     val activity = context as Activity
+
     Scaffold(
-        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
@@ -90,7 +101,6 @@ fun HomeScreen() {
                         )
                     }
                 },
-
                 actions = {
                     IconButton(onClick = {}) {
                         Icon(
@@ -107,7 +117,7 @@ fun HomeScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFF8F9FB))
-                .padding(top = padding.calculateTopPadding()),
+                .padding(padding),
         ) {
             item {
                 OutlinedTextField(
@@ -115,12 +125,10 @@ fun HomeScreen() {
                         .fillMaxWidth()
                         .padding(vertical = 5.dp, horizontal = 5.dp)
                         .height(48.dp),
-
                     value = search,
                     onValueChange = { data ->
                         search = data
                     },
-
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Text
                     ),
@@ -138,14 +146,12 @@ fun HomeScreen() {
                             )
                         )
                     },
-
                     leadingIcon = {
                         Icon(
                             painter = painterResource(R.drawable.outline_search_24),
                             contentDescription = null
                         )
                     },
-
                     shape = RoundedCornerShape(10.dp),
                 )
             }
@@ -156,11 +162,9 @@ fun HomeScreen() {
                         .padding(horizontal = 5.dp, vertical = 8.dp)
                         .horizontalScroll(rememberScrollState())
                 ) {
-
                     for ((filter, icon) in filters) {
                         FilterChip(
-                            selected =
-                                selectedFilters.contains(filter),
+                            selected = selectedFilters.contains(filter),
                             onClick = {
                                 selectedFilters = if (filter in selectedFilters)
                                     selectedFilters - filter
@@ -184,11 +188,21 @@ fun HomeScreen() {
                             )
                         )
                     }
-
                 }
             }
             items(properties) { property ->
-                PropertyCard(property = property, onClick = {}, onFavoriteClick = {})
+                PropertyCard(
+                    property = property,
+                    onClick = {
+                        val intent = Intent(context, PropertyDetailActivity::class.java)
+                        intent.putExtra("propertyId", property.id)
+                        context.startActivity(intent)
+                    },
+                    onFavoriteClick = { prop ->
+
+                        viewModel.toggleFavorite(prop)
+                    }
+                )
             }
         }
     }

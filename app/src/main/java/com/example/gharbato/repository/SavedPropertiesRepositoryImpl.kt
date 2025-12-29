@@ -25,6 +25,11 @@ class SavedPropertiesRepositoryImpl : SavedPropertiesRepository {
         updateFlow()
     }
 
+    // Alias method for consistency
+    override suspend fun removeProperty(propertyId: Int) {
+        removeSavedProperty(propertyId)
+    }
+
     override suspend fun isPropertySaved(propertyId: Int): Boolean {
         return savedPropertiesMap.containsKey(propertyId)
     }
