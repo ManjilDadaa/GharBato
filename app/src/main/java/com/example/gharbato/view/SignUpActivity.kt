@@ -497,7 +497,7 @@ fun SignUpBody() {
                                     password != confirmPassword -> Toast.makeText(context, "Passwords don't match", Toast.LENGTH_SHORT).show()
                                     else -> {
                                         isLoading = true
-                                        userViewModel.signUp(email, password, fullname) { success, message, userId ->
+                                        userViewModel.signUp(email, password, fullname, phoneNo, selectedCountry) { success, message, userId ->
                                             if (success) {
                                                 val model = UserModel(
                                                     userId = userId,
