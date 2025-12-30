@@ -6,8 +6,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,234 +22,218 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.model.UserModel
-import com.example.gharbato.repository.UserRepoImpl
-import com.example.gharbato.viewmodel.UserViewModel
-
+import com.example.gharbato.viewmodel.MessageViewModel
 
 class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { MessageScreen()
+        setContent { 
+            MessageScreen()
         }
     }
 }
 
-private fun getOrCreateLocalUserId(context: Context): String {
-    val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
-    val existing = prefs.getString("local_user_id", null)
-    if (!existing.isNullOrBlank()) return existing
-
-    val newId = "guest_${System.currentTimeMillis()}"
-    prefs.edit().putString("local_user_id", newId).apply()
-    return newId
-}
-
-data class FirebaseUser(
-    val uid: String = "",
-    val email: String = "",
-    val displayName: String = ""
-)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessageScreen(){
-    var searchText by remember { mutableStateOf("") }
-    var users by remember { mutableStateOf<List<UserModel>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf("") }
+fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
+    val searchText by messageViewModel.searchText
+    val users by messageViewModel.users
+    val isLoading by messageViewModel.isLoading
+    val errorMessage by messageViewModel.errorMessage
+    val currentUser by messageViewModel.currentUser
     val context = LocalContext.current
     val activity = context as Activity
     
-    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-    
-    // Load only registered users from database
     LaunchedEffect(Unit) {
-        android.util.Log.d("MessageScreen", "Loading registered users from database...")
-        
-        userViewModel.getAllUsers { success, userList, message ->
-            android.util.Log.d("MessageScreen", "Database fetch completed - success: $success, userList size: ${userList?.size}")
-            
-            // Always set loading to false
-            isLoading = false
-            
-            if (success && userList != null) {
-                users = userList
-                if (userList.isEmpty()) {
-                    errorMessage = "No registered users found in database"
-                } else {
-                    errorMessage = "Found ${userList.size} registered users"
-                }
-                android.util.Log.d("MessageScreen", "Loaded ${userList.size} registered users: ${userList.map { it.fullName }}")
-            } else {
-                users = emptyList()
-                errorMessage = "Error loading users: $message"
-                android.util.Log.e("MessageScreen", "Failed to load users: $message")
-            }
-        }
+        messageViewModel.loadUsers()
     }
     
-    // Search users when query changes
     LaunchedEffect(searchText) {
-        if (isLoading) return@LaunchedEffect
-        android.util.Log.d("MessageScreen", "Searching users with query: '$searchText'")
-        
-        try {
-            kotlinx.coroutines.withTimeout(3000) {
-                userViewModel.searchUsers(searchText) { success, userList, message ->
-                    if (success && userList != null) {
-                        android.util.Log.d("MessageScreen", "Search returned ${userList.size} users: ${userList.map { it.fullName }}")
-                        users = userList
-                        errorMessage = ""
-                    } else {
-                        android.util.Log.e("MessageScreen", "Search error: $message")
-                        errorMessage = message
-                    }
-                }
-            }
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            android.util.Log.e("MessageScreen", "Search timeout, keeping current users")
-            errorMessage = "Search timeout"
+        if (!isLoading) {
+            messageViewModel.searchUsers()
         }
     }
     
-    Scaffold { innerPadding ->
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color(0xFFF8F9FA)
+    ) {
         Column(
             modifier = Modifier.fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 20.dp, vertical = 20.dp)
         ) {
-            Text(text = "Messages ",
-                modifier = Modifier.fillMaxWidth(),
-                style = TextStyle(fontSize = 27.sp,
-                    fontWeight = FontWeight.W400))
-
-            Spacer(modifier = Modifier.height(15.dp))
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = { searchText = it},
-                modifier = Modifier.fillMaxWidth()
-                    .height(51.dp),
-                placeholder = { Text("Search users...",
-                    fontSize = 14.sp,
-                    color = Gray)},
-                leadingIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_search_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Messages",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontFamily = FontFamily.SansSerif,
+                        fontWeight = FontWeight.SemiBold
                     )
-                },singleLine = true,
-                shape = MaterialTheme.shapes.medium,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Blue,
-                    unfocusedBorderColor = Gray,
-                    focusedContainerColor = Gray.copy(alpha = 0.15f),
-                    unfocusedContainerColor = Gray.copy(alpha = 0.15f)
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Blue
                 ),
+                modifier = Modifier.shadow(4.dp)
             )
-            Spacer(modifier = Modifier.height(20.dp))
             
-            if (isLoading) {
-                Column(
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = searchText,
+                    onValueChange = { messageViewModel.onSearchTextChanged(it) },
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text("Loading users...", color = Gray)
-                }
-            } else {
-                // Always show user list when not loading
-                if (errorMessage.isNotEmpty() && users.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Error: $errorMessage", color = Color.Red)
-                    }
-                }
+                    placeholder = { 
+                        Text(
+                            "Search users...",
+                            color = Gray.copy(alpha = 0.7f),
+                            fontSize = 16.sp
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_search_24),
+                            contentDescription = null,
+                            tint = Gray,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Blue,
+                        unfocusedBorderColor = Gray.copy(alpha = 0.3f),
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = Blue
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
                 
-                LazyColumn {
-                    // "Me" entry for self-chat
-                    item {
-                        val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-                        val myId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-                        val myName = auth.currentUser?.email ?: "Me"
-                        
-                        MessageUserItem(
-                            imageRes = R.drawable.outline_person_24,
-                            name = "Me",
-                            userId = myId,
-                            userName = myName,
-                            onMessageClick = {
-                                activity.startActivity(
-                                    MessageDetailsActivity.newIntent(
-                                        activity = activity,
-                                        otherUserId = myId,
-                                        otherUserName = myName,
-                                    )
-                                )
-                            },
-                            onVideoCallClick = {
-                                startVideoCall(activity, myId, myName)
-                            },
-                            onVoiceCallClick = {
-                                startVoiceCall(activity, myId, myName)
-                            }
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                if (isLoading) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            color = Blue,
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Loading users...",
+                            color = Gray,
+                            fontSize = 16.sp
                         )
                     }
-                    
-                    // Firebase users
-                    items(users) { user ->
-                        MessageUserItem(
-                            imageRes = R.drawable.outline_person_24,
-                            name = user.fullName.ifBlank { user.email },
-                            userId = user.userId,
-                            userName = user.fullName.ifBlank { user.email },
-                            onMessageClick = {
-                                activity.startActivity(
-                                    MessageDetailsActivity.newIntent(
-                                        activity = activity,
-                                        otherUserId = user.userId,
-                                        otherUserName = user.fullName.ifBlank { user.email },
-                                    )
+                } else {
+                    if (errorMessage.isNotEmpty() && users.isEmpty()) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_person_24),
+                                contentDescription = null,
+                                tint = Color.Red.copy(alpha = 0.7f),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Error: $errorMessage",
+                                color = Color.Red,
+                                fontSize = 16.sp
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            item {
+                                val myId = currentUser?.userId ?: messageViewModel.getLocalUserId(activity)
+                                val myName = currentUser?.userName ?: "Me"
+                                
+                                EnhancedMessageUserItem(
+                                    imageRes = R.drawable.outline_person_24,
+                                    name = "Me",
+                                    userId = myId,
+                                    userName = myName,
+                                    onMessageClick = {
+                                        messageViewModel.navigateToChat(myId, myName, activity)
+                                    },
+                                    onVideoCallClick = {
+                                        messageViewModel.initiateCall(myId, myName, true, activity)
+                                    },
+                                    onVoiceCallClick = {
+                                        messageViewModel.initiateCall(myId, myName, false, activity)
+                                    },
+                                    isCurrentUser = true
                                 )
-                            },
-                            onVideoCallClick = {
-                                startVideoCall(activity, user.userId, user.fullName.ifBlank { user.email })
-                            },
-                            onVoiceCallClick = {
-                                startVoiceCall(activity, user.userId, user.fullName.ifBlank { user.email })
                             }
-                        )
+                            
+                            items(users) { user ->
+                                val displayName = user.fullName.ifBlank { user.email }
+                                EnhancedMessageUserItem(
+                                    imageRes = R.drawable.outline_person_24,
+                                    name = displayName,
+                                    userId = user.userId,
+                                    userName = displayName,
+                                    onMessageClick = {
+                                        messageViewModel.navigateToChat(user.userId, displayName, activity)
+                                    },
+                                    onVideoCallClick = {
+                                        messageViewModel.initiateCall(user.userId, displayName, true, activity)
+                                    },
+                                    onVoiceCallClick = {
+                                        messageViewModel.initiateCall(user.userId, displayName, false, activity)
+                                    },
+                                    isCurrentUser = false
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -256,123 +242,134 @@ fun MessageScreen(){
 }
 
 @Composable
-fun MessageUserItem(
-    imageRes : Int,
-    name : String,
+fun EnhancedMessageUserItem(
+    imageRes: Int,
+    name: String,
     userId: String,
     userName: String,
     onMessageClick: () -> Unit,
     onVideoCallClick: () -> Unit,
-    onVoiceCallClick: () -> Unit
-
-){
-    Row (
-        modifier = Modifier.fillMaxWidth()
-            .clickable(onClick = onMessageClick)
-            .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-    ){
-        Image(
-            painter = painterResource(imageRes),
-            contentDescription = null,
-            modifier = Modifier.size(48.dp)
-                .clip(CircleShape)
-
+    onVoiceCallClick: () -> Unit,
+    isCurrentUser: Boolean = false
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(12.dp)
+            ),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isCurrentUser) 
+                Color(0xFFE3F2FD) 
+            else 
+                Color.White
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 0.dp
         )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column (modifier = Modifier.weight(1f)
-           ) {
-            Text(
-                text = name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Hello, how are you?",
-                fontSize = 14.sp,
-                color = Gray
-            )
-
-        }
-        
-        // Call buttons
-        Row {
-            // Voice call button
-            Icon(
-                painter = painterResource(R.drawable.outline_call_24),
-                contentDescription = "Voice Call",
-                modifier = Modifier.size(24.dp)
-                    .clickable(onClick = onVoiceCallClick)
-                    .padding(4.dp),
-                tint = Blue
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            // Video call button
-            Icon(
-                painter = painterResource(R.drawable.outline_videocam_24),
-                contentDescription = "Video Call",
-                modifier = Modifier.size(24.dp)
-                    .clickable(onClick = onVideoCallClick)
-                    .padding(4.dp),
-                tint = Blue
-            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onMessageClick)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier.size(56.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(
+                            color = if (isCurrentUser) Blue else Gray.copy(alpha = 0.2f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(imageRes),
+                        contentDescription = null,
+                        tint = if (isCurrentUser) 
+                            Color.White 
+                        else 
+                            Gray,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = name,
+                    fontSize = 18.sp,
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF1A1A1A)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Hello, how are you?",
+                    fontSize = 14.sp,
+                    color = Gray,
+                    fontFamily = FontFamily.SansSerif
+                )
+            }
+            
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = Color(0xFFE8F5E8),
+                            shape = CircleShape
+                        )
+                        .clickable(onClick = onVoiceCallClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_call_24),
+                        contentDescription = "Voice Call",
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            color = Color(0xFFE3F2FD),
+                            shape = CircleShape
+                        )
+                        .clickable(onClick = onVideoCallClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_videocam_24),
+                        contentDescription = "Video Call",
+                        tint = Blue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
 
-
-
-
-
-
-
-
-// Helper functions for starting calls
-private fun startVideoCall(activity: Activity, targetUserId: String, targetUserName: String) {
-    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-    val currentUserName = auth.currentUser?.email ?: "Me"
-    
-    // Use current user ID as room ID for direct call
-    val callId = currentUserId
-    
-    val intent = ZegoCallActivity.newIntent(
-        activity = activity,
-        callId = callId,
-        userId = currentUserId,
-        userName = currentUserName,
-        isVideoCall = true,
-        targetUserId = "", // Not needed for direct ZegoCloud
-        isIncomingCall = false
-    )
-    activity.startActivity(intent)
-}
-
-private fun startVoiceCall(activity: Activity, targetUserId: String, targetUserName: String) {
-    val auth = com.google.firebase.auth.FirebaseAuth.getInstance()
-    val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
-    val currentUserName = auth.currentUser?.email ?: "Me"
-    
-    // Use current user ID as room ID for direct call
-    val callId = currentUserId
-    
-    val intent = ZegoCallActivity.newIntent(
-        activity = activity,
-        callId = callId,
-        userId = currentUserId,
-        userName = currentUserName,
-        isVideoCall = false,
-        targetUserId = "", // Not needed for direct ZegoCloud
-        isIncomingCall = false
-    )
-    activity.startActivity(intent)
-}
-
 @Preview(showBackground = true)
 @Composable
-fun Preview4(){
+fun PreviewMessageScreen() {
     MessageScreen()
-
 }
 
