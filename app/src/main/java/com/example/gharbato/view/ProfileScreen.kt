@@ -17,10 +17,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,8 +35,11 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Black
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.UserViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 class ProfileScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,22 +53,28 @@ class ProfileScreenActivity : ComponentActivity() {
 @Composable
 fun ProfileScreen() {
     val context = LocalContext.current
-    val prefs = context.getSharedPreferences("profile_prefs", Context.MODE_PRIVATE)
 
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phone by remember { mutableStateOf("") }
-    var imageUri by remember { mutableStateOf<String?>(null) }
+    // Initialize ViewModel
+    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
+
+    // Observe user data from ViewModel
+    val userData by userViewModel.userData.observeAsState()
+
     var showContactInfo by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
 
+    // Load user profile when screen opens
+    LaunchedEffect(Unit) {
+        userViewModel.loadUserProfile()
+        isLoading = false
+    }
+
+    // Reload profile when returning from EditProfileActivity
     DisposableEffect(Unit) {
         val lifecycleOwner = context as ComponentActivity
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                name = prefs.getString("name", "Abhi Khatiwada")!!
-                email = prefs.getString("email", "KKKhatiwada@gmail.com")!!
-                phone = prefs.getString("phone", "+977 9861996115")!!
-                imageUri = prefs.getString("profile_image", null)
+                userViewModel.loadUserProfile()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -97,207 +106,229 @@ fun ProfileScreen() {
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFF8F9FB))
-                .verticalScroll(rememberScrollState())
-        ) {
-            // Profile Header Section
-            Row(
+        if (isLoading || userData == null) {
+            // Show loading indicator
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
             ) {
-                // Profile Image with Edit Icon
-                Box(contentAlignment = Alignment.BottomEnd) {
-                    Image(
-                        painter = if (imageUri != null)
-                            rememberAsyncImagePainter(Uri.parse(imageUri))
-                        else painterResource(R.drawable.billu),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(Blue),
-                        contentScale = ContentScale.Crop
-                    )
+                CircularProgressIndicator(color = Blue)
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(Color(0xFFF8F9FB))
+                    .verticalScroll(rememberScrollState())
+            ) {
+                // Profile Header Section
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Profile Image with Edit Icon
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        Image(
+                            painter = painterResource(R.drawable.billu),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Blue),
+                            contentScale = ContentScale.Crop
+                        )
 
-                    // Edit Icon Button
-                    Box(
-                        modifier = Modifier
-                            .size(22.dp)
-                            .clip(CircleShape)
-                            .background(Blue)
-                            .border(2.dp, Color.White, CircleShape)
-                            .clickable {
-                                context.startActivity(
-                                    Intent(context, EditProfileActivity::class.java)
-                                )
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
+                        // Edit Icon Button
+                        Box(
+                            modifier = Modifier
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(Blue)
+                                .border(2.dp, Color.White, CircleShape)
+                                .clickable {
+                                    context.startActivity(
+                                        Intent(context, EditProfileActivity::class.java)
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = "Edit Profile",
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            userData?.fullName ?: "User",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Black
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Show/Hide contact info
+                        Text(
+                            if (showContactInfo) "Hide contact info" else "Show contact info",
+                            fontSize = 13.sp,
+                            color = Color(0xFF4D8DFF),
+                            modifier = Modifier.clickable {
+                                showContactInfo = !showContactInfo
+                            }
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                // Contact Info Section (Expandable)
+                if (showContactInfo) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .padding(bottom = 16.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .padding(16.dp)
+                    ) {
+                        ContactInfoRow(
+                            icon = R.drawable.baseline_email_24,
+                            label = "Email",
+                            value = userData?.email ?: "N/A"
+                        )
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        name,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Black
-                    )
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                        ContactInfoRow(
+                            icon = R.drawable.baseline_email_24,
+                            label = "Phone",
+                            value = userData?.phoneNo ?: "N/A"
+                        )
 
-                    // Show/Hide contact info
-                    Text(
-                        if (showContactInfo) "Hide contact info" else "Show contact info",
-                        fontSize = 13.sp,
-                        color = Color(0xFF4D8DFF),
-                        modifier = Modifier.clickable {
-                            showContactInfo = !showContactInfo
-                        }
-                    )
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        ContactInfoRow(
+                            icon = R.drawable.baseline_email_24,
+                            label = "Country",
+                            value = userData?.selectedCountry ?: "N/A"
+                        )
+                    }
                 }
-            }
 
-            // Contact Info Section (Expandable)
-            if (showContactInfo) {
-                Column(
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Profile Settings Section
+                SectionHeader("Profile Settings")
+
+                CleanMenuItem(
+                    icon = R.drawable.baseline_watch_24,
+                    title = "My Activities",
+                    subtitle = "View your account activities",
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, MyActivitiesActivity::class.java))
+                }
+
+                CleanMenuItem(
+                    icon = R.drawable.baseline_create_24,
+                    title = "Trust and Verification",
+                    subtitle = "Manage your account security",
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, TrustAndVerificationActivity::class.java))
+                }
+
+                CleanMenuItem(
+                    icon = R.drawable.baseline_settings_24,
+                    title = "Application Settings",
+                    subtitle = "Configure your app settings",
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, ApplicationSettingsActivity::class.java))
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Support Section
+                SectionHeader("Support")
+
+                CleanMenuItem(
+                    icon = R.drawable.outline_adb_24,
+                    title = "Help Center",
+                    subtitle = null,
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, HelpCenterActivity::class.java))
+                }
+
+                CleanMenuItem(
+                    icon = R.drawable.baseline_email_24,
+                    title = "Terms & Policies",
+                    subtitle = null,
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, TermsAndPoliciesActivity::class.java))
+                }
+
+                CleanMenuItem(
+                    icon = R.drawable.baseline_email_24,
+                    title = "Contact Us",
+                    subtitle = null,
+                    iconColor = Blue
+                ) {
+                    context.startActivity(Intent(context, ContactUsActivity::class.java))
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Logout Button
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .padding(bottom = 16.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
-                        .padding(16.dp)
+                        .clickable {
+                            // Sign out from Firebase
+                            FirebaseAuth.getInstance().signOut()
+
+                            val loginIntent = Intent(context, LoginActivity::class.java)
+                            loginIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(loginIntent)
+                            (context as ComponentActivity).finish()
+                        }
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    ContactInfoRow(
-                        icon = R.drawable.baseline_email_24,
-                        label = "Email",
-                        value = email
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    ContactInfoRow(
-                        icon = R.drawable.baseline_email_24,
-                        label = "Phone",
-                        value = phone
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Profile Settings Section
-            SectionHeader("Profile Settings")
-
-            CleanMenuItem(
-                icon = R.drawable.baseline_watch_24,
-                title = "My Activities",
-                subtitle = "View your account activities",
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, MyActivitiesActivity::class.java))
-            }
-
-            CleanMenuItem(
-                icon = R.drawable.baseline_create_24,
-                title = "Trust and Verification",
-                subtitle = "Manage your account security",
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, TrustAndVerificationActivity::class.java))
-            }
-
-            CleanMenuItem(
-                icon = R.drawable.baseline_settings_24,
-                title = "Application Settings",
-                subtitle = "Configure your app settings",
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, ApplicationSettingsActivity::class.java))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Support Section
-            SectionHeader("Support")
-
-            CleanMenuItem(
-                icon = R.drawable.outline_adb_24,
-                title = "Help Center",
-                subtitle = null,
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, HelpCenterActivity::class.java))
-            }
-
-            CleanMenuItem(
-                icon = R.drawable.baseline_email_24,
-                title = "Terms & Policies",
-                subtitle = null,
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, TermsAndPoliciesActivity::class.java))
-            }
-
-            CleanMenuItem(
-                icon = R.drawable.baseline_email_24,
-                title = "Contact Us",
-                subtitle = null,
-                iconColor = Blue
-            ) {
-                context.startActivity(Intent(context, ContactUsActivity::class.java))
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Logout Button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White)
-                    .clickable {
-                        val loginIntent = Intent(context, LoginActivity::class.java)
-                        context.startActivity(loginIntent)
-                        (context as ComponentActivity).finish()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_logout_24),
+                            contentDescription = null,
+                            tint = Color(0xFFE53935),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Logout",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFE53935)
+                        )
                     }
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_logout_24),
-                        contentDescription = null,
-                        tint = Color(0xFFE53935),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Logout",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFE53935)
-                    )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }
@@ -335,7 +366,7 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         color = Color(0xFF2C2C2C),
         modifier = modifier.padding(
-            start = 12.dp,  // 👈 moved slightly left
+            start = 12.dp,
             end = 20.dp,
             top = 12.dp,
             bottom = 12.dp

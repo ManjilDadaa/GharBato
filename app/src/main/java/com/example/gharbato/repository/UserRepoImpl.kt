@@ -11,31 +11,33 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import java.util.concurrent.TimeUnit
 
-class UserRepoImpl : UserRepo {
+class UserRepoImpl : UserRepo{
 
-    val auth: FirebaseAuth = FirebaseAuth.getInstance()
-    val database: FirebaseDatabase = FirebaseDatabase.getInstance()
-    val ref: DatabaseReference = database.getReference("Users")
+    val auth : FirebaseAuth = FirebaseAuth.getInstance()
+    val database : FirebaseDatabase = FirebaseDatabase.getInstance()
+    val ref : DatabaseReference = database.getReference("Users")
 
     override fun login(
         email: String,
         password: String,
         callback: (Boolean, String) -> Unit
     ) {
-        auth.signInWithEmailAndPassword(email, password)
+        auth.signInWithEmailAndPassword(email,password)
             .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    callback(true, "Login Successful")
-                } else {
+                if (it.isSuccessful){
+                    callback(true,"Login Successful")
+                }
+                else{
                     val exception = it.exception
-                    when (exception) {
+                    when(exception){
                         is FirebaseAuthInvalidUserException -> {
-                            callback(false, it.exception?.message.toString())
+                            callback(false,it.exception?.message.toString())
                         }
                         is FirebaseAuthInvalidCredentialsException -> {
                             callback(false, "Invalid email or password")
@@ -49,15 +51,18 @@ class UserRepoImpl : UserRepo {
     override fun signUp(
         email: String,
         password: String,
-        fullName: String,
+        fullName : String,
+        phoneNo: String,
+        country : String,
         callback: (Boolean, String, String) -> Unit
     ) {
-        auth.createUserWithEmailAndPassword(email, password)
+        auth.createUserWithEmailAndPassword(email,password)
             .addOnCompleteListener {
-                if (it.isSuccessful) {
-                    callback(true, "Registration Successful", "${auth.currentUser?.uid}")
-                } else {
-                    callback(false, "${it.exception?.message}", "")
+                if (it.isSuccessful){
+                    callback(true,"Registration Successful", "${auth.currentUser?.uid}")
+                }
+                else{
+                    callback(false, "${it.exception?.message}","" )
                 }
             }
     }
@@ -68,10 +73,11 @@ class UserRepoImpl : UserRepo {
         callback: (Boolean, String) -> Unit
     ) {
         ref.child(userId).setValue(model).addOnCompleteListener {
-            if (it.isSuccessful) {
-                callback(true, "User registered successfully")
-            } else {
-                callback(false, "${it.exception?.message}")
+            if (it.isSuccessful){
+                callback(true,"User registered successfully")
+            }
+            else{
+                callback(false,"${it.exception?.message}")
             }
         }
     }
@@ -89,6 +95,51 @@ class UserRepoImpl : UserRepo {
                 }
             }
     }
+
+    // ---------- PROFILE ----------
+
+    override fun getCurrentUserId(): String? {
+        return auth.currentUser?.uid
+    }
+
+    override fun getUser(
+        userId: String,
+        callback: (UserModel?) -> Unit
+    ) {
+        ref.child(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val user = snapshot.getValue(UserModel::class.java)
+                    callback(user)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(null)
+                }
+            })
+    }
+
+    override fun updateUserName(
+        userId: String,
+        fullName: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val updates = mapOf<String, Any>(
+            "fullName" to fullName
+        )
+
+        ref.child(userId)
+            .updateChildren(updates)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    callback(true, "Profile updated successfully")
+                } else {
+                    callback(false, it.exception?.message ?: "Update failed")
+                }
+            }
+    }
+
 
     override fun sendOtp(
         phoneNumber: String,
@@ -262,4 +313,6 @@ class UserRepoImpl : UserRepo {
             }
         })
     }
+
+
 }
