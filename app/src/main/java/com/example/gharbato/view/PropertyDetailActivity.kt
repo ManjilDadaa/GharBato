@@ -33,22 +33,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepositoryImpl
+import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
-import com.example.gharbato.view.ZegoCallActivity
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.*
-import com.google.firebase.auth.FirebaseAuth
-import java.util.UUID
 
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
         PropertyViewModelFactory(
-            PropertyRepositoryImpl(),
-            SavedPropertiesRepositoryImpl()
+            RepositoryProvider.getPropertyRepository(),  //Using singleton
+            RepositoryProvider.getSavedPropertiesRepository()  //  Using singleton
         )
     }
 
@@ -90,7 +88,6 @@ class PropertyDetailActivity : ComponentActivity() {
         }
     }
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PropertyDetailScreen(
@@ -114,6 +111,7 @@ fun PropertyDetailScreen(
                         imageUrl = property.imageUrl,
                         isFavorite = isFavorite,
                         onFavoriteClick = { isFavorite = !isFavorite },
+
                         onBackClick = onBack
                     )
                 }
@@ -184,14 +182,14 @@ fun PropertyDetailScreen(
                 }
 
                 // Agent Helper
-                item {
-                    AgentHelperSection()
-                }
+//                item {
+//                    AgentHelperSection()
+//                }
 
                 // Similar Properties
-                item {
-                    SimilarPropertiesSection()
-                }
+//                item {
+//                    SimilarPropertiesSection()
+//                }
 
                 // Bottom spacing
                 item {
@@ -200,7 +198,7 @@ fun PropertyDetailScreen(
             }
 
             // Bottom Action Buttons
-            BottomActionButtons(property = property)
+            BottomActionButtons()
         }
     }
 }
@@ -573,7 +571,6 @@ fun MapPreviewSection(
 
 @Composable
 fun ContactOwnerSection(property: PropertyModel) {
-    val context = LocalContext.current
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -626,9 +623,7 @@ fun ContactOwnerSection(property: PropertyModel) {
                 }
 
                 IconButton(
-                    onClick = {
-                        startVoiceCall(context, property.developer)
-                    },
+                    onClick = { /* Handle call */ },
                     modifier = Modifier
                         .size(48.dp)
                         .background(Color(0xFF4CAF50), CircleShape)
@@ -856,160 +851,127 @@ fun ReportSection() {
     }
 }
 
-@Composable
-fun AgentHelperSection() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Need Help Finding Property?",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black
-            )
+//fun AgentHelperSection() {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(16.dp),
+//        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
+//    ) {
+//        Column(
+//            modifier = Modifier.padding(20.dp),
+//            horizontalAlignment = Alignment.CenterHorizontally
+//        ) {
+//            Text(
+//                text = "Need Help Finding Property?",
+//                fontSize = 18.sp,
+//                fontWeight = FontWeight.Bold,
+//                color = Color.Black
+//            )
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Box(
+//                modifier = Modifier
+//                    .size(100.dp)
+//                    .background(Color.White, CircleShape)
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.SupportAgent,
+//                    contentDescription = "Agent",
+//                    modifier = Modifier
+//                        .size(60.dp)
+//                        .align(Alignment.Center),
+//                    tint = Color(0xFF2196F3)
+//                )
+//            }
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Text(
+//                text = "Our agents can help you find the perfect property,\nschedule visits, and handle all paperwork",
+//                fontSize = 14.sp,
+//                color = Color.Gray,
+//                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+//            )
+//
+//            Spacer(modifier = Modifier.height(16.dp))
+//
+//            Button(
+//                onClick = { /* Request agent */ },
+//                modifier = Modifier.fillMaxWidth(),
+//                colors = ButtonDefaults.buttonColors(
+//                    containerColor = Color(0xFF2196F3)
+//                ),
+//                shape = RoundedCornerShape(8.dp)
+//            ) {
+//                Text(
+//                    text = "Request Agent Assistance",
+//                    color = Color.White,
+//                    fontWeight = FontWeight.Bold
+//                )
+//            }
+//        }
+//    }
+//}
 
-            Spacer(modifier = Modifier.height(16.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .background(Color.White, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SupportAgent,
-                    contentDescription = "Agent",
-                    modifier = Modifier
-                        .size(60.dp)
-                        .align(Alignment.Center),
-                    tint = Color(0xFF2196F3)
-                )
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "Our agents can help you find perfect property,\nschedule visits, and handle all paperwork",
-                fontSize = 14.sp,
-                color = Color.Gray,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { /* Request agent */ },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                ),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(
-                    text = "Request Agent Assistance",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SimilarPropertiesSection() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(
-            text = "Similar Properties",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SimilarPropertyCard(
-                price = "from 15.2 lakh",
-                details = "2 BHK • 1800 sq.ft",
-                location = "Lalitpur",
-                imageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400",
-                modifier = Modifier.weight(1f)
-            )
-            SimilarPropertyCard(
-                price = "from 10.5 lakh",
-                details = "1 BHK • 1200 sq.ft",
-                location = "Bhaktapur",
-                imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400",
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun SimilarPropertyCard(
-    price: String,
-    details: String,
-    location: String,
-    imageUrl: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clickable { /* Navigate */ },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column {
-            Image(
-                painter = rememberAsyncImagePainter(imageUrl),
-                contentDescription = "Similar Property",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop
-            )
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = price,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
-                )
-                Text(
-                    text = details,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = location,
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
-        }
-    }
-}
+//@Composable
+//fun SimilarPropertiesSection(
+//    price: String,
+//    details: String,
+//    location: String,
+//    imageUrl: String,
+//    modifier: Modifier = Modifier
+//) {
+//    Card(
+//        modifier = modifier.clickable { /* Navigate */ },
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+//        shape = RoundedCornerShape(12.dp)
+//    ) {
+//        Column {
+//            Image(
+//                painter = rememberAsyncImagePainter(imageUrl),
+//                contentDescription = "Similar Property",
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(120.dp),
+//                contentScale = ContentScale.Crop
+//            )
+//            Column(modifier = Modifier.padding(12.dp)) {
+//                Text(
+//                    text = price,
+//                    fontSize = 16.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color(0xFF4CAF50)
+//                )
+//                Text(
+//                    text = details,
+//                    fontSize = 12.sp,
+//                    color = Color.Gray
+//                )
+//                Row(verticalAlignment = Alignment.CenterVertically) {
+//                    Icon(
+//                        imageVector = Icons.Default.LocationOn,
+//                        contentDescription = null,
+//                        modifier = Modifier.size(12.dp),
+//                        tint = Color.Gray
+//                    )
+//                    Spacer(modifier = Modifier.width(4.dp))
+//                    Text(
+//                        text = location,
+//                        fontSize = 11.sp,
+//                        color = Color.Gray
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 @Composable
-fun BoxScope.BottomActionButtons(property: PropertyModel) {
-    val context = LocalContext.current
+fun BoxScope.BottomActionButtons() {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1017,217 +979,49 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
         color = Color.White,
         shadowElevation = 8.dp
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = {
-                        startVoiceCall(context, property.developer)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Phone,
-                        contentDescription = "Call",
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Call", fontWeight = FontWeight.Bold, color = Color.White)
-                }
-
-                Button(
-                    onClick = { /* Handle message */ },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3)
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Email,
-                        contentDescription = "Message",
-                        tint = Color.White
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Message", fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            }
-            
-            // Test button for joining same room
-            Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = {
-                    joinTestRoom(context)
-                },
+                onClick = { /* Handle call */ },
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp),
+                    .weight(1f)
+                    .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF9800)
+                    containerColor = Color(0xFF4CAF50)
                 ),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Join Test Call Room", fontWeight = FontWeight.Bold, color = Color.White)
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Call",
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Call", fontWeight = FontWeight.Bold, color = Color.White)
             }
-            
-            // Manual join buttons for testing
-            BottomActionButtons(
-                onJoinScaftyRoom = {
-                    val targetRoomId = "0UKeFIqEPReRVv6Rjo3oCCy1gCq1" // scafty11233's actual user ID
-                    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                    val intent = ZegoCallActivity.newIntent(
-                        context as android.app.Activity,
-                        callId = targetRoomId,
-                        userId = currentUserId,
-                        userName = FirebaseAuth.getInstance().currentUser?.email ?: "Me",
-                        isVideoCall = false,
-                        targetUserId = "", // Not needed
-                        isIncomingCall = false // Manual join
-                    )
-                    context.startActivity(intent)
-                },
-                onJoinAryanRoom = {
-                    val targetRoomId = "qHZJSkfkzgQj56sNm8E1FPPrMUS2" // aryanshrestha's actual user ID
-                    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
-                    val intent = ZegoCallActivity.newIntent(
-                        context as android.app.Activity,
-                        callId = targetRoomId,
-                        userId = currentUserId,
-                        userName = FirebaseAuth.getInstance().currentUser?.email ?: "Me",
-                        isVideoCall = false,
-                        targetUserId = "", // Not needed
-                        isIncomingCall = false // Manual join
-                    )
-                    context.startActivity(intent)
-                }
-            )
-        }
-    }
-}
 
-@Composable
-private fun BottomActionButtons(onJoinScaftyRoom: () -> Unit, onJoinAryanRoom: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Join scafty11233's room
-        Button(
-            onClick = onJoinScaftyRoom,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2196F3),
-                contentColor = Color.White
-            )
-        ) {
-            Text("Join Scafty's Room", fontWeight = FontWeight.Bold, color = Color.White)
-        }
-        
-        // Join aryanshrestha's room  
-        Button(
-            onClick = onJoinAryanRoom,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4CAF50),
-                contentColor = Color.White
-            )
-        ) {
-            Text("Join Aryan's Room", fontWeight = FontWeight.Bold, color = Color.White)
-        }
-    }
-}
-
-// Helper function to join test room
-private fun joinTestRoom(context: android.content.Context) {
-    android.util.Log.d("PropertyDetail", "Manual join ZegoCloud room requested")
-    try {
-        val auth = FirebaseAuth.getInstance()
-        val currentUserId = auth.currentUser?.uid
-        val currentUserName = auth.currentUser?.email ?: "Me"
-        
-        if (currentUserId == null) {
-            android.util.Log.e("PropertyDetail", "User not logged in")
-            return
-        }
-        
-        // Join the other user's room (Aryan's room ID)
-        val targetRoomId = "qHZJSkfkzgQj56sNm8E1FPPrMUS2" // Aryan's user ID
-        android.util.Log.d("PropertyDetail", "Joining ZegoCloud room: $targetRoomId")
-        
-        val intent = ZegoCallActivity.newIntent(
-            context as android.app.Activity,
-            callId = targetRoomId,
-            userId = currentUserId,
-            userName = currentUserName,
-            isVideoCall = false,
-            targetUserId = "", // Not needed
-            isIncomingCall = false // Manual join
-        )
-        android.util.Log.d("PropertyDetail", "Starting ZegoCloud call for room: $targetRoomId")
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.util.Log.e("PropertyDetail", "Failed to join room", e)
-        if (context is android.app.Activity) {
-            android.widget.Toast.makeText(context, "Failed to join room: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
-        }
-    }
-}
-
-// Helper function for starting voice calls
-private fun startVoiceCall(context: android.content.Context, targetUserName: String) {
-    android.util.Log.d("PropertyDetail", "startVoiceCall called with target: $targetUserName")
-    try {
-        val auth = FirebaseAuth.getInstance()
-        val currentUserId = auth.currentUser?.uid
-        val currentUserName = auth.currentUser?.email ?: "Me"
-        
-        android.util.Log.d("PropertyDetail", "Current user: $currentUserId, name: $currentUserName")
-        
-        if (currentUserId == null) {
-            android.util.Log.e("PropertyDetail", "User not logged in")
-            return
-        }
-        
-        // Use current user ID as room ID for direct call
-        val callId = currentUserId // Simple: use caller's ID as room ID
-        android.util.Log.d("PropertyDetail", "Using ZegoCloud room: $callId")
-        
-        // Start voice call with ZegoCloud
-        val intent = ZegoCallActivity.newIntent(
-            context as android.app.Activity,
-            callId = callId,
-            userId = currentUserId,
-            userName = currentUserName,
-            isVideoCall = false,
-            targetUserId = "", // Not needed for direct ZegoCloud
-            isIncomingCall = false
-        )
-        android.util.Log.d("PropertyDetail", "Starting ZegoCloud call with room: $callId")
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.util.Log.e("PropertyDetail", "Failed to start voice call", e)
-        if (context is android.app.Activity) {
-            android.widget.Toast.makeText(context, "Failed to start call: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            Button(
+                onClick = { /* Handle message */ },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF2196F3)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Email,
+                    contentDescription = "Message",
+                    tint = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Message", fontWeight = FontWeight.Bold, color = Color.White)
+            }
         }
     }
 }

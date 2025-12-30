@@ -31,8 +31,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepositoryImpl
-import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
+import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.view.CustomMarkerHelper
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -44,26 +43,20 @@ import com.google.maps.android.compose.*
 fun SearchScreen(
     viewModel: PropertyViewModel = viewModel(
         factory = PropertyViewModelFactory(
-            PropertyRepositoryImpl(),
-            SavedPropertiesRepositoryImpl()
+            RepositoryProvider.getPropertyRepository(),
+            RepositoryProvider.getSavedPropertiesRepository()
         )
     )
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    var isMapFullScreen by remember { mutableStateOf(false) }
-
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
             listState.firstVisibleItemScrollOffset > 100
 
     val mapHeight by animateDpAsState(
-        targetValue = when {
-            isMapFullScreen -> 800.dp
-            isScrolled -> 0.dp
-            else -> 300.dp
-        },
+        targetValue = if (isScrolled) 0.dp else 300.dp,
         label = "mapHeight"
     )
 
@@ -74,10 +67,11 @@ fun SearchScreen(
                 onSearchQueryChange = { viewModel.updateSearchQuery(it) }
             )
         }
-    ) { padding ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(paddingValues)
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -90,39 +84,26 @@ fun SearchScreen(
                     ) {
                         MapSection(
                             properties = uiState.properties,
-                            isFullScreen = isMapFullScreen,
                             context = context,
                             onMarkerClick = { property ->
+                                // ✅ Show property overlay when marker clicked
                                 viewModel.selectProperty(property)
                             },
                             onMapClick = {
-                                if (!isMapFullScreen) {
-                                    isMapFullScreen = true
-                                }
+                                // ✅ Open FullSearchMapActivity when map background clicked
+                                val intent = Intent(context, FullSearchMapActivity::class.java)
+                                context.startActivity(intent)
                             }
                         )
 
-                        if (isMapFullScreen) {
-                            IconButton(
-                                onClick = { isMapFullScreen = false },
-                                modifier = Modifier
-                                    .align(Alignment.TopStart)
-                                    .padding(16.dp)
-                                    .background(Color.White, CircleShape)
-                                    .zIndex(10f)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Close",
-                                    tint = Color.Black
-                                )
-                            }
-                        }
-
+                        // ✅ Show overlay when marker is clicked
                         uiState.selectedProperty?.let { property ->
                             PropertyDetailOverlay(
                                 property = property,
-                                onClose = { viewModel.clearSelectedProperty() },
+                                onClose = {
+                                    // ✅ Clear selection to show all listings
+                                    viewModel.clearSelectedProperty()
+                                },
                                 onViewDetails = {
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
@@ -180,29 +161,6 @@ fun SearchScreen(
                     )
                 }
             }
-
-            // Save Search Button (outside Column, inside Box)
-            if (!isMapFullScreen && mapHeight > 0.dp && uiState.selectedProperty == null) {
-                Button(
-                    onClick = { /* Handle save */ },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 24.dp)
-                        .height(48.dp)
-                        .zIndex(10f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3)
-                    ),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Text(
-                        text = "Save search",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                }
-            }
         }
     }
 }
@@ -210,7 +168,6 @@ fun SearchScreen(
 @Composable
 fun MapSection(
     properties: List<PropertyModel>,
-    isFullScreen: Boolean,
     context: android.content.Context,
     onMarkerClick: (PropertyModel) -> Unit,
     onMapClick: () -> Unit
@@ -219,10 +176,7 @@ fun MapSection(
         ?: com.google.android.gms.maps.model.LatLng(27.7172, 85.3240)
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(
-            startLocation,
-            if (isFullScreen) 12f else 11f
-        )
+        position = CameraPosition.fromLatLngZoom(startLocation, 11f)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -233,7 +187,11 @@ fun MapSection(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
                 mapToolbarEnabled = false
-            )
+            ),
+            onMapClick = {
+                // ✅ Clicking map background opens FullMapActivity
+                onMapClick()
+            }
         ) {
             properties.forEach { property ->
                 Marker(
@@ -242,8 +200,9 @@ fun MapSection(
                     snippet = property.location,
                     icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                     onClick = {
+                        // ✅ Clicking marker shows overlay
                         onMarkerClick(property)
-                        true
+                        true // Consume the click event
                     }
                 )
             }
@@ -289,6 +248,23 @@ fun MapSection(
                     tint = Color.Black
                 )
             }
+        }
+
+        // ✅ Fullscreen button
+        FloatingActionButton(
+            onClick = onMapClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .size(40.dp)
+                .zIndex(1f),
+            containerColor = Color.White
+        ) {
+            Icon(
+                imageVector = Icons.Default.Fullscreen,
+                contentDescription = "Full Screen",
+                tint = Color.Black
+            )
         }
     }
 }
@@ -502,7 +478,6 @@ fun PropertyCard(
     ) {
         Column {
             Box {
-                // Property Image
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
                     contentDescription = property.title,
@@ -512,14 +487,12 @@ fun PropertyCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // Top Action Buttons (Favorite & More)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    // Favorite Button
                     IconButton(
                         onClick = { onFavoriteClick(property) },
                         modifier = Modifier
@@ -544,7 +517,6 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    // More Options Button
                     IconButton(
                         onClick = { /* Handle more options */ },
                         modifier = Modifier
@@ -560,7 +532,6 @@ fun PropertyCard(
                     }
                 }
 
-                // Property Stats Overlay (Bottom Left)
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
@@ -571,7 +542,6 @@ fun PropertyCard(
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Square Feet
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = null,
@@ -588,7 +558,6 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Bedrooms
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
@@ -605,7 +574,6 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    // Bathrooms
                     Icon(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
@@ -622,14 +590,12 @@ fun PropertyCard(
                 }
             }
 
-            // Property Details Section
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Property Information
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = property.developer,
@@ -645,7 +611,6 @@ fun PropertyCard(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        // Price
                         Text(
                             text = property.price,
                             fontSize = 18.sp,
@@ -653,7 +618,6 @@ fun PropertyCard(
                             color = Color(0xFF4CAF50)
                         )
 
-                        // Location
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.padding(top = 4.dp)
@@ -673,7 +637,6 @@ fun PropertyCard(
                         }
                     }
 
-                    // Chat Button
                     Surface(
                         shape = CircleShape,
                         color = Color(0xFF4CAF50),
