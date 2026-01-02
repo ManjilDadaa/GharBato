@@ -56,9 +56,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
+import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.viewmodel.ListingViewModel
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,6 +78,7 @@ fun ListingBody(){
 
     val context = LocalContext.current
     val activity = context as Activity
+    val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
 
     var step by rememberSaveable { mutableIntStateOf(1) }
     val showHeader = step == 1
@@ -130,19 +134,20 @@ fun ListingBody(){
         )
     }
 
-    if(showConfirmDialog){
-        AlertDialog(onDismissRequest = {showConfirmDialog = false},
-            title = { Text("DO you want to submit the listing?")},
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Do you want to submit the listing?") },
             confirmButton = {
                 Button(onClick = {
+                    showConfirmDialog = false
+                    listingViewModel.submitListing(context, listingState)
                 }) {
                     Text("Yes, Submit")
                 }
             },
             dismissButton = {
-                Button(onClick = {
-                    showConfirmDialog = false
-                }) {
+                Button(onClick = { showConfirmDialog = false }) {
                     Text("Cancel")
                 }
             }
