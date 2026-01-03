@@ -27,7 +27,7 @@ class SavedPropertiesRepositoryImpl : SavedPropertiesRepository {
     }
 
     private fun getSavedPropertiesRef() =
-        database.getReference("users/${getUserId()}/savedProperties")
+        database.getReference("users/${getUserId()}/UserFavoriteList")
 
     override suspend fun getSavedProperties(): List<PropertyModel> {
         return try {

@@ -92,8 +92,6 @@ class PropertyViewModel(
                 } else {
                     savedPropertiesRepository.saveProperty(property)
                 }
-                // Refresh properties to update favorite status
-                loadProperties()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
