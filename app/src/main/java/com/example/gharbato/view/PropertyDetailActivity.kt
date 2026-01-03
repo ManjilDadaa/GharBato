@@ -917,58 +917,58 @@ fun ReportSection() {
 
 
 
-//@Composable
-//fun SimilarPropertiesSection(
-//    price: String,
-//    details: String,
-//    location: String,
-//    imageUrl: String,
-//    modifier: Modifier = Modifier
-//) {
-//    Card(
-//        modifier = modifier.clickable { /* Navigate */ },
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-//        shape = RoundedCornerShape(12.dp)
-//    ) {
-//        Column {
-//            Image(
-//                painter = rememberAsyncImagePainter(imageUrl),
-//                contentDescription = "Similar Property",
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(120.dp),
-//                contentScale = ContentScale.Crop
-//            )
-//            Column(modifier = Modifier.padding(12.dp)) {
-//                Text(
-//                    text = price,
-//                    fontSize = 16.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color(0xFF4CAF50)
-//                )
-//                Text(
-//                    text = details,
-//                    fontSize = 12.sp,
-//                    color = Color.Gray
-//                )
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    Icon(
-//                        imageVector = Icons.Default.LocationOn,
-//                        contentDescription = null,
-//                        modifier = Modifier.size(12.dp),
-//                        tint = Color.Gray
-//                    )
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                    Text(
-//                        text = location,
-//                        fontSize = 11.sp,
-//                        color = Color.Gray
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
+@Composable
+fun SimilarPropertiesSection(
+    price: String,
+    details: String,
+    location: String,
+    imageUrl: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable { /* Navigate */ },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = "Similar Property",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = price,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+                Text(
+                    text = details,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = location,
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun BoxScope.BottomActionButtons() {
