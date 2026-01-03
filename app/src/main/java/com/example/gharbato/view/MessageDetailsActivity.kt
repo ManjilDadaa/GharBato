@@ -5,8 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
 import android.provider.MediaStore
+import androidx.core.content.FileProvider
 import androidx.activity.ComponentActivity
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -165,6 +171,22 @@ private fun sendImageMessage(
     ref.setValue(message)
 }
 
+private fun createImageFileUri(context: Context): Uri {
+    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+    val imageFileName = "JPEG_${timeStamp}_"
+    val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "chat_images")
+    if (!storageDir.exists()) {
+        storageDir.mkdirs()
+    }
+    val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
+    
+    return FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        imageFile
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageDetailsScreen(
@@ -194,12 +216,14 @@ private fun MessageDetailsScreen(
         uri?.let { sendImageMessage(it, db, chatId, myUserId, auth, context) }
     }
 
-    // Camera launcher
+    // Camera launcher with file URI
+    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success) {
-            // Handle camera photo
+        if (success && cameraImageUri != null) {
+            sendImageMessage(cameraImageUri!!, db, chatId, myUserId, auth, context)
+            cameraImageUri = null
         }
     }
 
@@ -520,9 +544,14 @@ private fun MessageDetailsScreen(
                                     text = { Text("Camera") },
                                     onClick = {
                                         showImageOptions = false
-                                        // For camera, we need to create a file URI first
-                                        // For now, just launch gallery
-                                        galleryLauncher.launch("image/*")
+                                        try {
+                                            val imageUri = createImageFileUri(context)
+                                            cameraImageUri = imageUri
+                                            cameraLauncher.launch(imageUri)
+                                        } catch (e: Exception) {
+                                            // Fallback to gallery if camera fails
+                                            galleryLauncher.launch("image/*")
+                                        }
                                     },
                                     leadingIcon = {
                                         Icon(
