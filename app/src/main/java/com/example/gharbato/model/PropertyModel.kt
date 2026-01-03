@@ -26,7 +26,8 @@ data class PropertyModel(
     val parking: Boolean = true,
     val petsAllowed: Boolean = false,
     var isFavorite: Boolean = false,
-
+    val ownerId: String = "",
+    val ownerName: String = "",
     var description: String? = "",
     var utilitiesIncluded: String? = "",
     var commission: String? = "",
