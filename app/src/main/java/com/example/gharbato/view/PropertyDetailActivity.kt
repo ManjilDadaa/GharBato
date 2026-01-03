@@ -150,7 +150,6 @@ fun PropertyDetailScreen(
     onFavoriteToggle: (PropertyModel) -> Unit
 ) {
     val context = LocalContext.current
-    var isFavorite by remember { mutableStateOf(false) }
 
     Scaffold { paddingValues ->
         Box(
@@ -163,11 +162,13 @@ fun PropertyDetailScreen(
                 item {
                     PropertyImageSection(
                         property = property,
-                        isFavorite = isFavorite,
-                        onFavoriteClick = { isFavorite = !isFavorite },
-
+                        isFavorite = property.isFavorite,
+                        onFavoriteClick = {
+                            onFavoriteToggle(property)
+                        },
                         onBackClick = onBack
                     )
+
                 }
 
                 // Status Chips

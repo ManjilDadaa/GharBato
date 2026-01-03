@@ -35,6 +35,7 @@ class PropertyViewModel(
 
     init {
         loadProperties()
+        observeSavedProperties()
     }
 
     fun loadProperties() {
@@ -57,6 +58,27 @@ class PropertyViewModel(
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message
+                )
+            }
+        }
+    }
+    private fun observeSavedProperties() {
+        viewModelScope.launch {
+            savedPropertiesRepository.getSavedPropertiesFlow().collect { savedProperties ->
+                val savedIds = savedProperties.map { it.id }.toSet()
+
+                val updatedProperties = _uiState.value.properties.map { property ->
+                    property.copy(isFavorite = savedIds.contains(property.id))
+                }
+
+
+                val updatedSelectedProperty = _uiState.value.selectedProperty?.let { selected ->
+                    selected.copy(isFavorite = savedIds.contains(selected.id))
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    properties = updatedProperties,
+                    selectedProperty = updatedSelectedProperty
                 )
             }
         }
