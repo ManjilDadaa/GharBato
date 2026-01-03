@@ -7,84 +7,20 @@ import android.os.Looper
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
-import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import kotlinx.coroutines.delay
+import com.google.firebase.database.*
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
 import java.util.concurrent.Executors
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class PropertyRepoImpl : PropertyRepo {
 
-    // Sample data - In real app, this would be from API/Firebase
-    private val sampleProperties = listOf(
-        PropertyModel(
-            id = 1,
-            title = "Luxury Villa",
-            developer = "ABC Builders",
-            price = "Rs 2,50,00,000",
-            sqft = "2500 sq.ft",
-            bedrooms = 4,
-            bathrooms = 3,
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
+    private val ref: DatabaseReference = database.getReference("Property")
 
-            images = mapOf(
-                "cover" to listOf(
-                    "https://picsum.photos/600/400"
-                ),
-                "bedrooms" to listOf(
-                    "https://picsum.photos/600/401",
-                    "https://picsum.photos/600/402"
-                ),
-                "kitchen" to listOf(
-                    "https://picsum.photos/600/403"
-                )
-            ),
-
-            location = "Kathmandu",
-            latLng = LatLng(27.7172, 85.3240),
-            propertyType = "House",
-            floor = "2",
-            furnishing = "Fully Furnished",
-            parking = true,
-            petsAllowed = true
-        ),
-        PropertyModel(
-            id = 1,
-            title = "Luxury Villa",
-            developer = "ABC Builders",
-            price = "Rs 2,50,00,000",
-            sqft = "2500 sq.ft",
-            bedrooms = 4,
-            bathrooms = 3,
-
-            images = mapOf(
-                "cover" to listOf(
-                    "https://picsum.photos/600/400"
-                ),
-                "bedrooms" to listOf(
-                    "https://picsum.photos/600/401",
-                    "https://picsum.photos/600/402"
-                ),
-                "kitchen" to listOf(
-                    "https://picsum.photos/600/403"
-                )
-            ),
-
-            location = "Kathmandu",
-            latLng = LatLng(27.7172, 85.3240),
-            propertyType = "House",
-            floor = "2",
-            furnishing = "Fully Furnished",
-            parking = true,
-            petsAllowed = true
-        ),
-
-    )
-
-    private val _properties = mutableListOf<PropertyModel>()
-
-    val database: FirebaseDatabase = FirebaseDatabase.getInstance()
-    val ref: DatabaseReference = database.getReference("Property")
     private val cloudinary = Cloudinary(
         mapOf(
             "cloud_name" to "dwqybrjf2",
@@ -93,67 +29,90 @@ class PropertyRepoImpl : PropertyRepo {
         )
     )
 
+    // ✅ STEP 1: Get All Properties from Firebase
     override suspend fun getAllProperties(): List<PropertyModel> {
-        // Simulate network delay
-        delay(500)
-        return sampleProperties
+        return suspendCancellableCoroutine { continuation ->
+            ref.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val properties = mutableListOf<PropertyModel>()
+
+                    for (propertySnapshot in snapshot.children) {
+                        try {
+                            val property = propertySnapshot.getValue(PropertyModel::class.java)
+                            property?.let { properties.add(it) }
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            // Skip invalid properties
+                        }
+                    }
+
+                    continuation.resume(properties)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    continuation.resumeWithException(
+                        Exception("Firebase error: ${error.message}")
+                    )
+                }
+            })
+        }
     }
 
+    // ✅ STEP 2: Get Property by ID from Firebase
     override suspend fun getPropertyById(id: Int): PropertyModel? {
-        delay(300)
-        return sampleProperties.find { it.id == id }
+        return suspendCancellableCoroutine { continuation ->
+            ref.orderByChild("id")
+                .equalTo(id.toDouble())
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val property = snapshot.children.firstOrNull()
+                            ?.getValue(PropertyModel::class.java)
+                        continuation.resume(property)
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        continuation.resumeWithException(
+                            Exception("Firebase error: ${error.message}")
+                        )
+                    }
+                })
+        }
     }
 
+    // ✅ STEP 3: Search Properties
     override suspend fun searchProperties(query: String): List<PropertyModel> {
-        delay(400)
+        val allProperties = getAllProperties()
+
         return if (query.isEmpty()) {
-            sampleProperties
+            allProperties
         } else {
-            sampleProperties.filter {
+            allProperties.filter {
                 it.title.contains(query, ignoreCase = true) ||
                         it.location.contains(query, ignoreCase = true) ||
-                        it.developer.contains(query, ignoreCase = true)
+                        it.developer.contains(query, ignoreCase = true) ||
+                        it.propertyType.contains(query, ignoreCase = true)
             }
         }
     }
 
-    override fun uploadImage(
-        context: Context,
-        imageUri: Uri,
-        callback: (String?) -> Unit
-    ) {
-        val executor = Executors.newSingleThreadExecutor()
-        executor.execute {
-            try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
-                var fileName = getFileNameFromUri(context, imageUri)
+    // ✅ STEP 4: Filter Properties
+    override suspend fun filterProperties(
+        marketType: String,
+        propertyType: String,
+        minPrice: Int,
+        bedrooms: Int
+    ): List<PropertyModel> {
+        val allProperties = getAllProperties()
 
-                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
-
-                val response = cloudinary.uploader().upload(
-                    inputStream, ObjectUtils.asMap(
-                        "public_id", fileName,
-                        "resource_type", "image"
-                    )
-                )
-
-                var imageUrl = response["url"] as String?
-
-                imageUrl = imageUrl?.replace("http://", "https://")
-
-                Handler(Looper.getMainLooper()).post {
-                    callback(imageUrl)
-                }
-
-            } catch (e: Exception) {
-                e.printStackTrace()
-                Handler(Looper.getMainLooper()).post {
-                    callback(null)
-                }
-            }
+        return allProperties.filter { property ->
+            // Add your filtering logic here
+            // For now, return all properties
+            // You can add filters based on marketType, propertyType, etc.
+            true
         }
     }
 
+    // ✅ Add Property to Firebase (already working)
     override fun addProperty(
         property: PropertyModel,
         callback: (Boolean, String?) -> Unit
@@ -175,7 +134,42 @@ class PropertyRepoImpl : PropertyRepo {
             }
     }
 
+    // ✅ Image Upload (already working)
+    override fun uploadImage(
+        context: Context,
+        imageUri: Uri,
+        callback: (String?) -> Unit
+    ) {
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                var fileName = getFileNameFromUri(context, imageUri)
+                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
 
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "resource_type", "image"
+                    )
+                )
+
+                var imageUrl = response["url"] as String?
+                imageUrl = imageUrl?.replace("http://", "https://")
+
+                Handler(Looper.getMainLooper()).post {
+                    callback(imageUrl)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post {
+                    callback(null)
+                }
+            }
+        }
+    }
+
+    // ✅ Upload Multiple Images (already working)
     override fun uploadMultipleImages(
         context: Context,
         imageUris: List<Uri>,
@@ -197,7 +191,7 @@ class PropertyRepoImpl : PropertyRepo {
                             inputStream, ObjectUtils.asMap(
                                 "public_id", fileName,
                                 "resource_type", "image",
-                                "folder", "properties" // Organize in folder
+                                "folder", "properties"
                             )
                         )
 
@@ -206,11 +200,9 @@ class PropertyRepoImpl : PropertyRepo {
 
                         if (imageUrl != null) {
                             uploadedUrls.add(imageUrl)
-                            println("Image uploaded: $imageUrl")
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        // Continue with other images even if one fails
                     }
                 }
             } catch (e: Exception) {
@@ -243,18 +235,5 @@ class PropertyRepoImpl : PropertyRepo {
         }
 
         return "image_${System.currentTimeMillis()}"
-    }
-
-    override suspend fun filterProperties(
-        marketType: String,
-        propertyType: String,
-        minPrice: Int,
-        bedrooms: Int
-    ): List<PropertyModel> {
-        delay(400)
-        return sampleProperties.filter { property ->
-            // Add your filtering logic here
-            true // For now, return all
-        }
     }
 }
