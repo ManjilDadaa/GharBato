@@ -1,7 +1,6 @@
 package com.example.gharbato.ui.view
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -94,6 +93,10 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import android.content.Context
+import android.content.Intent
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -246,6 +249,7 @@ fun PropertyDetailScreen(
     }
 }
 
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyImageSection(
@@ -254,15 +258,19 @@ fun PropertyImageSection(
     onFavoriteClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    //Get ALL images from all categories
+    val context = LocalContext.current
+
+    // Get all images from all categories
     val allImages = property.images.values.flatten()
 
     // If no images, show placeholder
-    val imagesToShow = allImages.ifEmpty {
+    val imagesToShow = if (allImages.isEmpty()) {
         listOf("https://via.placeholder.com/600x400?text=No+Image")
+    } else {
+        allImages
     }
 
-    //Pager state for swiping
+    // Pager state for swiping
     val pagerState = rememberPagerState(pageCount = { imagesToShow.size })
 
     Box(
@@ -270,7 +278,6 @@ fun PropertyImageSection(
             .fillMaxWidth()
             .height(300.dp)
     ) {
-
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
@@ -283,13 +290,14 @@ fun PropertyImageSection(
             )
         }
 
-        // Top Bar with Back and Favorite buttons
+        // Top Bar with Back, Favorite, and Share buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Back Button
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
@@ -297,13 +305,15 @@ fun PropertyImageSection(
                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.Default.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.Black
                 )
             }
 
+
             Row {
+                // Favorite Button
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
@@ -320,21 +330,23 @@ fun PropertyImageSection(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 IconButton(
-                    onClick = { /* Handle more */ },
+                    onClick = {
+                        shareProperty(context, property)
+                    },
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.9f), CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More",
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
                         tint = Color.Black
                     )
                 }
             }
         }
 
-        //Image counter indicator (top-right style)
+        // Image counter indicator (bottom-right)
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -351,7 +363,7 @@ fun PropertyImageSection(
             )
         }
 
-        // ✅ Dot indicators at bottom center
+        // Dot indicators at bottom center
         if (imagesToShow.size > 1) {
             Row(
                 modifier = Modifier
@@ -375,6 +387,36 @@ fun PropertyImageSection(
             }
         }
     }
+}
+
+// Share Property function
+private fun shareProperty(context: Context, property: PropertyModel) {
+    // Create a shareable message with property details
+    val shareText = buildString {
+        append("🏠 ${property.developer}\n\n")
+        append("💰 Price: ${property.price}\n")
+        append("📍 Location: ${property.location}\n")
+        append("🛏️ Bedrooms: ${property.bedrooms}\n")
+        append("🛁 Bathrooms: ${property.bathrooms}\n")
+        append("📐 Area: ${property.sqft}\n\n")
+
+        append("View property: https://gharbato.app/property/${property.id}\n\n")
+
+        append("Check out this amazing property on Gharbato!")
+    }
+
+    // Create share intent
+    val shareIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "Check out this property: ${property.developer}")
+        putExtra(Intent.EXTRA_TEXT, shareText)
+    }
+
+    // Show system share sheet
+    context.startActivity(
+        Intent.createChooser(shareIntent, "Share Property via")
+    )
 }
 
 @Composable
