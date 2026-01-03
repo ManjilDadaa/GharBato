@@ -68,7 +68,7 @@ fun ListingBody() {
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
-    // ✅ Collect states from ViewModel
+    //Collect states from ViewModel
     val isUploading by listingViewModel.isUploading.collectAsState()
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
     val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
@@ -436,7 +436,7 @@ fun ListingBody() {
                 // Next/Submit Button
                 Button(
                     onClick = {
-                        // ✅ VALIDATE before proceeding
+                        // VALIDATE before proceeding
                         val validationResult = listingViewModel.validateStep(step, listingState)
 
                         if (validationResult.isValid) {

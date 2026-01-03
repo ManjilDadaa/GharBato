@@ -16,7 +16,7 @@ data class PropertyModel(
     val images: Map<String, List<String>> = emptyMap(),
     val location: String = "",
 
-    // ✅ Firebase stores lat/lng separately, not LatLng object
+    // Firebase stores lat/lng separately, not LatLng object
     val latitude: Double = 27.7172,
     val longitude: Double = 85.3240,
 
@@ -27,12 +27,12 @@ data class PropertyModel(
     val petsAllowed: Boolean = false,
     var isFavorite: Boolean = false
 ) {
-    // ✅ Computed property for LatLng (not stored in Firebase)
+    //Computed property for LatLng (not stored in Firebase)
     @get:Exclude
     val latLng: LatLng
         get() = LatLng(latitude, longitude)
 
-    // ✅ Get first image URL
+    // Get first image URL
     @get:Exclude
     val imageUrl: String
         get() = images["cover"]?.firstOrNull()

@@ -86,22 +86,22 @@ fun SearchScreen(
                             properties = uiState.properties,
                             context = context,
                             onMarkerClick = { property ->
-                                // ✅ Show property overlay when marker clicked
+                                //Show property overlay when marker clicked
                                 viewModel.selectProperty(property)
                             },
                             onMapClick = {
-                                // ✅ Open FullSearchMapActivity when map background clicked
+                                //Open FullSearchMapActivity when map background clicked
                                 val intent = Intent(context, FullSearchMapActivity::class.java)
                                 context.startActivity(intent)
                             }
                         )
 
-                        // ✅ Show overlay when marker is clicked
+                        // Show overlay when marker is clicked
                         uiState.selectedProperty?.let { property ->
                             PropertyDetailOverlay(
                                 property = property,
                                 onClose = {
-                                    // ✅ Clear selection to show all listings
+                                    //Clear selection to show all listings
                                     viewModel.clearSelectedProperty()
                                 },
                                 onViewDetails = {
@@ -189,7 +189,7 @@ fun MapSection(
                 mapToolbarEnabled = false
             ),
             onMapClick = {
-                // ✅ Clicking map background opens FullMapActivity
+                //Clicking map background opens FullMapActivity
                 onMapClick()
             }
         ) {
@@ -200,7 +200,7 @@ fun MapSection(
                     snippet = property.location,
                     icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                     onClick = {
-                        // ✅ Clicking marker shows overlay
+                        // Clicking marker shows overlay
                         onMarkerClick(property)
                         true // Consume the click event
                     }
@@ -250,7 +250,7 @@ fun MapSection(
             }
         }
 
-        // ✅ Fullscreen button
+        // Fullscreen button
         FloatingActionButton(
             onClick = onMapClick,
             modifier = Modifier

@@ -234,12 +234,6 @@ fun PropertyDetailScreen(
                 item {
                     ReportSection()
                 }
-
-                // Agent Helper
-//                item {
-//                    AgentHelperSection()
-//                }
-
                 // Similar Properties
 //                item {
 //                    SimilarPropertiesSection()
@@ -260,18 +254,18 @@ fun PropertyDetailScreen(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyImageSection(
-    property: PropertyModel, // ✅ Changed parameter
+    property: PropertyModel,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
-    // ✅ Get ALL images from all categories
+    //Get ALL images from all categories
     val allImages = property.images.values.flatten()
 
-    // ✅ If no images, show placeholder
+    // If no images, show placeholder
     val imagesToShow = if (allImages.isEmpty()) {
         listOf("https://via.placeholder.com/600x400?text=No+Image")
-    } else {
+        } else {
         allImages
     }
 
@@ -347,7 +341,7 @@ fun PropertyImageSection(
             }
         }
 
-        // ✅ Image counter indicator (top-right style)
+        //Image counter indicator (top-right style)
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
