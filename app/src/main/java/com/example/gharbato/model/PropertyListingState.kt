@@ -12,11 +12,18 @@ data class PropertyListingState(
 
     // Step 2: Details
     var title: String = "",
+    var developer: String = "",
     var price: String = "",
     var location: String = "",
+    var area: String = "", // maps to sqft
+    var floor: String = "",
+    var furnishing: String = "Fully Furnished",
     var bedrooms: String = "",
     var bathrooms: String = "",
-    var area: String = "",
+    var parking: Boolean = true,
+    var petsAllowed: Boolean = false,
+
+    // Extra details (optional / future)
     var description: String = "",
     var kitchen: String = "",
     var totalRooms: String = "",

@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepositoryImpl
+import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.viewmodel.PropertyViewModel

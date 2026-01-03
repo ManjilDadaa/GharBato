@@ -1,10 +1,17 @@
 package com.example.gharbato.view
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,8 +25,10 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
 @Composable
-fun DetailsContentScreen(state: PropertyListingState,
-                         onStateChange: (PropertyListingState) -> Unit) {
+fun DetailsContentScreen(
+    state: PropertyListingState,
+    onStateChange: (PropertyListingState) -> Unit
+) {
 
     val priceLabel = when(state.selectedPurpose) {
         "Sell" -> "Asking Price"
@@ -29,9 +38,9 @@ fun DetailsContentScreen(state: PropertyListingState,
     }
 
     val pricePlaceholder = when(state.selectedPurpose) {
-        "Sell" -> "250000"
-        "Rent" -> "1200"
-        "Book" -> "500"
+        "Sell" -> "5000000"
+        "Rent" -> "25000"
+        "Book" -> "5000"
         else -> "0"
     }
 
@@ -39,7 +48,9 @@ fun DetailsContentScreen(state: PropertyListingState,
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(2.dp)
+            .padding(horizontal = 8.dp)
+            .verticalScroll(rememberScrollState())
+            .imePadding()
     ) {
         Text(
             "Property Details",
@@ -47,9 +58,10 @@ fun DetailsContentScreen(state: PropertyListingState,
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             ),
-            modifier = Modifier.padding(start = 2.dp,bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 16.dp)
         )
-        // Show selected purpose and property type
+
+        // Summary Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -100,12 +112,22 @@ fun DetailsContentScreen(state: PropertyListingState,
             onValueChange = { onStateChange(state.copy(title = it)) },
             label = "Property Title",
             placeholder = "e.g., Modern 2BHK ${state.selectedPropertyType}",
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 1,
-            singleLine = true
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        // Developer/Owner Name
+        CustomOutlinedTextField(
+            value = state.developer,
+            onValueChange = { onStateChange(state.copy(developer = it)) },
+            label = "Owner/Developer Name",
+            placeholder = "e.g., Ram Sharma",
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
         // Price and Area
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -113,24 +135,20 @@ fun DetailsContentScreen(state: PropertyListingState,
         ) {
             CustomOutlinedTextField(
                 value = state.price,
-                onValueChange = { onStateChange(state.copy(price = it))},
+                onValueChange = { onStateChange(state.copy(price = it)) },
                 label = "$priceLabel (रु)",
                 placeholder = pricePlaceholder,
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                maxLines = 1,
-                singleLine = true
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
             CustomOutlinedTextField(
                 value = state.area,
                 onValueChange = { onStateChange(state.copy(area = it)) },
                 label = "Area (sq ft)",
-                placeholder = "e.g,1200",
+                placeholder = "1200",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                maxLines = 1,
-                singleLine = true
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
 
@@ -141,28 +159,46 @@ fun DetailsContentScreen(state: PropertyListingState,
             value = state.location,
             onValueChange = { onStateChange(state.copy(location = it)) },
             label = "Location",
-            placeholder = "e.g,Thamel, Kathmandu",
-            modifier = Modifier.fillMaxWidth(),
-            maxLines = 1,
-            singleLine = true
+            placeholder = "e.g., Thamel, Kathmandu",
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Total Rooms and Bed Rooms
+        // Floor and Furnishing
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Location
+            CustomOutlinedTextField(
+                value = state.floor,
+                onValueChange = { onStateChange(state.copy(floor = it)) },
+                label = "Floor",
+                placeholder = "e.g., 5 floors",
+                modifier = Modifier.weight(1f)
+            )
+
+            // Furnishing Dropdown
+            FurnishingDropdown(
+                selectedFurnishing = state.furnishing,
+                onFurnishingChange = { onStateChange(state.copy(furnishing = it)) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Total Rooms and Bedrooms
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             CustomOutlinedTextField(
                 value = state.totalRooms,
                 onValueChange = { onStateChange(state.copy(totalRooms = it)) },
                 label = "Total Rooms",
-                placeholder = "e.g,10",
+                placeholder = "10",
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -170,16 +206,15 @@ fun DetailsContentScreen(state: PropertyListingState,
                 value = state.bedrooms,
                 onValueChange = { onStateChange(state.copy(bedrooms = it)) },
                 label = "Bedrooms",
-                placeholder = "e.g,2",
+                placeholder = "2",
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Bathrooms and Kitchen
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -188,10 +223,8 @@ fun DetailsContentScreen(state: PropertyListingState,
                 value = state.bathrooms,
                 onValueChange = { onStateChange(state.copy(bathrooms = it)) },
                 label = "Bathrooms",
-                placeholder = "e.g,2",
+                placeholder = "2",
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
 
@@ -199,12 +232,72 @@ fun DetailsContentScreen(state: PropertyListingState,
                 value = state.kitchen,
                 onValueChange = { onStateChange(state.copy(kitchen = it)) },
                 label = "Kitchen",
-                placeholder = "e.g,1",
+                placeholder = "1",
                 modifier = Modifier.weight(1f),
-                maxLines = 1,
-                singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Parking and Pets Allowed (Checkboxes)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF9FAFB)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    "Additional Features",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Parking Checkbox
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onStateChange(state.copy(parking = !state.parking)) }
+                        .padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Parking Available", fontSize = 14.sp)
+                    Checkbox(
+                        checked = state.parking,
+                        onCheckedChange = { onStateChange(state.copy(parking = it)) },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = Blue,
+                            uncheckedColor = Gray
+                        )
+                    )
+                }
+
+                //  Only show Pets Allowed for Rent or Book
+                if (state.selectedPurpose == "Rent" || state.selectedPurpose == "Book") {
+                    HorizontalDivider(color = Gray.copy(0.3f))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onStateChange(state.copy(petsAllowed = !state.petsAllowed)) }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Pets Allowed", fontSize = 14.sp)
+                        Checkbox(
+                            checked = state.petsAllowed,
+                            onCheckedChange = { onStateChange(state.copy(petsAllowed = it)) },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Blue,
+                                uncheckedColor = Gray
+                            )
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -219,10 +312,70 @@ fun DetailsContentScreen(state: PropertyListingState,
                 .fillMaxWidth()
                 .height(120.dp),
             maxLines = 5,
-            singleLine = false,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            singleLine = false
         )
-        Spacer(modifier = Modifier.height(15.dp))
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FurnishingDropdown(
+    selectedFurnishing: String,
+    onFurnishingChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val furnishingOptions = listOf("Fully Furnished", "Semi Furnished", "Unfurnished")
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier
+    ) {
+        OutlinedTextField(
+            value = selectedFurnishing,
+            onValueChange = {},
+            label = { Text("Furnishing") },
+            readOnly = true,
+            trailingIcon = {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .menuAnchor(),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Blue,
+                unfocusedBorderColor = Gray.copy(0.5f),
+                focusedLabelColor = Blue,
+                unfocusedLabelColor = Gray,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            )
+        )
+
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            furnishingOptions.forEach { option ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            option,
+                            color = if (selectedFurnishing == option) Blue else Color.Black,
+                            fontWeight = if (selectedFurnishing == option) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        onFurnishingChange(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 
@@ -234,21 +387,23 @@ fun CustomOutlinedTextField(
     placeholder: String,
     modifier: Modifier = Modifier,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    maxLines: Int,
+    maxLines: Int = 1,
     singleLine: Boolean = true
-){
+) {
     OutlinedTextField(
         value = value,
-        onValueChange = { onValueChange(it) },
+        onValueChange = onValueChange,
         label = { Text(label) },
-        placeholder = { Text(placeholder)},
+        placeholder = { Text(placeholder) },
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        colors = TextFieldDefaults.colors(
-            focusedIndicatorColor = Blue,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = Blue,
+            unfocusedBorderColor = Gray.copy(0.5f),
+            focusedLabelColor = Blue,
+            unfocusedLabelColor = Gray,
             focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent,
-            focusedLabelColor = Blue
+            unfocusedContainerColor = Color.Transparent
         ),
         maxLines = maxLines,
         singleLine = singleLine,

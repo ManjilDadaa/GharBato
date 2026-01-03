@@ -5,7 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepository
+import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.repository.SavedPropertiesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,8 +26,8 @@ data class PropertyUiState(
 )
 
 class PropertyViewModel(
-    private val repository: PropertyRepository,
-    private val savedPropertiesRepository: SavedPropertiesRepository
+    private val repository: PropertyRepo,
+    private val savedPropertiesRepository: SavedPropertiesRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PropertyUiState())
@@ -187,4 +188,9 @@ class PropertyViewModel(
     ){
         repository.uploadImage(context , imageUri, callback)
     }
+
+//    fun submitListing(context: Context, state: PropertyListingState){
+//
+//    }
+
 }

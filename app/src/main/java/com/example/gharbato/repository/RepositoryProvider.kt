@@ -9,15 +9,15 @@ object RepositoryProvider {
         SavedPropertiesRepositoryImpl()
     }
 
-    private val propertyRepository: PropertyRepositoryImpl by lazy {
-        PropertyRepositoryImpl()
+    private val propertyRepository: PropertyRepoImpl by lazy {
+        PropertyRepoImpl()
     }
 
     fun getSavedPropertiesRepository(): SavedPropertiesRepository {
         return savedPropertiesRepository
     }
 
-    fun getPropertyRepository(): PropertyRepository {
+    fun getPropertyRepository(): PropertyRepo {
         return propertyRepository
     }
 }
