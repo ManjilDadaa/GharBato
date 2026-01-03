@@ -10,7 +10,7 @@ data class PropertyModel(
     val sqft: String,
     val bedrooms: Int,
     val bathrooms: Int,
-    val imageUrl: String,
+    val images: Map<String, List<String>>,
     val location: String,
     val latLng: LatLng,
     val propertyType: String = "Apartment",
@@ -19,7 +19,12 @@ data class PropertyModel(
     val parking: Boolean = true,
     val petsAllowed: Boolean = false,
     var isFavorite: Boolean = false
-)
+){
+    val imageUrl: String
+        get() = images["cover"]?.firstOrNull()
+            ?: images.values.flatten().firstOrNull()
+            ?: ""
+}
 
 
 // Sample data
@@ -27,63 +32,64 @@ object SampleData {
     val properties = listOf(
         PropertyModel(
             id = 1,
-            title = "Modern Apartment",
-            developer = "Ram Sharma",
-            price = "from 8.7 lakh",
-            sqft = "1200 sq.ft",
-            bedrooms = 2,
-            bathrooms = 2,
-            imageUrl = "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-            location = "Kathmandu",
-            latLng = LatLng(27.7172, 85.3240)
-        ),
-        PropertyModel(
-            id = 2,
             title = "Luxury Villa",
-            developer = "Shyam Builders",
-            price = "from 15.8 lakh",
+            developer = "ABC Builders",
+            price = "Rs 2,50,00,000",
             sqft = "2500 sq.ft",
-            bedrooms = 3,
+            bedrooms = 4,
             bathrooms = 3,
-            imageUrl = "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
-            location = "Lalitpur",
-            latLng = LatLng(27.6710, 85.3240)
-        ),
-        PropertyModel(
-            id = 3,
-            title = "Cozy House",
-            developer = "Krishna Estates",
-            price = "from 12.6 lakh",
-            sqft = "1800 sq.ft",
-            bedrooms = 3,
-            bathrooms = 2,
-            imageUrl = "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-            location = "Bhaktapur",
-            latLng = LatLng(27.6710, 85.4298)
-        ),
-        PropertyModel(
-            id = 4,
-            title = "Penthouse Suite",
-            developer = "Hari Properties",
-            price = "13.2 lakh",
-            sqft = "2000 sq.ft",
-            bedrooms = 2,
-            bathrooms = 2,
-            imageUrl = "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-            location = "Pokhara",
-            latLng = LatLng(28.2096, 83.9856)
-        ),
-        PropertyModel(
-            id = 5,
-            title = "Family Home",
-            developer = "Sita Developers",
-            price = "from 10.5 lakh",
-            sqft = "1500 sq.ft",
-            bedrooms = 3,
-            bathrooms = 2,
-            imageUrl = "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+
+            images = mapOf(
+                "cover" to listOf(
+                    "https://picsum.photos/600/400"
+                ),
+                "bedrooms" to listOf(
+                    "https://picsum.photos/600/401",
+                    "https://picsum.photos/600/402"
+                ),
+                "kitchen" to listOf(
+                    "https://picsum.photos/600/403"
+                )
+            ),
+
             location = "Kathmandu",
-            latLng = LatLng(27.7000, 85.3200)
+            latLng = LatLng(27.7172, 85.3240),
+            propertyType = "House",
+            floor = "2",
+            furnishing = "Fully Furnished",
+            parking = true,
+            petsAllowed = true
+        ),
+        PropertyModel(
+            id = 1,
+            title = "Luxury Villa",
+            developer = "ABC Builders",
+            price = "Rs 2,50,00,000",
+            sqft = "2500 sq.ft",
+            bedrooms = 4,
+            bathrooms = 3,
+
+            images = mapOf(
+                "cover" to listOf(
+                    "https://picsum.photos/600/400"
+                ),
+                "bedrooms" to listOf(
+                    "https://picsum.photos/600/401",
+                    "https://picsum.photos/600/402"
+                ),
+                "kitchen" to listOf(
+                    "https://picsum.photos/600/403"
+                )
+            ),
+
+            location = "Kathmandu",
+            latLng = LatLng(27.7172, 85.3240),
+            propertyType = "House",
+            floor = "2",
+            furnishing = "Fully Furnished",
+            parking = true,
+            petsAllowed = true
         )
+
     )
 }
