@@ -5,8 +5,7 @@ import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
-import com.example.gharbato.data.model.SampleData.properties
 import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
@@ -70,6 +69,9 @@ fun HomeScreen(
     )
 ) {
     var search by remember { mutableStateOf("") }
+
+    // ✅ Get UI state from ViewModel
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // variables required for multi selection FilterChips
     var selectedFilters by remember { mutableStateOf(setOf<String>()) }
@@ -113,96 +115,132 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF8F9FB))
-                .padding(padding),
-        ) {
-            item {
-                OutlinedTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 5.dp, horizontal = 5.dp)
-                        .height(48.dp),
-                    value = search,
-                    onValueChange = { data ->
-                        search = data
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Text
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color.Gray.copy(0.2f),
-                        unfocusedContainerColor = Color.Gray.copy(0.2f),
-                        unfocusedBorderColor = Color.Gray.copy(0.1f),
-                        focusedBorderColor = Blue,
-                    ),
-                    placeholder = {
-                        Text(
-                            "Search Properties...",
-                            style = TextStyle(
-                                fontSize = 14.sp
-                            )
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_search_24),
-                            contentDescription = null
-                        )
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                )
+        // ✅ Show loading state
+        if (uiState.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-            item {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier
-                        .padding(horizontal = 5.dp, vertical = 8.dp)
-                        .horizontalScroll(rememberScrollState())
-                ) {
-                    for ((filter, icon) in filters) {
-                        FilterChip(
-                            selected = selectedFilters.contains(filter),
-                            onClick = {
-                                selectedFilters = if (filter in selectedFilters)
-                                    selectedFilters - filter
-                                else selectedFilters + filter
-                            },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        painter = painterResource(icon),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(3.dp))
-                                    Text(filter)
-                                }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Purple.copy(0.3f)
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF8F9FB))
+                    .padding(padding),
+            ) {
+                item {
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 5.dp, horizontal = 5.dp)
+                            .height(48.dp),
+                        value = search,
+                        onValueChange = { data ->
+                            search = data
+                            // ✅ Optional: trigger search
+                            // viewModel.updateSearchQuery(data)
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color.Gray.copy(0.2f),
+                            unfocusedContainerColor = Color.Gray.copy(0.2f),
+                            unfocusedBorderColor = Color.Gray.copy(0.1f),
+                            focusedBorderColor = Blue,
+                        ),
+                        placeholder = {
+                            Text(
+                                "Search Properties...",
+                                style = TextStyle(
+                                    fontSize = 14.sp
+                                )
                             )
-                        )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_search_24),
+                                contentDescription = null
+                            )
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                    )
+                }
+
+                item {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 5.dp, vertical = 8.dp)
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        for ((filter, icon) in filters) {
+                            FilterChip(
+                                selected = selectedFilters.contains(filter),
+                                onClick = {
+                                    selectedFilters = if (filter in selectedFilters)
+                                        selectedFilters - filter
+                                    else selectedFilters + filter
+                                },
+                                label = {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(icon),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(filter)
+                                    }
+                                },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Purple.copy(0.3f)
+                                )
+                            )
+                        }
                     }
                 }
-            }
-            items(properties) { property ->
-                PropertyCard(
-                    property = property,
-                    onClick = {
-                        val intent = Intent(context, PropertyDetailActivity::class.java)
-                        intent.putExtra("propertyId", property.id)
-                        context.startActivity(intent)
-                    },
-                    onFavoriteClick = { prop ->
 
-                        viewModel.toggleFavorite(prop)
+                // ✅ Use properties from ViewModel's state
+                items(uiState.properties) { property ->
+                    PropertyCard(
+                        property = property,
+                        onClick = {
+                            val intent = Intent(context, PropertyDetailActivity::class.java)
+                            intent.putExtra("propertyId", property.id)
+                            context.startActivity(intent)
+                        },
+                        onFavoriteClick = { prop ->
+                            viewModel.toggleFavorite(prop)
+                        }
+                    )
+                }
+
+                // ✅ Show empty state if no properties
+                if (uiState.properties.isEmpty() && !uiState.isLoading) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No properties available.\nAdd some properties to get started!",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    color = Color.Gray
+                                )
+                            )
+                        }
                     }
-                )
+                }
             }
         }
     }
