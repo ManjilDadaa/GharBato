@@ -35,6 +35,7 @@ class PropertyViewModel(
 
     init {
         loadProperties()
+        observeSavedProperties()
     }
 
     fun loadProperties() {
@@ -61,6 +62,27 @@ class PropertyViewModel(
             }
         }
     }
+    private fun observeSavedProperties() {
+        viewModelScope.launch {
+            savedPropertiesRepository.getSavedPropertiesFlow().collect { savedProperties ->
+                val savedIds = savedProperties.map { it.id }.toSet()
+
+                val updatedProperties = _uiState.value.properties.map { property ->
+                    property.copy(isFavorite = savedIds.contains(property.id))
+                }
+
+
+                val updatedSelectedProperty = _uiState.value.selectedProperty?.let { selected ->
+                    selected.copy(isFavorite = savedIds.contains(selected.id))
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    properties = updatedProperties,
+                    selectedProperty = updatedSelectedProperty
+                )
+            }
+        }
+    }
 
     fun toggleFavorite(property: PropertyModel) {
         viewModelScope.launch {
@@ -70,8 +92,6 @@ class PropertyViewModel(
                 } else {
                     savedPropertiesRepository.saveProperty(property)
                 }
-                // Refresh properties to update favorite status
-                loadProperties()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
