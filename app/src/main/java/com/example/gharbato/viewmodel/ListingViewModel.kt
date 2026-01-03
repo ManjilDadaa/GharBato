@@ -185,6 +185,8 @@ class ListingViewModel(
         }
     }
 
+// Update only the createAndSubmitProperty function in ListingViewModel.kt
+
     private suspend fun createAndSubmitProperty(
         state: PropertyListingState,
         uploadedUrls: List<String>,
@@ -192,7 +194,6 @@ class ListingViewModel(
         onError: (String) -> Unit
     ) {
         try {
-
             val categorizedImages = mutableMapOf<String, List<String>>()
             var currentIndex = 0
 
@@ -221,11 +222,13 @@ class ListingViewModel(
                 sqft = "${state.area} sq.ft",
                 bedrooms = state.bedrooms.toIntOrNull() ?: 0,
                 bathrooms = state.bathrooms.toIntOrNull() ?: 0,
-
-                images = categorizedImages, // ⭐ HERE
-
+                images = categorizedImages,
                 location = state.location,
-                latLng = LatLng(27.7172, 85.3240),
+
+                // ✅ Store lat/lng separately for Firebase
+                latitude = 27.7172,  // Default Kathmandu coordinates
+                longitude = 85.3240, // You can add location picker later
+
                 propertyType = state.selectedPropertyType,
                 floor = state.floor,
                 furnishing = state.furnishing,
@@ -253,7 +256,6 @@ class ListingViewModel(
             onError(e.message ?: "Unknown error")
         }
     }
-
 
     fun resetUploadStatus() {
         _uploadSuccess.value = null

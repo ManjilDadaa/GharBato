@@ -9,16 +9,65 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.LocalLaundryService
+import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,14 +81,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.*
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -108,7 +162,7 @@ fun PropertyDetailScreen(
                 // Image Gallery Section
                 item {
                     PropertyImageSection(
-                        imageUrl = property.imageUrl,
+                        property = property,
                         isFavorite = isFavorite,
                         onFavoriteClick = { isFavorite = !isFavorite },
 
@@ -180,12 +234,6 @@ fun PropertyDetailScreen(
                 item {
                     ReportSection()
                 }
-
-                // Agent Helper
-//                item {
-//                    AgentHelperSection()
-//                }
-
                 // Similar Properties
 //                item {
 //                    SimilarPropertiesSection()
@@ -203,25 +251,46 @@ fun PropertyDetailScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyImageSection(
-    imageUrl: String,
+    property: PropertyModel,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
+    //Get ALL images from all categories
+    val allImages = property.images.values.flatten()
+
+    // If no images, show placeholder
+    val imagesToShow = if (allImages.isEmpty()) {
+        listOf("https://via.placeholder.com/600x400?text=No+Image")
+        } else {
+        allImages
+    }
+
+    // ✅ Pager state for swiping
+    val pagerState = rememberPagerState(pageCount = { imagesToShow.size })
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(300.dp)
     ) {
-        Image(
-            painter = rememberAsyncImagePainter(imageUrl),
-            contentDescription = "Property Image",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
 
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            Image(
+                painter = rememberAsyncImagePainter(imagesToShow[page]),
+                contentDescription = "Property Image ${page + 1}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        // Top Bar with Back and Favorite buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -272,6 +341,7 @@ fun PropertyImageSection(
             }
         }
 
+        //Image counter indicator (top-right style)
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -280,12 +350,36 @@ fun PropertyImageSection(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = "1/5",
+                text = "${pagerState.currentPage + 1}/${imagesToShow.size}",
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+
+        // ✅ Dot indicators at bottom center
+        if (imagesToShow.size > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 50.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(imagesToShow.size) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                            .background(
+                                color = if (index == pagerState.currentPage)
+                                    Color.White
+                                else
+                                    Color.White.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
         }
     }
 }
@@ -917,58 +1011,58 @@ fun ReportSection() {
 
 
 
-//@Composable
-//fun SimilarPropertiesSection(
-//    price: String,
-//    details: String,
-//    location: String,
-//    imageUrl: String,
-//    modifier: Modifier = Modifier
-//) {
-//    Card(
-//        modifier = modifier.clickable { /* Navigate */ },
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-//        shape = RoundedCornerShape(12.dp)
-//    ) {
-//        Column {
-//            Image(
-//                painter = rememberAsyncImagePainter(imageUrl),
-//                contentDescription = "Similar Property",
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(120.dp),
-//                contentScale = ContentScale.Crop
-//            )
-//            Column(modifier = Modifier.padding(12.dp)) {
-//                Text(
-//                    text = price,
-//                    fontSize = 16.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color(0xFF4CAF50)
-//                )
-//                Text(
-//                    text = details,
-//                    fontSize = 12.sp,
-//                    color = Color.Gray
-//                )
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    Icon(
-//                        imageVector = Icons.Default.LocationOn,
-//                        contentDescription = null,
-//                        modifier = Modifier.size(12.dp),
-//                        tint = Color.Gray
-//                    )
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                    Text(
-//                        text = location,
-//                        fontSize = 11.sp,
-//                        color = Color.Gray
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
+@Composable
+fun SimilarPropertiesSection(
+    price: String,
+    details: String,
+    location: String,
+    imageUrl: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.clickable { /* Navigate */ },
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = "Similar Property",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop
+            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = price,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+                Text(
+                    text = details,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = location,
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun BoxScope.BottomActionButtons() {
