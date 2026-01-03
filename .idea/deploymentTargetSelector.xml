@@ -5,16 +5,19 @@
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="ListingActivity">
+      <SelectionState runConfigName="MessageScreenActivity">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity (1)">
+      <SelectionState runConfigName="MessageScreenActivity (1)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity">
+      <SelectionState runConfigName="MessageScreenActivity (2)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity (3)">
+      <SelectionState runConfigName="MessageScreenActivity (3)">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="MessageScreenActivity (4)">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>

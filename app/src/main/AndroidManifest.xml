@@ -89,9 +89,14 @@
         </activity>
         <activity
             android:name=".view.MessageDetailsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.GharBato" />
-
+            android:exported="true"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".view.ZegoCallActivity"
             android:exported="true"
