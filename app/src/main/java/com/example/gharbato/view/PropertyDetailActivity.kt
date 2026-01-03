@@ -1,11 +1,13 @@
 package com.example.gharbato.ui.view
 
+import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,13 +25,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Apartment
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
@@ -65,9 +69,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -82,6 +83,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
+import com.example.gharbato.view.MessageDetailsActivity
+import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -91,9 +94,6 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -168,7 +168,6 @@ fun PropertyDetailScreen(
                         },
                         onBackClick = onBack
                     )
-
                 }
 
                 // Status Chips
@@ -235,10 +234,6 @@ fun PropertyDetailScreen(
                 item {
                     ReportSection()
                 }
-                // Similar Properties
-//                item {
-//                    SimilarPropertiesSection()
-//                }
 
                 // Bottom spacing
                 item {
@@ -246,8 +241,7 @@ fun PropertyDetailScreen(
                 }
             }
 
-            // Bottom Action Buttons
-            BottomActionButtons()
+            BottomActionButtons(property = property)
         }
     }
 }
@@ -264,13 +258,11 @@ fun PropertyImageSection(
     val allImages = property.images.values.flatten()
 
     // If no images, show placeholder
-    val imagesToShow = if (allImages.isEmpty()) {
+    val imagesToShow = allImages.ifEmpty {
         listOf("https://via.placeholder.com/600x400?text=No+Image")
-        } else {
-        allImages
     }
 
-    // ✅ Pager state for swiping
+    //Pager state for swiping
     val pagerState = rememberPagerState(pageCount = { imagesToShow.size })
 
     Box(
@@ -305,7 +297,7 @@ fun PropertyImageSection(
                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.Black
                 )
@@ -984,7 +976,7 @@ fun ReportSection() {
 //            Spacer(modifier = Modifier.height(16.dp))
 //
 //            Text(
-//                text = "Our agents can help you find the perfect property,\nschedule visits, and handle all paperwork",
+//                text = "Our agents can help you find the perfect property,schedule visits, and handle all paperwork",
 //                fontSize = 14.sp,
 //                color = Color.Gray,
 //                textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -1011,62 +1003,64 @@ fun ReportSection() {
 //}
 
 
+//
+//@Composable
+//fun SimilarPropertiesSection(
+//    price: String,
+//    details: String,
+//    location: String,
+//    imageUrl: String,
+//    modifier: Modifier = Modifier
+//) {
+//    Card(
+//        modifier = modifier.clickable { /* Navigate */ },
+//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+//        shape = RoundedCornerShape(12.dp)
+//    ) {
+//        Column {
+//            Image(
+//                painter = rememberAsyncImagePainter(imageUrl),
+//                contentDescription = "Similar Property",
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .height(120.dp),
+//                contentScale = ContentScale.Crop
+//            )
+//            Column(modifier = Modifier.padding(12.dp)) {
+//                Text(
+//                    text = price,
+//                    fontSize = 16.sp,
+//                    fontWeight = FontWeight.Bold,
+//                    color = Color(0xFF4CAF50)
+//                )
+//                Text(
+//                    text = details,
+//                    fontSize = 12.sp,
+//                    color = Color.Gray
+//                )
+//                Row(verticalAlignment = Alignment.CenterVertically) {
+//                    Icon(
+//                        imageVector = Icons.Default.LocationOn,
+//                        contentDescription = null,
+//                        modifier = Modifier.size(12.dp),
+//                        tint = Color.Gray
+//                    )
+//                    Spacer(modifier = Modifier.width(4.dp))
+//                    Text(
+//                        text = location,
+//                        fontSize = 11.sp,
+//                        color = Color.Gray
+//                    )
+//                }
+//            }
+//        }
+//    }
+//}
 
 @Composable
-fun SimilarPropertiesSection(
-    price: String,
-    details: String,
-    location: String,
-    imageUrl: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clickable { /* Navigate */ },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column {
-            Image(
-                painter = rememberAsyncImagePainter(imageUrl),
-                contentDescription = "Similar Property",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop
-            )
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = price,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
-                )
-                Text(
-                    text = details,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = null,
-                        modifier = Modifier.size(12.dp),
-                        tint = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = location,
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
-        }
-    }
-}
+fun BoxScope.BottomActionButtons(property: PropertyModel) {
+    val context = LocalContext.current
 
-@Composable
-fun BoxScope.BottomActionButtons() {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1081,7 +1075,15 @@ fun BoxScope.BottomActionButtons() {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { /* Handle call */ },
+                onClick = {
+                    val messageViewModel = MessageViewModel()
+                    messageViewModel.initiateCall(
+                        targetUserId = property.ownerId,
+                        targetUserName = property.ownerName.ifBlank { property.developer },
+                        isVideoCall = false,
+                        activity = context as Activity
+                    )
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -1100,7 +1102,15 @@ fun BoxScope.BottomActionButtons() {
             }
 
             Button(
-                onClick = { /* Handle message */ },
+                onClick = {
+                    // ✅ Navigate to chat with property owner
+                    val intent = MessageDetailsActivity.newIntent(
+                        activity = context as Activity,
+                        otherUserId = property.ownerId,
+                        otherUserName = property.ownerName.ifBlank { property.developer }
+                    )
+                    context.startActivity(intent)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),

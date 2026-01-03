@@ -1,5 +1,6 @@
 package com.example.gharbato.ui.view
 
+import android.app.Activity
 import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
@@ -33,6 +34,7 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.view.CustomMarkerHelper
+import com.example.gharbato.view.MessageDetailsActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -468,6 +470,8 @@ fun PropertyCard(
     onClick: () -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -642,12 +646,20 @@ fun PropertyCard(
                         color = Color(0xFF4CAF50),
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable { /* Handle chat */ }
+                            .clickable {
+                                val intent = MessageDetailsActivity.newIntent(
+                                    activity = context as Activity,
+                                    otherUserId = property.ownerId,
+                                    otherUserName = property.ownerName.ifBlank { property.developer }
+                                )
+                                context.startActivity(intent)
+
+                            }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Chat",
+                                contentDescription = "Chat With Owner",
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
