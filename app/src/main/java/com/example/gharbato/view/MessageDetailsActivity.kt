@@ -3,9 +3,13 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,9 +32,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -56,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -63,6 +73,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.gharbato.R
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
@@ -126,6 +138,33 @@ private fun buildChatId(userA: String, userB: String): String {
     return if (a <= b) "${a}_$b" else "${b}_$a"
 }
 
+private fun sendImageMessage(
+    imageUri: Uri,
+    db: FirebaseDatabase,
+    chatId: String,
+    myUserId: String,
+    auth: FirebaseAuth,
+    context: Context
+) {
+    // For now, we'll use the URI directly as imageUrl
+    // In a real app, you would upload to Firebase Storage first
+    val ref = db.getReference("chats")
+        .child(chatId)
+        .child("messages")
+        .push()
+
+    val message = ChatMessage(
+        id = ref.key ?: "",
+        senderId = myUserId,
+        senderName = auth.currentUser?.email ?: myUserId,
+        text = "",
+        imageUrl = imageUri.toString(),
+        timestamp = System.currentTimeMillis(),
+    )
+
+    ref.setValue(message)
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MessageDetailsScreen(
@@ -146,6 +185,23 @@ private fun MessageDetailsScreen(
 
     val messages = remember { mutableStateListOf<ChatMessage>() }
     var messageText by remember { mutableStateOf("") }
+    var showImageOptions by remember { mutableStateOf(false) }
+
+    // Gallery picker
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { sendImageMessage(it, db, chatId, myUserId, auth, context) }
+    }
+
+    // Camera launcher
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            // Handle camera photo
+        }
+    }
 
     val listState = rememberLazyListState()
 
@@ -321,15 +377,34 @@ private fun MessageDetailsScreen(
                                             Color.White
                                     )
                                 ) {
-                                    Text(
-                                        text = msg.text,
-                                        color = if (isMe) Color.White else Color(0xFF1A1A1A),
-                                        fontSize = 16.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Normal,
-                                        modifier = Modifier.padding(16.dp),
-                                        lineHeight = 20.sp
-                                    )
+                                    // Display image if present
+                                    if (msg.imageUrl.isNotEmpty()) {
+                                        AsyncImage(
+                                            model = ImageRequest.Builder(LocalContext.current)
+                                                .data(msg.imageUrl)
+                                                .crossfade(true)
+                                                .build(),
+                                            contentDescription = "Image message",
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(200.dp)
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+                                    
+                                    // Display text if present
+                                    if (msg.text.isNotEmpty()) {
+                                        Text(
+                                            text = msg.text,
+                                            color = if (isMe) Color.White else Color(0xFF1A1A1A),
+                                            fontSize = 16.sp,
+                                            fontFamily = FontFamily.SansSerif,
+                                            fontWeight = FontWeight.Normal,
+                                            modifier = Modifier.padding(16.dp),
+                                            lineHeight = 20.sp
+                                        )
+                                    }
                                 }
                                 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -410,6 +485,56 @@ private fun MessageDetailsScreen(
                         )
 
                         Spacer(modifier = Modifier.width(8.dp))
+
+                        // Image options button
+                        Box {
+                            IconButton(
+                                onClick = { showImageOptions = true }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Image,
+                                    contentDescription = "Add Image",
+                                    tint = Color(0xFF8E8E93),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showImageOptions,
+                                onDismissRequest = { showImageOptions = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Gallery") },
+                                    onClick = {
+                                        showImageOptions = false
+                                        galleryLauncher.launch("image/*")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.Image,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Camera") },
+                                    onClick = {
+                                        showImageOptions = false
+                                        // For camera, we need to create a file URI first
+                                        // For now, just launch gallery
+                                        galleryLauncher.launch("image/*")
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = null
+                                        )
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
 
                         Box(
                             modifier = Modifier
