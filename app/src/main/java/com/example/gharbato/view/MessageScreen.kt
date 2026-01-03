@@ -192,28 +192,6 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            item {
-                                val myId = currentUser?.userId ?: messageViewModel.getLocalUserId(activity)
-                                val myName = currentUser?.userName ?: "Me"
-                                
-                                EnhancedMessageUserItem(
-                                    imageRes = R.drawable.outline_person_24,
-                                    name = "Me",
-                                    userId = myId,
-                                    userName = myName,
-                                    onMessageClick = {
-                                        messageViewModel.navigateToChat(myId, myName, activity)
-                                    },
-                                    onVideoCallClick = {
-                                        messageViewModel.initiateCall(myId, myName, true, activity)
-                                    },
-                                    onVoiceCallClick = {
-                                        messageViewModel.initiateCall(myId, myName, false, activity)
-                                    },
-                                    isCurrentUser = true
-                                )
-                            }
-                            
                             items(users) { user ->
                                 val displayName = user.fullName.ifBlank { user.email }
                                 EnhancedMessageUserItem(

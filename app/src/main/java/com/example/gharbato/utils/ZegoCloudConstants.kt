@@ -1,4 +1,4 @@
-package com.example.gharbato.zego
+package com.example.gharbato.utils
 
 import com.example.gharbato.BuildConfig
 
