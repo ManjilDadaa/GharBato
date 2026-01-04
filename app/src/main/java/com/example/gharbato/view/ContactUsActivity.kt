@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -36,17 +35,14 @@ fun ContactUsScreen() {
         putExtra(Intent.EXTRA_SUBJECT, "Support Request")
     }
 
-    // Go back to ProfileScreen
-    val goBackToProfile = {
-        context.startActivity(Intent(context, ProfileScreenActivity::class.java))
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Contact Us") },
                 navigationIcon = {
-                    IconButton(onClick = { goBackToProfile() }) {
+                    IconButton(onClick = {
+                        (context as ComponentActivity).finish()
+                    }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
@@ -75,7 +71,7 @@ fun ContactUsScreen() {
             // Email Us Button
             Button(
                 onClick = {
-                    context.startActivity(emailIntent) // Open the email client
+                    context.startActivity(emailIntent)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Blue)

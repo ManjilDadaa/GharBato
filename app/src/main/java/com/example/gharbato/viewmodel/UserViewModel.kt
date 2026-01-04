@@ -1,6 +1,8 @@
 package com.example.gharbato.viewmodel
 
 import android.app.Activity
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,14 +11,15 @@ import com.example.gharbato.repository.UserRepo
 
 class UserViewModel (val repo: UserRepo) : ViewModel(){
 
-
     private val _userData = MutableLiveData<UserModel?>()
     val userData: LiveData<UserModel?> get() = _userData
 
     private val _profileUpdateStatus = MutableLiveData<Pair<Boolean, String>>()
     val profileUpdateStatus: LiveData<Pair<Boolean, String>> get() = _profileUpdateStatus
 
-
+    // NEW: LiveData for image upload status
+    private val _imageUploadStatus = MutableLiveData<String?>()
+    val imageUploadStatus: LiveData<String?> get() = _imageUploadStatus
 
     fun login(
         email: String, password: String,
@@ -24,6 +27,7 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
     ){
         repo.login(email, password, callback)
     }
+
     fun signUp(
         email: String, password: String,
         fullName : String,
@@ -71,6 +75,27 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         }
     }
 
+
+
+    fun updateUserProfile(newName: String, profileImageUrl: String) {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.updateUserProfile(userId, newName, profileImageUrl) { success, message ->
+            _profileUpdateStatus.postValue(Pair(success, message))
+            if (success) {
+                loadUserProfile()
+            }
+        }
+    }
+
+    fun uploadProfileImage(context: Context, imageUri: Uri) {
+        repo.uploadProfileImage(context, imageUri) { imageUrl ->
+            _imageUploadStatus.postValue(imageUrl)
+        }
+    }
+
+    // ------------------ OTP & VERIFICATION ------------------
+
     fun sendOtp(phoneNumber: String,
                 activity: Activity, callback: (Boolean, String, String?) -> Unit
     ){
@@ -89,15 +114,16 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
             callback(success, message)
         }
     }
+
     fun sendEmailVerification(callback: (Boolean, String) -> Unit){
         repo.sendEmailVerification(callback)
     }
+
     fun checkEmailVerified(callback: (Boolean) -> Unit){
         repo.checkEmailVerified(callback)
     }
 
-
-
+    // ------------------ USER MANAGEMENT ------------------
 
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit){
         repo.getAllUsers(callback)
@@ -106,6 +132,4 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit){
         repo.searchUsers(query, callback)
     }
-
-
 }

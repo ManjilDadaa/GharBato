@@ -33,7 +33,7 @@ class TermsAndPoliciesActivity : ComponentActivity() {
 @Composable
 fun TermsAndConditionsScreen() {
     val context = LocalContext.current
-    val goBackToProfile = { context.startActivity(Intent(context, ProfileScreenActivity::class.java)) }
+    val goBackToProfile = { (context as ComponentActivity).finish() }
 
     Scaffold(
         topBar = {
