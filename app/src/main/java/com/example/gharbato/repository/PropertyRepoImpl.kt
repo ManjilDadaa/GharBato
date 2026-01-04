@@ -15,6 +15,10 @@ import java.io.InputStream
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class PropertyRepoImpl : PropertyRepo {
 
@@ -236,4 +240,51 @@ class PropertyRepoImpl : PropertyRepo {
 
         return "image_${System.currentTimeMillis()}"
     }
+
+    override suspend fun getPropertiesByLocation(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Float
+    ): List<PropertyModel> {
+        val allProperties = getAllProperties()
+
+        return allProperties.filter { property ->
+            // Calculate distance from search location
+            val distance = calculateDistance(
+                lat1 = latitude,
+                lon1 = longitude,
+                lat2 = property.latLng.latitude,
+                lon2 = property.latLng.longitude
+            )
+
+            // Keep properties within radius
+            distance <= radiusKm
+        }
+    }
+    private fun calculateDistance(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Float {
+        val earthRadius = 6371.0 // Earth's radius in kilometers
+
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2) * sin(dLon / 2)
+
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return (earthRadius * c).toFloat()
+    }
+
+
+    private fun extractPriceValue(priceString: String): Int {
+        val numbers = priceString.filter { it.isDigit() }
+        return numbers.toIntOrNull() ?: 0
+    }
+
 }
