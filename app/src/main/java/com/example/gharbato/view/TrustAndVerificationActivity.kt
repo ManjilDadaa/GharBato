@@ -65,7 +65,6 @@ fun TrustAndVerificationScreen() {
                 title = { Text("Trust & Verification", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        context.startActivity(Intent(context, ProfileScreenActivity::class.java))
                         (context as ComponentActivity).finish()
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

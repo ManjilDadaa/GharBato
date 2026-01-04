@@ -5,7 +5,8 @@ data class UserModel(
     val email : String = "",
     val fullName : String = "",
     val phoneNo : String = "",
-    val selectedCountry : String = ""
+    val selectedCountry : String = "",
+    val profileImageUrl : String =""
 //    val dob : String = "",
 )
 
