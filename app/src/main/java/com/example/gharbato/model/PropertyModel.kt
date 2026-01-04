@@ -25,7 +25,10 @@ data class PropertyModel(
     val furnishing: String = "Fully Furnished",
     val parking: Boolean = true,
     val petsAllowed: Boolean = false,
-    var isFavorite: Boolean = false
+    var isFavorite: Boolean = false,
+    val ownerId: String = "",
+    val ownerName: String = ""
+
 ) {
     //Computed property for LatLng (not stored in Firebase)
     @get:Exclude

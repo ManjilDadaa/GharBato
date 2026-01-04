@@ -1,5 +1,6 @@
 package com.example.gharbato.ui.view
 
+import android.app.Activity
 import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
@@ -33,10 +34,12 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.view.CustomMarkerHelper
+import com.example.gharbato.view.MessageDetailsActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.*
+import androidx.compose.foundation.layout.WindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +69,9 @@ fun SearchScreen(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = { viewModel.updateSearchQuery(it) }
             )
-        }
+        },
+
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -86,22 +91,18 @@ fun SearchScreen(
                             properties = uiState.properties,
                             context = context,
                             onMarkerClick = { property ->
-                                //Show property overlay when marker clicked
                                 viewModel.selectProperty(property)
                             },
                             onMapClick = {
-                                //Open FullSearchMapActivity when map background clicked
                                 val intent = Intent(context, FullSearchMapActivity::class.java)
                                 context.startActivity(intent)
                             }
                         )
 
-                        // Show overlay when marker is clicked
                         uiState.selectedProperty?.let { property ->
                             PropertyDetailOverlay(
                                 property = property,
                                 onClose = {
-                                    //Clear selection to show all listings
                                     viewModel.clearSelectedProperty()
                                 },
                                 onViewDetails = {
@@ -117,7 +118,6 @@ fun SearchScreen(
                     }
                 }
 
-                // Filter Chips
                 FilterChipsSection(
                     selectedMarketType = uiState.selectedMarketType,
                     onMarketTypeChange = { viewModel.updateMarketType(it) },
@@ -129,7 +129,6 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Properties Count
                 Text(
                     text = "${uiState.properties.size} Listings",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -137,7 +136,6 @@ fun SearchScreen(
                     fontSize = 18.sp
                 )
 
-                // Loading State
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -146,7 +144,6 @@ fun SearchScreen(
                         CircularProgressIndicator()
                     }
                 } else {
-                    // Property List
                     PropertyList(
                         properties = uiState.properties,
                         listState = listState,
@@ -164,6 +161,9 @@ fun SearchScreen(
         }
     }
 }
+
+
+
 
 @Composable
 fun MapSection(
@@ -275,7 +275,9 @@ fun SearchTopBar(
     onSearchQueryChange: (String) -> Unit
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars),
         color = Color.White,
         shadowElevation = 2.dp
     ) {
@@ -468,6 +470,8 @@ fun PropertyCard(
     onClick: () -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit
 ) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -642,12 +646,20 @@ fun PropertyCard(
                         color = Color(0xFF4CAF50),
                         modifier = Modifier
                             .size(48.dp)
-                            .clickable { /* Handle chat */ }
+                            .clickable {
+                                val intent = MessageDetailsActivity.newIntent(
+                                    activity = context as Activity,
+                                    otherUserId = property.ownerId,
+                                    otherUserName = property.ownerName.ifBlank { property.developer }
+                                )
+                                context.startActivity(intent)
+
+                            }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Chat",
+                                contentDescription = "Chat With Owner",
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
