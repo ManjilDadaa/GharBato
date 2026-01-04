@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+
     <application
         android:name=".GharBatoApplication"
         android:allowBackup="true"
@@ -24,18 +25,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
-            android:name=".view.LocationPickerActivity"
+            android:name=".ui.view.FullMapActivity"
             android:exported="true"
-            android:label="@string/title_activity_location_picker"
+            android:label="@string/title_activity_full_map"
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity> <!-- Google Maps API Key - Using direct value -->
         <activity
-            android:name=".ui.view.FullMapActivity"
+            android:name=".ui.view.LocationPickerActivity"
             android:exported="true"
             android:label="@string/title_activity_full_map"
             android:theme="@style/Theme.GharBato">
