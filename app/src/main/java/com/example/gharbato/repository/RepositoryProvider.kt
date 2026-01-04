@@ -1,5 +1,6 @@
 package com.example.gharbato.data.repository
 
+import com.example.gharbato.repository.PropertyRepoImpl
 import com.example.gharbato.repository.SavedPropertiesRepository
 import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 
