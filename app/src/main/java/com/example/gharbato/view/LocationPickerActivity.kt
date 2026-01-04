@@ -1,4 +1,4 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.content.Intent
 import android.location.Geocoder

@@ -1,4 +1,4 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.content.Intent
 import android.os.Bundle
@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -56,10 +57,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.view.CustomMarkerHelper
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
@@ -94,7 +96,7 @@ fun FullSearchMapScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val startLocation = uiState.properties.firstOrNull()?.latLng
-        ?: com.google.android.gms.maps.model.LatLng(27.7172, 85.3240)
+        ?: LatLng(27.7172, 85.3240)
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(startLocation, 12f)
@@ -258,7 +260,7 @@ fun FullSearchMapScreen(
                 FloatingActionButton(
                     onClick = {
                         cameraPositionState.move(
-                            com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                            CameraUpdateFactory.zoomIn()
                         )
                     },
                     modifier = Modifier.size(48.dp),
@@ -276,7 +278,7 @@ fun FullSearchMapScreen(
                 FloatingActionButton(
                     onClick = {
                         cameraPositionState.move(
-                            com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                            CameraUpdateFactory.zoomOut()
                         )
                     },
                     modifier = Modifier.size(48.dp),
@@ -295,7 +297,7 @@ fun FullSearchMapScreen(
 
 @Composable
 fun PropertyInfoChipFullMap(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String
 ) {
     Surface(

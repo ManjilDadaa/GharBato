@@ -53,8 +53,6 @@ import com.example.gharbato.R
 import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
-import com.example.gharbato.ui.view.PropertyCard
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 

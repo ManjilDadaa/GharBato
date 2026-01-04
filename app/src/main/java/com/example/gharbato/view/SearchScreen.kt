@@ -1,6 +1,7 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -38,11 +41,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.view.CustomMarkerHelper
-import com.example.gharbato.view.MessageDetailsActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -314,12 +317,12 @@ fun SearchTopBar(
 @Composable
 fun MapSection(
     properties: List<PropertyModel>,
-    context: android.content.Context,
+    context: Context,
     onMarkerClick: (PropertyModel) -> Unit,
     onMapClick: () -> Unit
 ) {
     val startLocation = properties.firstOrNull()?.latLng
-        ?: com.google.android.gms.maps.model.LatLng(27.7172, 85.3240)
+        ?: LatLng(27.7172, 85.3240)
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(startLocation, 11f)
@@ -364,7 +367,7 @@ fun MapSection(
             FloatingActionButton(
                 onClick = {
                     cameraPositionState.move(
-                        com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                        CameraUpdateFactory.zoomIn()
                     )
                 },
                 modifier = Modifier.size(40.dp),
@@ -382,7 +385,7 @@ fun MapSection(
             FloatingActionButton(
                 onClick = {
                     cameraPositionState.move(
-                        com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                        CameraUpdateFactory.zoomOut()
                     )
                 },
                 modifier = Modifier.size(40.dp),
@@ -591,7 +594,7 @@ fun FilterChipsSection(
 @Composable
 fun PropertyList(
     properties: List<PropertyModel>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     onPropertyClick: (PropertyModel) -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit
 ) {
@@ -913,7 +916,7 @@ fun PropertyDetailOverlay(
 
 @Composable
 fun PropertyInfoChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String
 ) {
     Surface(

@@ -1,10 +1,11 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -27,6 +28,7 @@ import com.example.gharbato.data.model.PlaceType
 import com.example.gharbato.data.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.viewmodel.MapViewModel
 import com.example.gharbato.viewmodel.MapViewModelFactory
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -189,7 +191,7 @@ fun FullMapScreen(
                 FloatingActionButton(
                     onClick = {
                         cameraPositionState.move(
-                            com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                            CameraUpdateFactory.zoomIn()
                         )
                     },
                     modifier = Modifier.size(48.dp),
@@ -207,7 +209,7 @@ fun FullMapScreen(
                 FloatingActionButton(
                     onClick = {
                         cameraPositionState.move(
-                            com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                            CameraUpdateFactory.zoomOut()
                         )
                     },
                     modifier = Modifier.size(48.dp),
@@ -225,7 +227,7 @@ fun FullMapScreen(
                 FloatingActionButton(
                     onClick = {
                         cameraPositionState.move(
-                            com.google.android.gms.maps.CameraUpdateFactory.newLatLngZoom(
+                            CameraUpdateFactory.newLatLngZoom(
                                 uiState.propertyLocation,
                                 14f
                             )
@@ -275,7 +277,7 @@ fun LocationFilterChip(
         modifier = Modifier.clickable(onClick = onClick),
         color = if (isSelected) Color(0xFF2196F3) else Color(0xFFF5F5F5),
         shape = RoundedCornerShape(20.dp),
-        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(
+        border = if (isSelected) null else BorderStroke(
             1.dp,
             Color(0xFFE0E0E0)
         )
