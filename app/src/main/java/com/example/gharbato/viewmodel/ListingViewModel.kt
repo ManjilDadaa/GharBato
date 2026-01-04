@@ -6,9 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
-import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -120,12 +120,54 @@ class ListingViewModel(
         }
     }
 
+    // ✅ STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
+    fun validateStep4(state: PropertyListingState): ListingValidationResult {
+        // Skip validation if selling
+        if (state.selectedPurpose == "Sell") {
+            return ListingValidationResult(true)
+        }
+
+        return when {
+            state.utilitiesIncluded.isBlank() -> {
+                ListingValidationResult(false, "Please select utilities option")
+            }
+            state.commission.isBlank() -> {
+                ListingValidationResult(false, "Please select commission terms")
+            }
+            state.advancePayment.isBlank() -> {
+                ListingValidationResult(false, "Please select advance payment terms")
+            }
+            state.securityDeposit.isBlank() -> {
+                ListingValidationResult(false, "Please select security deposit terms")
+            }
+            state.minimumLease.isBlank() -> {
+                ListingValidationResult(false, "Please select minimum lease period")
+            }
+            state.availableFrom.isBlank() -> {
+                ListingValidationResult(false, "Please select availability date")
+            }
+            else -> ListingValidationResult(true)
+        }
+    }
+
+    // ✅ STEP 5 VALIDATION - Amenities
+    fun validateStep5(state: PropertyListingState): ListingValidationResult {
+        return when {
+            state.amenities.isEmpty() -> {
+                ListingValidationResult(false, "Please select at least one amenity")
+            }
+            else -> ListingValidationResult(true)
+        }
+    }
+
     // ✅ Master validation function
     fun validateStep(step: Int, state: PropertyListingState): ListingValidationResult {
         return when (step) {
             1 -> validateStep1(state)
             2 -> validateStep2(state)
             3 -> validateStep3(state)
+            4 -> validateStep4(state)
+            5 -> validateStep5(state)
             else -> ListingValidationResult(false, "Invalid step")
         }
     }
@@ -185,8 +227,6 @@ class ListingViewModel(
         }
     }
 
-// Update only the createAndSubmitProperty function in ListingViewModel.kt
-
     private suspend fun createAndSubmitProperty(
         state: PropertyListingState,
         uploadedUrls: List<String>,
@@ -194,6 +234,7 @@ class ListingViewModel(
         onError: (String) -> Unit
     ) {
         try {
+            // Categorize images by their category IDs
             val categorizedImages = mutableMapOf<String, List<String>>()
             var currentIndex = 0
 
@@ -209,6 +250,7 @@ class ListingViewModel(
                 }
             }
 
+            // Create property model with all data
             val property = PropertyModel(
                 id = System.currentTimeMillis().toInt(),
                 title = state.title,
@@ -224,16 +266,26 @@ class ListingViewModel(
                 bathrooms = state.bathrooms.toIntOrNull() ?: 0,
                 images = categorizedImages,
                 location = state.location,
-
-                // ✅ Store lat/lng separately for Firebase
                 latitude = 27.7172,  // Default Kathmandu coordinates
-                longitude = 85.3240, // You can add location picker later
-
+                longitude = 85.3240,
                 propertyType = state.selectedPropertyType,
                 floor = state.floor,
                 furnishing = state.furnishing,
                 parking = state.parking,
                 petsAllowed = state.petsAllowed,
+                description = state.description,
+
+                // ✅ Rental Terms (only applicable for Rent/Book)
+                utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
+                commission = if (state.selectedPurpose != "Sell") state.commission else null,
+                advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
+                securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
+                minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
+                availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
+
+                // ✅ Amenities
+                amenities = state.amenities,
+
                 isFavorite = false
             )
 
@@ -247,12 +299,16 @@ class ListingViewModel(
                     onSuccess()
                 } else {
                     _uploadSuccess.value = false
+                    _uploadProgress.value = ""
                     onError(error ?: "Failed to save property")
                 }
             }
 
         } catch (e: Exception) {
+            e.printStackTrace()
             _isUploading.value = false
+            _uploadSuccess.value = false
+            _uploadProgress.value = ""
             onError(e.message ?: "Unknown error")
         }
     }

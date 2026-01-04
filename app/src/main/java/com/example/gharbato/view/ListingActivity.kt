@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
-import com.example.gharbato.data.repository.PropertyRepoImpl
+import com.example.gharbato.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
@@ -331,7 +331,7 @@ fun ListingBody() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                for (i in 1..3) {
+                for (i in 1..5) {
                     Column {
                         val circleColor by animateColorAsState(
                             targetValue = if (step >= i) Blue else Gray.copy(0.3f),
@@ -351,6 +351,8 @@ fun ListingBody() {
                                 1 -> "Purpose"
                                 2 -> "Details"
                                 3 -> "Photos"
+                                4 -> "Terms"
+                                5 -> "Amenities"
                                 else -> ""
                             },
                             fontSize = 12.sp,
@@ -358,7 +360,7 @@ fun ListingBody() {
                         )
                     }
 
-                    if (i < 3) {
+                    if (i < 5) {
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 7.dp)
@@ -402,6 +404,18 @@ fun ListingBody() {
                             listingState = listingState.copy(imageCategories = newCategories)
                         }
                     )
+                    4 -> RentalTermsContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
+                    5 -> AmenitiesContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
                 }
             }
 
@@ -436,19 +450,17 @@ fun ListingBody() {
                 // Next/Submit Button
                 Button(
                     onClick = {
-                        // VALIDATE before proceeding
                         val validationResult = listingViewModel.validateStep(step, listingState)
 
                         if (validationResult.isValid) {
-                            // Validation passed - proceed to next step
-                            if (step < 3) {
+                            if (step < 5) {
+                                // Move to next step (1 → 2 → 3 → 4 → 5)
                                 step += 1
                             } else {
-                                // Final step - show confirmation
+                                // ONLY submit at step 5
                                 showConfirmDialog = true
                             }
                         } else {
-                            // Validation failed - show error
                             Toast.makeText(
                                 context,
                                 validationResult.errorMessage,
@@ -458,19 +470,20 @@ fun ListingBody() {
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue
-                    )
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
                 ) {
                     Text(
                         when (step) {
                             1 -> "Continue"
                             2 -> "Next"
-                            3 -> "Submit"
+                            3 -> "Next"
+                            4 -> "Next"
+                            5 -> "Submit"
                             else -> "Next"
                         }
                     )
                 }
+
             }
         }
     }

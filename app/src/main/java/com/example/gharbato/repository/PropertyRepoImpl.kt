@@ -1,15 +1,15 @@
-package com.example.gharbato.data.repository
+package com.example.gharbato.repository
 
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.data.repository.PropertyRepo
 import com.google.firebase.database.*
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
 import java.util.concurrent.Executors
@@ -29,7 +29,7 @@ class PropertyRepoImpl : PropertyRepo {
         )
     )
 
-    // ✅ STEP 1: Get All Properties from Firebase
+    // Get All Properties from Firebase
     override suspend fun getAllProperties(): List<PropertyModel> {
         return suspendCancellableCoroutine { continuation ->
             ref.addListenerForSingleValueEvent(object : ValueEventListener {
@@ -58,7 +58,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // ✅ STEP 2: Get Property by ID from Firebase
+    // Get Property by ID from Firebase
     override suspend fun getPropertyById(id: Int): PropertyModel? {
         return suspendCancellableCoroutine { continuation ->
             ref.orderByChild("id")
@@ -79,7 +79,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // ✅ STEP 3: Search Properties
+    // Search Properties
     override suspend fun searchProperties(query: String): List<PropertyModel> {
         val allProperties = getAllProperties()
 
@@ -95,7 +95,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // ✅ STEP 4: Filter Properties
+    // Filter Properties
     override suspend fun filterProperties(
         marketType: String,
         propertyType: String,
@@ -112,7 +112,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // ✅ Add Property to Firebase (already working)
+    // Add Property to Firebase (already working)
     override fun addProperty(
         property: PropertyModel,
         callback: (Boolean, String?) -> Unit
@@ -134,7 +134,7 @@ class PropertyRepoImpl : PropertyRepo {
             }
     }
 
-    // ✅ Image Upload (already working)
+    //  Image Upload
     override fun uploadImage(
         context: Context,
         imageUri: Uri,
@@ -169,7 +169,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // ✅ Upload Multiple Images (already working)
+    //  Upload Multiple Images
     override fun uploadMultipleImages(
         context: Context,
         imageUris: List<Uri>,
@@ -228,7 +228,7 @@ class PropertyRepoImpl : PropertyRepo {
         )
 
         cursor?.use {
-            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (it.moveToFirst() && nameIndex != -1) {
                 return it.getString(nameIndex)
             }

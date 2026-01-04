@@ -26,9 +26,15 @@ data class PropertyModel(
     val parking: Boolean = true,
     val petsAllowed: Boolean = false,
     var isFavorite: Boolean = false,
-    val ownerId: String = "",
-    val ownerName: String = ""
 
+    var description: String? = "",
+    var utilitiesIncluded: String? = "",
+    var commission: String? = "",
+    var advancePayment: String? = "",
+    var securityDeposit: String? = "",
+    var minimumLease: String? = "",
+    var availableFrom: String? = "",
+    var amenities: List<String> = emptyList()
 ) {
     //Computed property for LatLng (not stored in Firebase)
     @get:Exclude
