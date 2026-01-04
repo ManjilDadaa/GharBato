@@ -1,4 +1,4 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.app.Activity
 import android.os.Bundle
@@ -29,7 +29,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Apartment
@@ -45,7 +44,6 @@ import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.School
@@ -82,7 +80,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.view.MessageDetailsActivity
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -97,6 +94,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.text.style.TextAlign
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -805,7 +803,7 @@ fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
             fontSize = 14.sp,
             color = Color(0xFF2196F3),
             fontWeight = FontWeight.Medium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }

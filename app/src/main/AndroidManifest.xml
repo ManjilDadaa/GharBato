@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+
     <application
         android:name=".GharBatoApplication"
         android:allowBackup="true"
@@ -24,7 +25,18 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
-            android:name=".ui.view.FullMapActivity"
+            android:name=".view.FullMapActivity"
+            android:exported="true"
+            android:label="@string/title_activity_full_map"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity> <!-- Google Maps API Key - Using direct value -->
+        <activity
+            android:name=".view.LocationPickerActivity"
             android:exported="true"
             android:label="@string/title_activity_full_map"
             android:theme="@style/Theme.GharBato">
@@ -39,7 +51,7 @@
             android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
-            android:name=".ui.view.PropertyDetailActivity"
+            android:name=".view.PropertyDetailActivity"
             android:exported="true"
             android:label="@string/title_activity_property_detail"
             android:theme="@style/Theme.GharBato">
@@ -50,7 +62,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.view.FullSearchMapActivity"
+            android:name=".view.FullSearchMapActivity"
             android:exported="true"
             android:label="FullSearchMapActivity"
             android:theme="@style/Theme.GharBato">
@@ -97,7 +109,9 @@
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+
                 <category android:name="android.intent.category.DEFAULT" />
+
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
