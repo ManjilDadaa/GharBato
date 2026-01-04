@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,9 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicText
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,15 +38,15 @@ class ApplicationSettingsActivity : ComponentActivity() {
 fun ApplicationSettingsScreen() {
     val context = LocalContext.current
 
-    // Dark Mode toggle state
-    var isDarkMode by remember { mutableStateOf(false) }
-    // Language selection state
-    var selectedLanguage by remember { mutableStateOf("English") }
-    // App Info state
-    var appVersion by remember { mutableStateOf("") }
-    val appName = "GharBato"  // Hardcoding the app name here
 
-    // Fetch app version
+    var isDarkMode by remember { mutableStateOf(false) }
+
+    var selectedLanguage by remember { mutableStateOf("English") }
+
+    var appVersion by remember { mutableStateOf("") }
+    val appName = "GharBato"
+
+
     LaunchedEffect(Unit) {
         appVersion = getAppVersion(context)
     }
@@ -60,9 +57,7 @@ fun ApplicationSettingsScreen() {
                 title = { Text("Application Settings") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // Navigate back to Profile screen
-                        val backIntent = Intent(context, ProfileScreenActivity::class.java)
-                        context.startActivity(backIntent)
+                        // Simply finish the activity to go back to Dashboard/Profile
                         (context as ComponentActivity).finish()
                     }) {
                         Icon(
@@ -84,7 +79,7 @@ fun ApplicationSettingsScreen() {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-            // Dark Mode Settings
+
             SettingItem(
                 icon = R.drawable.baseline_dark_mode_24,
                 title = "Dark Mode",
@@ -94,7 +89,7 @@ fun ApplicationSettingsScreen() {
                 isDarkMode = !isDarkMode
             }
 
-            // Language Settings
+
             SettingItem(
                 icon = R.drawable.baseline_language_24,
                 title = "Language",
@@ -104,7 +99,7 @@ fun ApplicationSettingsScreen() {
                 selectedLanguage = if (selectedLanguage == "English") "Spanish" else "English"
             }
 
-            // App Info Section
+
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
@@ -114,7 +109,7 @@ fun ApplicationSettingsScreen() {
                 modifier = Modifier.padding(vertical = 12.dp)
             )
 
-            // Display hardcoded app name ("GharBato") and version
+
             SettingItem(
                 icon = R.drawable.baseline_info_24,
                 title = "App Name",
@@ -134,7 +129,7 @@ fun ApplicationSettingsScreen() {
     }
 }
 
-// Function to get the app version
+
 fun getAppVersion(context: Context): String {
     return try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
@@ -158,7 +153,7 @@ fun SettingItem(
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White)
-            .clickable { onClick() }  // Directly call onClick()
+            .clickable { onClick() }
             .padding(16.dp)
     ) {
         // Icon with rounded square background
@@ -198,7 +193,7 @@ fun SettingItem(
         }
 
         Icon(
-            painter = painterResource(R.drawable.outline_arrow_forward_ios_24), // This icon should exist
+            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
             contentDescription = null,
             tint = Color(0xFFCCCCCC),
             modifier = Modifier.size(16.dp)

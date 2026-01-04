@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,35 +17,14 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,13 +32,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
+import com.example.gharbato.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.viewmodel.ListingViewModel
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,20 +53,27 @@ class ListingActivity : ComponentActivity() {
 }
 
 @Composable
-fun ListingBody(){
+fun ListingBody() {
 
     val context = LocalContext.current
     val activity = context as Activity
+    val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
 
     var step by rememberSaveable { mutableIntStateOf(1) }
     val showHeader = step == 1
 
-    var listingState by rememberSaveable {mutableStateOf(PropertyListingState()) }
+    var listingState by rememberSaveable { mutableStateOf(PropertyListingState()) }
 
     var showExitDialog by remember { mutableStateOf(false) }
-
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
+    //Collect states from ViewModel
+    val isUploading by listingViewModel.isUploading.collectAsState()
+    val uploadProgress by listingViewModel.uploadProgress.collectAsState()
+    val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
+
+    // Exit Dialog
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
@@ -130,36 +119,140 @@ fun ListingBody(){
         )
     }
 
-    if(showConfirmDialog){
-        AlertDialog(onDismissRequest = {showConfirmDialog = false},
-            title = { Text("DO you want to submit the listing?")},
+    // Confirm Submit Dialog
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!isUploading) showConfirmDialog = false },
+            title = {
+                Text(
+                    if (isUploading) "Uploading..." else "Submit Listing?",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    if (isUploading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .padding(16.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            uploadProgress,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    } else {
+                        Text("Review your listing:", fontWeight = FontWeight.Medium)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("• Purpose: ${listingState.selectedPurpose}", fontSize = 14.sp)
+                        Text("• Type: ${listingState.selectedPropertyType}", fontSize = 14.sp)
+                        Text("• Title: ${listingState.title}", fontSize = 14.sp)
+                        Text("• Price: Rs ${listingState.price}", fontSize = 14.sp)
+                        Text("• Location: ${listingState.location}", fontSize = 14.sp)
+
+                        val totalImages = listingState.imageCategories.sumOf { it.images.size }
+                        Text("• Images: $totalImages photos", fontSize = 14.sp)
+                    }
+                }
+            },
             confirmButton = {
-                Button(onClick = {
-                }) {
-                    Text("Yes, Submit")
+                if (!isUploading) {
+                    Button(
+                        onClick = {
+                            listingViewModel.submitListing(
+                                context = context,
+                                state = listingState,
+                                onSuccess = {
+                                    showConfirmDialog = false
+                                    showSuccessDialog = true
+                                },
+                                onError = { error ->
+                                    showConfirmDialog = false
+                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    ) {
+                        Text("Yes, Submit")
+                    }
                 }
             },
             dismissButton = {
-                Button(onClick = {
-                    showConfirmDialog = false
-                }) {
-                    Text("Cancel")
+                if (!isUploading) {
+                    Button(
+                        onClick = { showConfirmDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = Gray.copy(0.7f))
+                    ) {
+                        Text("Cancel")
+                    }
                 }
-            }
+            },
+            shape = RoundedCornerShape(16.dp)
         )
     }
 
-    Scaffold (
+    // Success Dialog
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { },
+            title = {
+                Text(
+                    "Success!",
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_check_24),
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(64.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Your property has been listed successfully!",
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        listingViewModel.resetUploadStatus()
+                        val intent = Intent(context, DashboardActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                ) {
+                    Text("Go to Dashboard")
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    Scaffold(
         containerColor = Color.White
-    ){
-            padding ->
-        Column (
+    ) { padding ->
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
                 .animateContentSize()
                 .verticalScroll(rememberScrollState())
-        ){
+        ) {
+            // Header with animation
             AnimatedVisibility(
                 visible = showHeader,
                 enter = fadeIn(
@@ -230,6 +323,7 @@ fun ListingBody(){
 
             Spacer(modifier = Modifier.height(30.dp))
 
+            // Progress Indicator
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -237,7 +331,7 @@ fun ListingBody(){
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                for (i in 1..3) {
+                for (i in 1..5) {
                     Column {
                         val circleColor by animateColorAsState(
                             targetValue = if (step >= i) Blue else Gray.copy(0.3f),
@@ -257,6 +351,8 @@ fun ListingBody(){
                                 1 -> "Purpose"
                                 2 -> "Details"
                                 3 -> "Photos"
+                                4 -> "Terms"
+                                5 -> "Amenities"
                                 else -> ""
                             },
                             fontSize = 12.sp,
@@ -264,22 +360,21 @@ fun ListingBody(){
                         )
                     }
 
-                    if (i < 3) {
+                    if (i < 5) {
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 7.dp)
                                 .weight(1f)
                                 .height(2.dp)
                                 .background(if (step > i) Blue else Gray.copy(0.3f))
-                        ) {
-
-                        }
+                        )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
+            // Content based on step
             Column(
                 modifier = Modifier
                     .padding(horizontal = 10.dp)
@@ -309,15 +404,29 @@ fun ListingBody(){
                             listingState = listingState.copy(imageCategories = newCategories)
                         }
                     )
+                    4 -> RentalTermsContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
+                    5 -> AmenitiesContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
                 }
             }
 
+            // Navigation Buttons
             Row(
                 horizontalArrangement = Arrangement.SpaceAround,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 15.dp)
+                    .padding(horizontal = 15.dp, vertical = 10.dp)
             ) {
+                // Back Button
                 Button(
                     onClick = {
                         val newStep = step - 1
@@ -338,30 +447,44 @@ fun ListingBody(){
 
                 Spacer(modifier = Modifier.width(7.dp))
 
+                // Next/Submit Button
                 Button(
                     onClick = {
-                        if (step <= 2) {
-                            step += 1
-                        }
-                        else if(step == 3){
-                            showConfirmDialog = true
+                        val validationResult = listingViewModel.validateStep(step, listingState)
+
+                        if (validationResult.isValid) {
+                            if (step < 5) {
+                                // Move to next step (1 → 2 → 3 → 4 → 5)
+                                step += 1
+                            } else {
+                                // ONLY submit at step 5
+                                showConfirmDialog = true
+                            }
+                        } else {
+                            Toast.makeText(
+                                context,
+                                validationResult.errorMessage,
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
                 ) {
-                    Text("Next")
+                    Text(
+                        when (step) {
+                            1 -> "Continue"
+                            2 -> "Next"
+                            3 -> "Next"
+                            4 -> "Next"
+                            5 -> "Submit"
+                            else -> "Next"
+                        }
+                    )
                 }
+
             }
         }
     }
-}
-
-@Preview
-@Composable
-fun ListingBodyPreview(){
-    ListingBody()
 }

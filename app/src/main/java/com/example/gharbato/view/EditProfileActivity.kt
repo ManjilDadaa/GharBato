@@ -1,29 +1,39 @@
 package com.example.gharbato.view
 
-import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
@@ -46,18 +56,33 @@ fun EditProfileScreen() {
     // Observe user data and update status
     val userData by userViewModel.userData.observeAsState()
     val updateStatus by userViewModel.profileUpdateStatus.observeAsState()
+    val uploadedImageUrl by userViewModel.imageUploadStatus.observeAsState()
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var country by remember { mutableStateOf("") }
+    var profileImageUrl by remember { mutableStateOf<String?>(null) }
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
     var verificationCode by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(true) }
     var isSaving by remember { mutableStateOf(false) }
+    var isUploadingImage by remember { mutableStateOf(false) }
 
     val generatedCode = remember { generateRandomCode() }
+
+    // Image picker launcher
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            isUploadingImage = true
+            userViewModel.uploadProfileImage(context, it)
+        }
+    }
 
     // Load user profile when screen opens
     LaunchedEffect(Unit) {
@@ -71,7 +96,17 @@ fun EditProfileScreen() {
             email = user.email
             phone = user.phoneNo
             country = user.selectedCountry
+            profileImageUrl = user.profileImageUrl.ifEmpty { null }
             isLoading = false
+        }
+    }
+
+    // Handle image upload result
+    LaunchedEffect(uploadedImageUrl) {
+        uploadedImageUrl?.let { url ->
+            isUploadingImage = false
+            profileImageUrl = url
+            Toast.makeText(context, "Image uploaded successfully", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -91,13 +126,11 @@ fun EditProfileScreen() {
         DeleteAccountConfirmationDialog(
             onDismiss = { showDeleteDialog = false },
             onAccountDelete = {
-                // Delete user from Firebase Auth
                 val user = FirebaseAuth.getInstance().currentUser
                 user?.delete()?.addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         Toast.makeText(context, "Account deleted successfully", Toast.LENGTH_SHORT).show()
 
-                        // Redirect to LoginActivity
                         val intent = Intent(context, LoginActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         context.startActivity(intent)
@@ -143,6 +176,68 @@ fun EditProfileScreen() {
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Profile Image Section with Upload
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(vertical = 20.dp)
+                ) {
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        // Profile Image
+                        Image(
+                            painter = if (selectedImageUri != null) {
+                                rememberAsyncImagePainter(selectedImageUri)
+                            } else if (profileImageUrl != null) {
+                                rememberAsyncImagePainter(profileImageUrl)
+                            } else {
+                                painterResource(R.drawable.billu)
+                            },
+                            contentDescription = "Profile Image",
+                            modifier = Modifier
+                                .size(120.dp)
+                                .clip(CircleShape)
+                                .border(3.dp, Color(0xFF4D8DFF), CircleShape)
+                                .background(Color.LightGray),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        // Camera Icon Button for uploading
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF4D8DFF))
+                                .border(3.dp, Color.White, CircleShape)
+                                .clickable {
+                                    imagePickerLauncher.launch("image/*")
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isUploadingImage) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Change Photo",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    "Tap to change profile picture",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
+
+                // Form Fields
                 ProfileTextField(
                     value = name,
                     label = "Full Name"
@@ -150,7 +245,6 @@ fun EditProfileScreen() {
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Email is read-only (cannot be changed in Firebase Auth easily)
                 ProfileTextField(
                     value = email,
                     label = "Email Address",
@@ -175,6 +269,7 @@ fun EditProfileScreen() {
 
                 Spacer(modifier = Modifier.height(30.dp))
 
+                // Save Button
                 Button(
                     onClick = {
                         if (name.isBlank()) {
@@ -182,7 +277,13 @@ fun EditProfileScreen() {
                             return@Button
                         }
                         isSaving = true
-                        userViewModel.updateUserName(name)
+
+                        // Update profile with or without image
+                        if (profileImageUrl != null) {
+                            userViewModel.updateUserProfile(name, profileImageUrl!!)
+                        } else {
+                            userViewModel.updateUserName(name)
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -191,7 +292,7 @@ fun EditProfileScreen() {
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4D8DFF)
                     ),
-                    enabled = !isSaving
+                    enabled = !isSaving && !isUploadingImage
                 ) {
                     if (isSaving) {
                         CircularProgressIndicator(
@@ -209,7 +310,7 @@ fun EditProfileScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // "Delete Account" Button
+                // Delete Account Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -295,7 +396,6 @@ fun DeleteAccountConfirmationDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Display the generated code
                 Text(
                     generatedCode,
                     style = MaterialTheme.typography.bodyLarge.copy(
@@ -306,7 +406,6 @@ fun DeleteAccountConfirmationDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Input field for verification code
                 OutlinedTextField(
                     value = verificationCode,
                     onValueChange = onVerificationCodeChange,
@@ -315,7 +414,6 @@ fun DeleteAccountConfirmationDialog(
                     shape = RoundedCornerShape(14.dp)
                 )
 
-                // Display message if the code is incorrect
                 if (verificationCode.isNotEmpty() && !isCodeCorrect) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(

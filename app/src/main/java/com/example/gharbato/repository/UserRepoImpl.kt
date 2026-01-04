@@ -1,6 +1,12 @@
 package com.example.gharbato.repository
 
 import android.app.Activity
+import android.content.Context
+import android.net.Uri
+import android.os.Handler
+import android.os.Looper
+import com.cloudinary.Cloudinary
+import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.UserModel
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
@@ -11,10 +17,11 @@ import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
-
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import java.io.InputStream
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class UserRepoImpl : UserRepo{
@@ -22,6 +29,15 @@ class UserRepoImpl : UserRepo{
     val auth : FirebaseAuth = FirebaseAuth.getInstance()
     val database : FirebaseDatabase = FirebaseDatabase.getInstance()
     val ref : DatabaseReference = database.getReference("Users")
+
+    // Cloudinary configuration
+    private val cloudinary = Cloudinary(
+        mapOf(
+            "cloud_name" to "dwqybrjf2",
+            "api_key" to "929885821451753",
+            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
+        )
+    )
 
     override fun login(
         email: String,
@@ -140,6 +156,68 @@ class UserRepoImpl : UserRepo{
             }
     }
 
+    // ---------- NEW: PROFILE WITH IMAGE ----------
+
+    override fun updateUserProfile(
+        userId: String,
+        fullName: String,
+        profileImageUrl: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val updates = mutableMapOf<String, Any>(
+            "fullName" to fullName
+        )
+
+        if (profileImageUrl.isNotEmpty()) {
+            updates["profileImageUrl"] = profileImageUrl
+        }
+
+        ref.child(userId)
+            .updateChildren(updates)
+            .addOnCompleteListener {
+                if (it.isSuccessful) {
+                    callback(true, "Profile updated successfully")
+                } else {
+                    callback(false, it.exception?.message ?: "Update failed")
+                }
+            }
+    }
+
+    override fun uploadProfileImage(
+        context: Context,
+        imageUri: Uri,
+        callback: (String?) -> Unit
+    ) {
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                val fileName = "profile_${auth.currentUser?.uid}_${System.currentTimeMillis()}"
+
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "resource_type", "image",
+                        "folder", "profile_images"
+                    )
+                )
+
+                var imageUrl = response["url"] as String?
+                imageUrl = imageUrl?.replace("http://", "https://")
+
+                Handler(Looper.getMainLooper()).post {
+                    callback(imageUrl)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Handler(Looper.getMainLooper()).post {
+                    callback(null)
+                }
+            }
+        }
+    }
+
+    // ---------- OTP & VERIFICATION ----------
 
     override fun sendOtp(
         phoneNumber: String,
@@ -147,17 +225,15 @@ class UserRepoImpl : UserRepo{
         callback: (Boolean, String, String?) -> Unit
     ) {
         val options = PhoneAuthOptions.newBuilder(auth)
-            .setPhoneNumber(phoneNumber) // Phone number with country code
-            .setTimeout(60L, TimeUnit.SECONDS) // Timeout duration
-            .setActivity(activity) // Activity for callback binding
+            .setPhoneNumber(phoneNumber)
+            .setTimeout(60L, TimeUnit.SECONDS)
+            .setActivity(activity)
             .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
-                // Called when verification is completed automatically
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                     callback(true, "Verification completed automatically", null)
                 }
 
-                // Called when verification fails
                 override fun onVerificationFailed(exception: FirebaseException) {
                     callback(
                         false,
@@ -166,26 +242,21 @@ class UserRepoImpl : UserRepo{
                     )
                 }
 
-                // Called when OTP is sent successfully
                 override fun onCodeSent(
                     verificationId: String,
                     token: PhoneAuthProvider.ForceResendingToken
                 ) {
                     super.onCodeSent(verificationId, token)
-                    // Return the verification ID so user can verify OTP
                     callback(true, "OTP sent successfully", verificationId)
                 }
 
-                // Called when auto-retrieval times out
                 override fun onCodeAutoRetrievalTimeOut(verificationId: String) {
                     super.onCodeAutoRetrievalTimeOut(verificationId)
-                    // Still provide verification ID for manual entry
                     callback(true, "Enter OTP manually", verificationId)
                 }
             })
             .build()
 
-        //  Actually trigger the verification
         PhoneAuthProvider.verifyPhoneNumber(options)
     }
 
@@ -247,7 +318,6 @@ class UserRepoImpl : UserRepo{
     override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
         android.util.Log.d("UserRepoImpl", "Fetching all registered users from Firebase Database")
 
-        // Fetch registered users from Firebase Database
         ref.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 android.util.Log.d("UserRepoImpl", "Database snapshot exists: ${snapshot.exists()}, children count: ${snapshot.childrenCount}")
@@ -258,7 +328,6 @@ class UserRepoImpl : UserRepo{
                     android.util.Log.d("UserRepoImpl", "User found: ${userSnapshot.key} = ${userModel}")
 
                     if (userModel != null) {
-                        // Add the userId from the snapshot key
                         val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
                         userList.add(userWithId)
                         android.util.Log.d("UserRepoImpl", "Added user: ${userWithId.fullName} (${userWithId.email})")
@@ -279,7 +348,6 @@ class UserRepoImpl : UserRepo{
     override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
         android.util.Log.d("UserRepoImpl", "Searching users with query: '$query' from Firebase Database")
 
-        // Fetch registered users from Firebase Database
         ref.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 android.util.Log.d("UserRepoImpl", "Search - Database snapshot exists: ${snapshot.exists()}, children count: ${snapshot.childrenCount}")
@@ -292,7 +360,6 @@ class UserRepoImpl : UserRepo{
                     if (userModel != null) {
                         val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
 
-                        // Filter based on search query
                         if (query.isBlank() ||
                             userWithId.fullName.contains(query, ignoreCase = true) ||
                             userWithId.email.contains(query, ignoreCase = true) ||
@@ -313,6 +380,4 @@ class UserRepoImpl : UserRepo{
             }
         })
     }
-
-
 }

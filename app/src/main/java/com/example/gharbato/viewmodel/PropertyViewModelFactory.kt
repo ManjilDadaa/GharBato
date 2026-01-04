@@ -2,11 +2,11 @@ package com.example.gharbato.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.gharbato.data.repository.PropertyRepository
+import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.repository.SavedPropertiesRepository
 
 class PropertyViewModelFactory(
-    private val repository: PropertyRepository,
+    private val repository: PropertyRepo,
     private val savedPropertiesRepository: SavedPropertiesRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

@@ -4,7 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.example.gharbato.data.model.PropertyModel
 
-interface PropertyRepository {
+interface PropertyRepo{
     suspend fun getAllProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
     suspend fun searchProperties(query: String): List<PropertyModel>
@@ -13,6 +13,17 @@ interface PropertyRepository {
                     imageUri: Uri,
                     callback: (String?) -> Unit
     ) // android.net bata
+
+    fun addProperty(
+        property: PropertyModel,
+        callback: (Boolean,String?) -> Unit
+    )
+
+    fun uploadMultipleImages(
+        context: Context,
+        imageUris: List<Uri>,
+        callback: (List<String>) -> Unit
+    )
 
     fun getFileNameFromUri(context: Context, imageUri: Uri) : String?
     suspend fun filterProperties(

@@ -1,8 +1,9 @@
 package com.example.gharbato.repository
 
 import android.app.Activity
+import android.content.Context
+import android.net.Uri
 import com.example.gharbato.model.UserModel
-import com.google.firebase.auth.FirebaseUser
 
 interface UserRepo {
 
@@ -36,6 +37,21 @@ interface UserRepo {
         callback: (Boolean, String) -> Unit
     )
 
+
+    fun updateUserProfile(
+        userId: String,
+        fullName: String,
+        profileImageUrl: String,
+        callback: (Boolean, String) -> Unit
+    )
+
+
+    fun uploadProfileImage(
+        context: Context,
+        imageUri: Uri,
+        callback: (String?) -> Unit
+    )
+
     fun sendOtp(phoneNumber: String,
                 activity: Activity, callback: (Boolean, String, String?) -> Unit
     )
@@ -54,4 +70,3 @@ interface UserRepo {
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
 
 }
-
