@@ -209,6 +209,7 @@ class PropertyViewModel(
         repository.uploadImage(context , imageUri, callback)
     }
 
+
 //    fun submitListing(context: Context, state: PropertyListingState){
 //
 //    }

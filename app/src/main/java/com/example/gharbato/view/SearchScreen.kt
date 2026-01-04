@@ -2,6 +2,8 @@ package com.example.gharbato.ui.view
 
 import android.app.Activity
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,6 +15,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
@@ -25,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -39,7 +44,6 @@ import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.maps.android.compose.*
-import androidx.compose.foundation.layout.WindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,14 +67,38 @@ fun SearchScreen(
         label = "mapHeight"
     )
 
+    // Location picker launcher
+    val locationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val latitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0) ?: 0.0
+            val longitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0) ?: 0.0
+            val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
+            val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
+
+            // Update ViewModel with location search
+            viewModel.searchByLocation(latitude, longitude, address, radius)
+        }
+    }
+
     Scaffold(
         topBar = {
             SearchTopBar(
                 searchQuery = uiState.searchQuery,
-                onSearchQueryChange = { viewModel.updateSearchQuery(it) }
+                onSearchQueryChange = { query ->
+                    viewModel.updateSearchQuery(query)
+                },
+                onLocationClick = {
+                    val intent = Intent(context, LocationPickerActivity::class.java)
+                    locationPickerLauncher.launch(intent)
+                },
+                onSearchClick = {
+                    viewModel.performSearch()
+                }
             )
         },
-
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
@@ -118,6 +146,7 @@ fun SearchScreen(
                     }
                 }
 
+                // Filter Chips
                 FilterChipsSection(
                     selectedMarketType = uiState.selectedMarketType,
                     onMarketTypeChange = { viewModel.updateMarketType(it) },
@@ -129,6 +158,7 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Properties Count
                 Text(
                     text = "${uiState.properties.size} Listings",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -136,14 +166,57 @@ fun SearchScreen(
                     fontSize = 18.sp
                 )
 
+                // Loading State
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = Color(0xFF2196F3))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Searching properties...",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                } else if (uiState.errorMessage.isNotEmpty()) {
+                    // Error State
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                uiState.errorMessage,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Try adjusting your search or filters",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 } else {
+                    // Property List
                     PropertyList(
                         properties = uiState.properties,
                         listState = listState,
@@ -162,6 +235,79 @@ fun SearchScreen(
     }
 }
 
+@Composable
+fun SearchTopBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onLocationClick: () -> Unit,
+    onSearchClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars),
+        color = Color.White,
+        shadowElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                placeholder = {
+                    Text(
+                        text = "Search by location, property type...",
+                        color = Color.Gray,
+                        fontSize = 15.sp
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                trailingIcon = {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color(0xFF2196F3), CircleShape)
+                            .clickable { onLocationClick() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Select Location",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                },
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color(0xFF2196F3),
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5),
+                    cursorColor = Color(0xFF2196F3)
+                ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Search
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        onSearchClick()
+                    }
+                )
+            )
+        }
+    }
+}
 
 
 
