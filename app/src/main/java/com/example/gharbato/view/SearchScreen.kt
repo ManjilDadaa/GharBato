@@ -63,6 +63,8 @@ fun SearchScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var showFilterSheet by remember { mutableStateOf(false) }
+
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
             listState.firstVisibleItemScrollOffset > 100
@@ -83,7 +85,6 @@ fun SearchScreen(
             val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
             val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
 
-            // Update ViewModel with location search
             viewModel.searchByLocation(latitude, longitude, address, radius)
         }
     }
@@ -94,6 +95,9 @@ fun SearchScreen(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = { query ->
                     viewModel.updateSearchQuery(query)
+                },
+                onFilterClick = {
+                    showFilterSheet = true
                 },
                 onLocationClick = {
                     val intent = Intent(context, LocationPickerActivity::class.java)
@@ -158,7 +162,8 @@ fun SearchScreen(
                     selectedPropertyType = uiState.selectedPropertyType,
                     onPropertyTypeChange = { viewModel.updatePropertyType(it) },
                     minPrice = uiState.minPrice,
-                    onMinPriceChange = { viewModel.updateMinPrice(it) }
+                    onMinPriceChange = { viewModel.updateMinPrice(it) },
+                    onShowFilters = { showFilterSheet = true }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -189,7 +194,7 @@ fun SearchScreen(
                             )
                         }
                     }
-                } else if (uiState.error?.isNotEmpty() == true ) {
+                } else if (uiState.error?.isNotEmpty() == true) {
                     // Error State
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -238,12 +243,27 @@ fun SearchScreen(
             }
         }
     }
+
+    // Filter Bottom Sheet
+    if (showFilterSheet) {
+        FilterBottomSheet(
+            currentFilters = uiState.currentFilters,
+            onFiltersApply = { filters ->
+                viewModel.applyFilters(filters)
+                showFilterSheet = false
+            },
+            onDismiss = {
+                showFilterSheet = false
+            }
+        )
+    }
 }
 
 @Composable
 fun SearchTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit,
     onLocationClick: () -> Unit,
     onSearchClick: () -> Unit
 ) {
@@ -277,19 +297,41 @@ fun SearchTopBar(
                     )
                 },
                 trailingIcon = {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color(0xFF2196F3), CircleShape)
-                            .clickable { onLocationClick() },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Select Location",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        // Filter Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onFilterClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filters",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        // Location Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onLocationClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Select Location",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 },
                 shape = RoundedCornerShape(28.dp),
@@ -338,7 +380,6 @@ fun MapSection(
                 mapToolbarEnabled = false
             ),
             onMapClick = {
-                //Clicking map background opens FullMapActivity
                 onMapClick()
             }
         ) {
@@ -349,9 +390,8 @@ fun MapSection(
                     snippet = property.location,
                     icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                     onClick = {
-                        // Clicking marker shows overlay
                         onMarkerClick(property)
-                        true // Consume the click event
+                        true
                     }
                 )
             }
@@ -425,7 +465,8 @@ fun FilterChipsSection(
     selectedPropertyType: String,
     onPropertyTypeChange: (String) -> Unit,
     minPrice: Int,
-    onMinPriceChange: (Int) -> Unit
+    onMinPriceChange: (Int) -> Unit,
+    onShowFilters: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -436,9 +477,10 @@ fun FilterChipsSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Market Type Chip (Buy/Rent)
             item {
                 FilterChip(
-                    selected = selectedMarketType == "Buy",
+                    selected = true,
                     onClick = {
                         onMarketTypeChange(if (selectedMarketType == "Buy") "Rent" else "Buy")
                     },
@@ -457,11 +499,16 @@ fun FilterChipsSection(
                 )
             }
 
+            // Property Type Chip
             item {
                 FilterChip(
-                    selected = true,
-                    onClick = { /* Handle property type */ },
-                    label = { Text(selectedPropertyType) },
+                    selected = selectedPropertyType != "All",
+                    onClick = onShowFilters,
+                    label = {
+                        Text(
+                            if (selectedPropertyType == "All") "Property Type" else selectedPropertyType
+                        )
+                    },
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
@@ -471,56 +518,36 @@ fun FilterChipsSection(
                     },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFE3F2FD),
-                        selectedLabelColor = Color(0xFF2196F3)
+                        selectedLabelColor = Color(0xFF2196F3),
+                        containerColor = Color(0xFFF5F5F5),
+                        labelColor = Color.Gray
                     )
                 )
             }
 
+            // More Filters Chip
             item {
                 FilterChip(
-                    selected = true,
-                    onClick = { /* Handle bedrooms */ },
+                    selected = minPrice > 0,
+                    onClick = onShowFilters,
                     label = {
-                        Text("9+", color = Color.White, fontWeight = FontWeight.Bold)
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF4CAF50),
-                        selectedLabelColor = Color.White
-                    )
-                )
-            }
-
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF5F5F5),
-                    modifier = Modifier.clickable { /* Handle price */ }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Text(
-                            text = "from $minPrice thousand",
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                            if (minPrice > 0) "रु ${minPrice}k+" else "More Filters"
                         )
-                    }
-                }
-            }
-
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { /* Handle sort */ },
-                    label = { Text("Sort by") },
+                    },
                     trailingIcon = {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector = Icons.Default.FilterList,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                    }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF4CAF50),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color(0xFFF5F5F5),
+                        labelColor = Color.Gray
+                    )
                 )
             }
         }
@@ -738,7 +765,6 @@ fun PropertyCard(
                                     otherUserName = property.ownerName.ifBlank { property.developer }
                                 )
                                 context.startActivity(intent)
-
                             }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
