@@ -20,6 +20,9 @@ class MessageViewModel(
     private val _users = mutableStateOf<List<UserModel>>(emptyList())
     val users: State<List<UserModel>> = _users
     
+    // Store all chat partners locally for filtering
+    private val _allChatPartners = mutableStateOf<List<UserModel>>(emptyList())
+    
     private val _isLoading = mutableStateOf(true)
     val isLoading: State<Boolean> = _isLoading
     
@@ -40,6 +43,25 @@ class MessageViewModel(
     
     fun loadUsers() {
         _isLoading.value = true
+        repository.getChatPartners { success, userList, message ->
+            _isLoading.value = false
+            
+            if (success && userList != null) {
+                _allChatPartners.value = userList
+                _users.value = userList
+                if (userList.isEmpty()) {
+                    _errorMessage.value = "No chat history found. Start a conversation to see users here."
+                } else {
+                    _errorMessage.value = ""
+                }
+            } else {
+                _errorMessage.value = message ?: "Failed to load chat partners"
+            }
+        }
+    }
+    
+    fun loadAllUsers() {
+        _isLoading.value = true
         repository.getAllUsers { success, userList, message ->
             _isLoading.value = false
             
@@ -48,42 +70,43 @@ class MessageViewModel(
                 if (userList.isEmpty()) {
                     _errorMessage.value = "No registered users found in database"
                 } else {
-                    _errorMessage.value = "Found ${userList.size} registered users"
+                    _errorMessage.value = ""
                 }
             } else {
-                _users.value = emptyList()
-                _errorMessage.value = "Error loading users: $message"
+                _errorMessage.value = message ?: "Failed to load users"
             }
         }
     }
     
     fun onSearchTextChanged(newText: String) {
         _searchText.value = newText
+        filterChatPartners()
+    }
+    
+    private fun filterChatPartners() {
+        val query = _searchText.value.trim().lowercase()
+        if (query.isEmpty()) {
+            _users.value = _allChatPartners.value
+        } else {
+            _users.value = _allChatPartners.value.filter { user ->
+                user.fullName.lowercase().contains(query) ||
+                user.email.lowercase().contains(query) ||
+                user.userId.lowercase().contains(query)
+            }
+        }
     }
     
     fun searchUsers() {
-        if (_isLoading.value) return
-        
-        try {
-            repository.searchUsers(_searchText.value) { success, userList, message ->
-                if (success && userList != null) {
-                    _users.value = userList
-                    _errorMessage.value = ""
-                } else {
-                    _errorMessage.value = message
-                }
-            }
-        } catch (e: Exception) {
-            _errorMessage.value = "Search timeout"
-        }
+        // This method now just calls the local filter
+        filterChatPartners()
     }
     
     fun initiateCall(targetUserId: String, targetUserName: String, isVideoCall: Boolean, activity: android.app.Activity) {
         repository.initiateCall(activity, targetUserId, targetUserName, isVideoCall)
     }
     
-    fun navigateToChat(targetUserId: String, targetUserName: String, activity: android.app.Activity) {
-        repository.navigateToChat(activity, targetUserId, targetUserName)
+    fun navigateToChat(targetUserId: String, targetUserName: String, targetUserImage: String, activity: android.app.Activity) {
+        repository.navigateToChat(activity, targetUserId, targetUserName, targetUserImage)
     }
     
     fun getLocalUserId(context: android.content.Context): String {

@@ -136,6 +136,27 @@ class UserRepoImpl : UserRepo{
             })
     }
 
+    override fun getUserById(
+        userId: String,
+        callback: (Boolean, UserModel?, String) -> Unit
+    ) {
+        ref.child(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val user = snapshot.getValue(UserModel::class.java)
+                    if (user != null) {
+                        callback(true, user, "")
+                    } else {
+                        callback(false, null, "User not found")
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, null, "Database error: ${error.message}")
+                }
+            })
+    }
+
     override fun updateUserName(
         userId: String,
         fullName: String,
