@@ -41,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
+import com.example.gharbato.ui.view.FullSearchMapActivity
+import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -312,8 +314,6 @@ fun SearchTopBar(
     }
 }
 
-
-
 @Composable
 fun MapSection(
     properties: List<PropertyModel>,
@@ -414,70 +414,6 @@ fun MapSection(
                 contentDescription = "Full Screen",
                 tint = Color.Black
             )
-        }
-    }
-}
-
-@Composable
-fun SearchTopBar(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
-        color = Color.White,
-        shadowElevation = 2.dp
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(24.dp)
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (searchQuery.isEmpty()) {
-                        Text(
-                            text = "What are you looking for?",
-                            color = Color.Gray,
-                            fontSize = 16.sp
-                        )
-                    }
-                    Text(
-                        text = searchQuery,
-                        fontSize = 16.sp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color(0xFF2196F3), CircleShape)
-                        .clickable { /* Handle location */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
         }
     }
 }
