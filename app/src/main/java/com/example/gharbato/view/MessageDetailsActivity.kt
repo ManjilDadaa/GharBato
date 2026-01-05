@@ -288,7 +288,6 @@ private fun MessageDetailsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Custom Top Bar matching WhatsApp design
             Surface(
                 color = Color.White,
                 shadowElevation = 1.dp,

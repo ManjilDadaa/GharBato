@@ -105,9 +105,9 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             // Header Title
             Text(
                 text = "Message",
-                color = Color(0xFFE0B0FF), // Light Purple color
+                color = Blue, // Light Purple color
                 fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.W500,
                 fontFamily = FontFamily.SansSerif,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
@@ -247,7 +247,7 @@ fun ChatListItem(
                 Text(
                     text = message,
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = Blue,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
