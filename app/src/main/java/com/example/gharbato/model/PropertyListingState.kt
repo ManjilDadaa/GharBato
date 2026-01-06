@@ -1,6 +1,5 @@
 package com.example.gharbato.model
 
-import android.net.Uri
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
@@ -12,18 +11,52 @@ data class PropertyListingState(
 
     // Step 2: Details
     var title: String = "",
+    var developer: String = "",
     var price: String = "",
     var location: String = "",
+    var area: String = "",
+    var floor: String = "",
+    var furnishing: String = "Fully Furnished",
     var bedrooms: String = "",
     var bathrooms: String = "",
-    var area: String = "",
+    var parking: Boolean = true,
+    var petsAllowed: Boolean = false,
     var description: String = "",
     var kitchen: String = "",
     var totalRooms: String = "",
 
     // Step 3: Images
-    var imageCategories: List<ImageCategory> = getDefaultImageCategories()
+    var imageCategories: List<ImageCategory> = getDefaultImageCategories(),
+
+    // Step 4: Rental Terms (only for Rent/Book)
+    var utilitiesIncluded: String = "Included (electricity extra)",
+    var commission: String = "No commission",
+    var advancePayment: String = "1 month rent",
+    var securityDeposit: String = "2 months rent",
+    var minimumLease: String = "12 months",
+    var availableFrom: String = "Immediate",
+
+    // Step 5: Amenities
+    var amenities: List<String> = emptyList()
 ) : Parcelable
+
+// Amenities list
+fun getDefaultAmenities(): List<String> {
+    return listOf(
+        "Air Conditioning",
+        "WiFi Internet",
+        "Washing Machine",
+        "Refrigerator",
+        "Security",
+        "Elevator",
+        "Gym",
+        "Swimming Pool",
+        "Garden",
+        "Balcony",
+        "Power Backup",
+        "Water Supply 24/7"
+    )
+}
 
 @Parcelize
 data class ImageCategory(
@@ -33,7 +66,7 @@ data class ImageCategory(
     val icon: Int,
     val isRequired: Boolean,
     val maxImages: Int,
-    val images: MutableList<String> = mutableListOf() // Store as URI strings for Parcelable
+    val images: MutableList<String> = mutableListOf()
 ) : Parcelable
 
 fun getDefaultImageCategories(): List<ImageCategory> {

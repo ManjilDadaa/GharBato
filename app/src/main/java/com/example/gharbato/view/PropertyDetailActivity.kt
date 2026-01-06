@@ -1,24 +1,73 @@
 package com.example.gharbato.ui.view
 
-import android.content.Intent
+import android.app.Activity
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.LocalLaundryService
+import androidx.compose.material.icons.filled.LocationCity
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,14 +81,22 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepositoryImpl
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
+import com.example.gharbato.view.MessageDetailsActivity
+import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.*
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
+import android.content.Context
+import android.content.Intent
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -96,7 +153,6 @@ fun PropertyDetailScreen(
     onFavoriteToggle: (PropertyModel) -> Unit
 ) {
     val context = LocalContext.current
-    var isFavorite by remember { mutableStateOf(false) }
 
     Scaffold { paddingValues ->
         Box(
@@ -108,10 +164,11 @@ fun PropertyDetailScreen(
                 // Image Gallery Section
                 item {
                     PropertyImageSection(
-                        imageUrl = property.imageUrl,
-                        isFavorite = isFavorite,
-                        onFavoriteClick = { isFavorite = !isFavorite },
-
+                        property = property,
+                        isFavorite = property.isFavorite,
+                        onFavoriteClick = {
+                            onFavoriteToggle(property)
+                        },
                         onBackClick = onBack
                     )
                 }
@@ -181,53 +238,66 @@ fun PropertyDetailScreen(
                     ReportSection()
                 }
 
-                // Agent Helper
-//                item {
-//                    AgentHelperSection()
-//                }
-
-                // Similar Properties
-//                item {
-//                    SimilarPropertiesSection()
-//                }
-
                 // Bottom spacing
                 item {
                     Spacer(modifier = Modifier.height(100.dp))
                 }
             }
 
-            // Bottom Action Buttons
-            BottomActionButtons()
+            BottomActionButtons(property = property)
         }
     }
 }
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyImageSection(
-    imageUrl: String,
+    property: PropertyModel,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
     onBackClick: () -> Unit
 ) {
+    val context = LocalContext.current
+
+    // Get all images from all categories
+    val allImages = property.images.values.flatten()
+
+    // If no images, show placeholder
+    val imagesToShow = if (allImages.isEmpty()) {
+        listOf("https://via.placeholder.com/600x400?text=No+Image")
+    } else {
+        allImages
+    }
+
+    // Pager state for swiping
+    val pagerState = rememberPagerState(pageCount = { imagesToShow.size })
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(300.dp)
     ) {
-        Image(
-            painter = rememberAsyncImagePainter(imageUrl),
-            contentDescription = "Property Image",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            Image(
+                painter = rememberAsyncImagePainter(imagesToShow[page]),
+                contentDescription = "Property Image ${page + 1}",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
+        // Top Bar with Back, Favorite, and Share buttons
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            // Back Button
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier
@@ -241,7 +311,9 @@ fun PropertyImageSection(
                 )
             }
 
+
             Row {
+                // Favorite Button
                 IconButton(
                     onClick = onFavoriteClick,
                     modifier = Modifier
@@ -258,20 +330,23 @@ fun PropertyImageSection(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 IconButton(
-                    onClick = { /* Handle more */ },
+                    onClick = {
+                        shareProperty(context, property)
+                    },
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color.White.copy(alpha = 0.9f), CircleShape)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "More",
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Share",
                         tint = Color.Black
                     )
                 }
             }
         }
 
+        // Image counter indicator (bottom-right)
         Surface(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -280,14 +355,68 @@ fun PropertyImageSection(
             shape = RoundedCornerShape(16.dp)
         ) {
             Text(
-                text = "1/5",
+                text = "${pagerState.currentPage + 1}/${imagesToShow.size}",
                 color = Color.White,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
         }
+
+        // Dot indicators at bottom center
+        if (imagesToShow.size > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 50.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(imagesToShow.size) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(if (index == pagerState.currentPage) 8.dp else 6.dp)
+                            .background(
+                                color = if (index == pagerState.currentPage)
+                                    Color.White
+                                else
+                                    Color.White.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                    )
+                }
+            }
+        }
     }
+}
+
+// Share Property function
+private fun shareProperty(context: Context, property: PropertyModel) {
+    // Create a shareable message with property details
+    val shareText = buildString {
+        append("🏠 ${property.developer}\n\n")
+        append("💰 Price: ${property.price}\n")
+        append("📍 Location: ${property.location}\n")
+        append("🛏️ Bedrooms: ${property.bedrooms}\n")
+        append("🛁 Bathrooms: ${property.bathrooms}\n")
+        append("📐 Area: ${property.sqft}\n\n")
+
+        append("View property: https://gharbato.app/property/${property.id}\n\n")
+
+        append("Check out this amazing property on Gharbato!")
+    }
+
+    // Create share intent
+    val shareIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        type = "text/plain"
+        putExtra(Intent.EXTRA_SUBJECT, "Check out this property: ${property.developer}")
+        putExtra(Intent.EXTRA_TEXT, shareText)
+    }
+
+    // Show system share sheet
+    context.startActivity(
+        Intent.createChooser(shareIntent, "Share Property via")
+    )
 }
 
 @Composable
@@ -889,7 +1018,7 @@ fun ReportSection() {
 //            Spacer(modifier = Modifier.height(16.dp))
 //
 //            Text(
-//                text = "Our agents can help you find the perfect property,\nschedule visits, and handle all paperwork",
+//                text = "Our agents can help you find the perfect property,schedule visits, and handle all paperwork",
 //                fontSize = 14.sp,
 //                color = Color.Gray,
 //                textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -916,7 +1045,7 @@ fun ReportSection() {
 //}
 
 
-
+//
 //@Composable
 //fun SimilarPropertiesSection(
 //    price: String,
@@ -971,7 +1100,9 @@ fun ReportSection() {
 //}
 
 @Composable
-fun BoxScope.BottomActionButtons() {
+fun BoxScope.BottomActionButtons(property: PropertyModel) {
+    val context = LocalContext.current
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -986,7 +1117,15 @@ fun BoxScope.BottomActionButtons() {
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Button(
-                onClick = { /* Handle call */ },
+                onClick = {
+                    val messageViewModel = MessageViewModel()
+                    messageViewModel.initiateCall(
+                        targetUserId = property.ownerId,
+                        targetUserName = property.ownerName.ifBlank { property.developer },
+                        isVideoCall = false,
+                        activity = context as Activity
+                    )
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),
@@ -1005,7 +1144,15 @@ fun BoxScope.BottomActionButtons() {
             }
 
             Button(
-                onClick = { /* Handle message */ },
+                onClick = {
+                    // ✅ Navigate to chat with property owner
+                    val intent = MessageDetailsActivity.newIntent(
+                        activity = context as Activity,
+                        otherUserId = property.ownerId,
+                        otherUserName = property.ownerName.ifBlank { property.developer }
+                    )
+                    context.startActivity(intent)
+                },
                 modifier = Modifier
                     .weight(1f)
                     .height(56.dp),

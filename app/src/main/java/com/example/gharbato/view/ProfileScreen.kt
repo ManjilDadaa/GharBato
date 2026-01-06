@@ -1,12 +1,6 @@
 package com.example.gharbato.view
 
-import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -33,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
@@ -41,18 +36,11 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 
-class ProfileScreenActivity : ComponentActivity() {
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContent { ProfileScreen() }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Initialize ViewModel
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
@@ -70,48 +58,50 @@ fun ProfileScreen() {
     }
 
     // Reload profile when returning from EditProfileActivity
-    DisposableEffect(Unit) {
-        val lifecycleOwner = context as ComponentActivity
+    DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 userViewModel.loadUserProfile()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Profile",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FB))
+    ) {
+        // Custom Top Bar (without Scaffold to avoid conflict with Dashboard)
+        TopAppBar(
+            title = {
+                Text(
+                    "Profile",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            colors = TopAppBarDefaults.topAppBarColors(
+                containerColor = Color.White
+            ),
+            actions = {
+                IconButton(onClick = { }) {
+                    Icon(
+                        painter = painterResource(R.drawable.outline_notifications_24),
+                        contentDescription = "Notifications",
+                        tint = Blue
                     )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                ),
-                actions = {
-                    IconButton(onClick = { }) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_notifications_24),
-                            contentDescription = "Notifications",
-                            tint = Blue
-                        )
-                    }
                 }
-            )
-        }
-    ) { padding ->
+            }
+        )
+
         if (isLoading || userData == null) {
             // Show loading indicator
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = Blue)
@@ -120,8 +110,6 @@ fun ProfileScreen() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .background(Color(0xFFF8F9FB))
                     .verticalScroll(rememberScrollState())
             ) {
                 // Profile Header Section
@@ -134,7 +122,11 @@ fun ProfileScreen() {
                     // Profile Image with Edit Icon
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Image(
-                            painter = painterResource(R.drawable.billu),
+                            painter = if (userData?.profileImageUrl?.isNotEmpty() == true) {
+                                rememberAsyncImagePainter(userData?.profileImageUrl)
+                            } else {
+                                painterResource(R.drawable.billu)
+                            },
                             contentDescription = null,
                             modifier = Modifier
                                 .size(64.dp)
@@ -305,7 +297,6 @@ fun ProfileScreen() {
                             val loginIntent = Intent(context, LoginActivity::class.java)
                             loginIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             context.startActivity(loginIntent)
-                            (context as ComponentActivity).finish()
                         }
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
@@ -327,7 +318,8 @@ fun ProfileScreen() {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                // Extra space for bottom navigation bar
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
@@ -356,7 +348,6 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
         }
     }
 }
-
 
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {

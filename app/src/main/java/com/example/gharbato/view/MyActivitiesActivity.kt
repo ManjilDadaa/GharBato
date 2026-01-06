@@ -51,7 +51,7 @@ fun MyActivitiesScreen() {
                 title = { Text("My Activities") },
                 navigationIcon = {
                     IconButton(onClick = {
-                        context.startActivity(Intent(context, ProfileScreenActivity::class.java))
+
                         (context as ComponentActivity).finish()
                     }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

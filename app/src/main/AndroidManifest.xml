@@ -24,6 +24,22 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
+            android:name=".view.AdminActivity"
+            android:exported="true"
+            android:label="@string/title_activity_admin"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.LocationPickerActivity"
+            android:exported="false"
+            android:label="@string/title_activity_location_picker"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".ui.view.FullMapActivity"
             android:exported="true"
             android:label="@string/title_activity_full_map"
@@ -72,7 +88,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".SplashActivity"
+            android:name=".view.SplashActivity"
             android:exported="true"
             android:label="@string/title_activity_splash"
             android:theme="@style/Theme.GharBato">
@@ -93,9 +109,16 @@
         </activity>
         <activity
             android:name=".view.MessageDetailsActivity"
-            android:exported="false"
-            android:theme="@style/Theme.GharBato" />
+            android:exported="true"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
 
+                <category android:name="android.intent.category.DEFAULT" />
+
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".view.ZegoCallActivity"
             android:exported="true"
@@ -157,6 +180,16 @@
             android:exported="true"
             android:label="Email Verify"
             android:theme="@style/Theme.GharBato" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>
