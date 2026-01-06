@@ -45,7 +45,7 @@ fun AdminBody() {
     var listNav = listOf(
         navItem("Home", R.drawable.baseline_home_24),
         navItem("Search", R.drawable.outline_search_24),
-        navItem("Report",R.drawable.baseline_report_24),
+        navItem("Delete",R.drawable.baseline_delete_forever_24),
 
     )
     Scaffold (
