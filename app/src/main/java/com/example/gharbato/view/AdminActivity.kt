@@ -90,7 +90,7 @@ fun AdminBody() {
             when(selectedIndex){
                 0 -> AdminHomeScreen()
                 1 -> AdminSearchScreen()
-                2 -> AdminReportScreen()
+                2 -> AdminDeleteScreen()
             }
         }
     }
