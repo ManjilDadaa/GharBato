@@ -28,7 +28,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -70,7 +74,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -97,11 +109,13 @@ class MessageDetailsActivity : ComponentActivity() {
 
         val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
         val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: "Chat"
+        val otherUserImage = intent.getStringExtra(EXTRA_OTHER_USER_IMAGE) ?: ""
 
         setContent {
             MessageDetailsScreen(
                 otherUserId = otherUserId,
                 otherUserName = otherUserName,
+                otherUserImage = otherUserImage,
             )
         }
     }
@@ -109,15 +123,18 @@ class MessageDetailsActivity : ComponentActivity() {
     companion object {
         const val EXTRA_OTHER_USER_ID = "extra_other_user_id"
         const val EXTRA_OTHER_USER_NAME = "extra_other_user_name"
+        const val EXTRA_OTHER_USER_IMAGE = "extra_other_user_image"
 
         fun newIntent(
             activity: Activity,
             otherUserId: String,
             otherUserName: String,
+            otherUserImage: String = "",
         ): Intent {
             return Intent(activity, MessageDetailsActivity::class.java).apply {
                 putExtra(EXTRA_OTHER_USER_ID, otherUserId)
                 putExtra(EXTRA_OTHER_USER_NAME, otherUserName)
+                putExtra(EXTRA_OTHER_USER_IMAGE, otherUserImage)
             }
         }
     }
@@ -192,6 +209,7 @@ private fun createImageFileUri(context: Context): Uri {
 private fun MessageDetailsScreen(
     otherUserId: String,
     otherUserName: String,
+    otherUserImage: String,
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -261,54 +279,92 @@ private fun MessageDetailsScreen(
         }
     }
 
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF5F7FA)
-    ) {
+        containerColor = Color(0xFFEFE7DE) // WhatsApp default background color
+    ) { paddingValues ->
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
         ) {
-            TopAppBar(
-                title = { 
-                    Text(
-                        text = otherUserName,
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontFamily = FontFamily.SansSerif,
-                        fontWeight = FontWeight.Medium
-                    ) 
-                },
-                navigationIcon = {
-                    IconButton(onClick = { activity.finish() }) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack, 
-                            contentDescription = null,
-                            tint = Color.White
-                        )
-                    }
-                },
-                actions = {
+            Surface(
+                color = Color.White,
+                shadowElevation = 1.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     IconButton(
-                        onClick = {
-                            activity.startActivity(
-                                ZegoCallActivity.newIntent(
-                                    activity = activity,
-                                    callId = chatId,
-                                    userId = myUserId,
-                                    userName = auth.currentUser?.email ?: myUserId,
-                                    isVideoCall = false,
-                                    targetUserId = otherId
-                                )
-                            )
-                        }
+                        onClick = { activity.finish() },
+                        modifier = Modifier.padding(start = 4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Call, 
-                            contentDescription = null,
-                            tint = Color.White
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.Black
                         )
                     }
 
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { /* Handle profile click */ }
+                            .padding(start = 0.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // User Avatar
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .background(Color.Gray),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (otherUserImage.isNotEmpty()) {
+                                AsyncImage(
+                                    model = otherUserImage,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Person,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Column {
+                            Text(
+                                text = otherUserName,
+                                color = Color.Black,
+                                fontSize = 16.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "last seen today at 6:22 PM",
+                                color = Color.Gray,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.SansSerif,
+                                fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Actions
                     IconButton(
                         onClick = {
                             activity.startActivity(
@@ -324,17 +380,36 @@ private fun MessageDetailsScreen(
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Videocam, 
-                            contentDescription = null,
-                            tint = Color.White
+                            imageVector = Icons.Default.Videocam,
+                            contentDescription = "Video Call",
+                            tint = Color.Black
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Blue
-                ),
-                modifier = Modifier.shadow(4.dp)
-            )
+
+                    IconButton(
+                        onClick = {
+                            activity.startActivity(
+                                ZegoCallActivity.newIntent(
+                                    activity = activity,
+                                    callId = chatId,
+                                    userId = myUserId,
+                                    userName = auth.currentUser?.email ?: myUserId,
+                                    isVideoCall = false,
+                                    targetUserId = otherId
+                                )
+                            )
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Call,
+                            contentDescription = "Voice Call",
+                            tint = Color.Black
+                        )
+                    }
+
+                    // Removed More options icon as requested
+                }
+            }
 
             Box(
                 modifier = Modifier
@@ -344,64 +419,75 @@ private fun MessageDetailsScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 8.dp), // Reduced padding for WhatsApp style
                     state = listState,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp), // Closer spacing like WhatsApp
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
                 ) {
                     items(messages, key = { it.id }) { msg ->
                         val isMe = msg.senderId == myUserId
                         
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth(),
-                            horizontalArrangement = if (isMe) Arrangement.Start else Arrangement.Start,
-                            verticalAlignment = Alignment.Top
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
+                            verticalAlignment = Alignment.Bottom // Align profile pic with bottom of bubble
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(
-                                        horizontal = if (isMe) 16.dp else 12.dp,
-                                        vertical = 8.dp
-                                    ),
-                                horizontalAlignment = if (isMe) Alignment.End else Alignment.Start
-                            ) {
-                                if (!isMe) {
-                                    Text(
-                                        text = msg.senderName,
-                                        color = Color(0xFF6B7280),
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.SansSerif,
-                                        fontWeight = FontWeight.Medium,
-                                        modifier = Modifier.padding(bottom = 4.dp)
-                                    )
-                                }
-                                
-                                Card(
+                            if (!isMe) {
+                                Box(
                                     modifier = Modifier
-                                        .shadow(
-                                            elevation = 2.dp,
-                                            shape = RoundedCornerShape(
-                                                topStart = if (isMe) 20.dp else 4.dp,
-                                                topEnd = if (isMe) 4.dp else 20.dp,
-                                                bottomStart = if (isMe) 20.dp else 20.dp,
-                                                bottomEnd = if (isMe) 4.dp else 4.dp
-                                            )
-                                        ),
-                                    shape = RoundedCornerShape(
-                                        topStart = if (isMe) 20.dp else 4.dp,
-                                        topEnd = if (isMe) 4.dp else 20.dp,
-                                        bottomStart = if (isMe) 20.dp else 20.dp,
-                                        bottomEnd = if (isMe) 4.dp else 4.dp
-                                    ),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isMe) 
-                                            Color(0xFF007AFF) 
-                                        else 
-                                            Color.White
-                                    )
+                                        .padding(end = 8.dp)
+                                        .size(28.dp) // Smaller than header
+                                        .clip(CircleShape)
+                                        .background(Color.Gray),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    // Display image if present
+                                    if (otherUserImage.isNotEmpty()) {
+                                        AsyncImage(
+                                            model = otherUserImage,
+                                            contentDescription = null,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.Person,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            Card(
+                                modifier = Modifier
+                                    .widthIn(max = 300.dp) // Limit max width
+                                    .shadow(
+                                        elevation = 1.dp,
+                                        shape = RoundedCornerShape(
+                                            topStart = 12.dp,
+                                            topEnd = 12.dp,
+                                            bottomStart = if (isMe) 12.dp else 0.dp,
+                                            bottomEnd = if (isMe) 0.dp else 12.dp
+                                        )
+                                    ),
+                                shape = RoundedCornerShape(
+                                    topStart = 12.dp,
+                                    topEnd = 12.dp,
+                                    bottomStart = if (isMe) 12.dp else 0.dp,
+                                    bottomEnd = if (isMe) 0.dp else 12.dp
+                                ),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isMe) 
+                                        Color(0xFFDCF8C6) // WhatsApp outgoing green
+                                    else 
+                                        Color.White // WhatsApp incoming white
+                                )
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    // Image Content
                                     if (msg.imageUrl.isNotEmpty()) {
                                         AsyncImage(
                                             model = ImageRequest.Builder(LocalContext.current)
@@ -411,197 +497,179 @@ private fun MessageDetailsScreen(
                                             contentDescription = "Image message",
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .height(200.dp)
-                                                .clip(RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop
+                                                .heightIn(max = 200.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .padding(bottom = 4.dp),
+                                            contentScale =  ContentScale.Crop
                                         )
                                     }
                                     
-                                    // Display text if present
-                                    if (msg.text.isNotEmpty()) {
-                                        Text(
-                                            text = msg.text,
-                                            color = if (isMe) Color.White else Color(0xFF1A1A1A),
-                                            fontSize = 16.sp,
-                                            fontFamily = FontFamily.SansSerif,
-                                            fontWeight = FontWeight.Normal,
-                                            modifier = Modifier.padding(16.dp),
-                                            lineHeight = 20.sp
-                                        )
+                                    // Text Content and Metadata Row
+                                    Row(
+                                        verticalAlignment = Alignment.Bottom,
+                                        horizontalArrangement = Arrangement.End,
+                                        modifier = Modifier.wrapContentSize()
+                                    ) {
+                                        if (msg.text.isNotEmpty()) {
+                                            Text(
+                                                text = msg.text,
+                                                color = Color.Black,
+                                                fontSize = 16.sp,
+                                                fontFamily = FontFamily.SansSerif,
+                                                fontWeight = FontWeight.Normal,
+                                                modifier = Modifier
+                                                    .padding(end = 8.dp)
+                                                    .weight(1f, fill = false), // Allow text to take space but not force row expansion
+                                                lineHeight = 22.sp
+                                            )
+                                        }
+
+                                        // Timestamp and Status
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(bottom = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = formatTimestamp(msg.timestamp),
+                                                color = Color.Gray,
+                                                fontSize = 11.sp,
+                                                fontFamily = FontFamily.SansSerif
+                                            )
+                                        }
                                     }
                                 }
-                                
-                                Spacer(modifier = Modifier.height(4.dp))
-                                
-                                Text(
-                                    text = formatTimestamp(msg.timestamp),
-                                    color = Color(0xFF8E8E93),
-                                    fontSize = 11.sp,
-                                    fontFamily = FontFamily.SansSerif,
-                                    modifier = Modifier.padding(
-                                        horizontal = if (isMe) 16.dp else 0.dp
-                                    )
-                                )
                             }
                         }
                     }
                 }
             }
 
+            // Bottom Input Area
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color.White)
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(8.dp),
+                verticalAlignment = Alignment.Bottom
             ) {
+                // Input Card
                 Card(
                     modifier = Modifier
-                        .weight(1f)
-                        .shadow(
-                            elevation = 2.dp,
-                            shape = RoundedCornerShape(25.dp)
-                        ),
-                    shape = RoundedCornerShape(25.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF8F9FA)
-                    )
+                        .weight(1f),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.size(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.outline_person_24),
-                                contentDescription = null,
-                                tint = Color(0xFF8E8E93),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.width(12.dp))
-                        
                         OutlinedTextField(
                             value = messageText,
                             onValueChange = { messageText = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { 
-                                Text(
-                                    "Type a message...",
-                                    color = Color(0xFF8E8E93),
-                                    fontSize = 16.sp
-                                )
-                            },
+                            placeholder = { Text("Message", color = Color.Gray) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = 40.dp, max = 120.dp), // Auto-grow
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent,
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
-                                cursorColor = Blue
+                                cursorColor = Color.Black
                             ),
-                            singleLine = true
+                            maxLines = 5,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                            keyboardActions = KeyboardActions.Default
                         )
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // Image options button
-                        Box {
-                            IconButton(
-                                onClick = { showImageOptions = true }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Image,
-                                    contentDescription = "Add Image",
-                                    tint = Color(0xFF8E8E93),
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = showImageOptions,
-                                onDismissRequest = { showImageOptions = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Gallery") },
-                                    onClick = {
-                                        showImageOptions = false
-                                        galleryLauncher.launch("image/*")
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.Image,
-                                            contentDescription = null
-                                        )
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Camera") },
-                                    onClick = {
-                                        showImageOptions = false
-                                        try {
-                                            val imageUri = createImageFileUri(context)
-                                            cameraImageUri = imageUri
-                                            cameraLauncher.launch(imageUri)
-                                        } catch (e: Exception) {
-                                            // Fallback to gallery if camera fails
-                                            galleryLauncher.launch("image/*")
-                                        }
-                                    },
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = Icons.Default.CameraAlt,
-                                            contentDescription = null
-                                        )
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(
-                                    color = Blue,
-                                    shape = CircleShape
-                                )
-                                .clickable {
-                                    val text = messageText.trim()
-                                    if (text.isNotEmpty()) {
-                                        val ref = db.getReference("chats")
-                                            .child(chatId)
-                                            .child("messages")
-                                            .push()
-
-                                        val message = ChatMessage(
-                                            id = ref.key ?: "",
-                                            senderId = myUserId,
-                                            senderName = auth.currentUser?.email ?: myUserId,
-                                            text = text,
-                                            timestamp = System.currentTimeMillis(),
-                                        )
-
-                                        ref.setValue(message)
-                                        messageText = ""
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
+                        IconButton(onClick = { showImageOptions = true }) {
                             Icon(
-                                imageVector = Icons.Default.Send,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
+                                painter = painterResource(R.drawable.ic_attach_file),
+                                contentDescription = "Attach",
+                                tint = Color.Gray,
+                                modifier = Modifier.rotate(45f) // Paperclip rotated
                             )
                         }
+                        
+                        // Dropdown for attachment options
+                        DropdownMenu(
+                            expanded = showImageOptions,
+                            onDismissRequest = { showImageOptions = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Gallery") },
+                                onClick = { 
+                                    showImageOptions = false
+                                    galleryLauncher.launch("image/*") 
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Image, contentDescription = null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Camera") },
+                                onClick = { 
+                                    showImageOptions = false
+                                    val uri = createImageFileUri(context)
+                                    cameraImageUri = uri
+                                    cameraLauncher.launch(uri)
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CameraAlt, contentDescription = null)
+                                }
+                            )
+                        }
+
+                        if (messageText.isEmpty()) {
+                            IconButton(onClick = { 
+                                val uri = createImageFileUri(context)
+                                cameraImageUri = uri
+                                cameraLauncher.launch(uri)
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Camera",
+                                    tint = Color.Gray
+                                )
+                            }
+                        }
                     }
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Send Button (always show Send icon)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF00A884))
+                        .clickable {
+                            if (messageText.isNotBlank()) {
+                                val ref = db.getReference("chats")
+                                    .child(chatId)
+                                    .child("messages")
+                                    .push()
+
+                                val message = ChatMessage(
+                                    id = ref.key ?: "",
+                                    senderId = myUserId,
+                                    senderName = auth.currentUser?.email ?: myUserId,
+                                    text = messageText,
+                                    timestamp = System.currentTimeMillis(),
+                                )
+
+                                ref.setValue(message)
+                                messageText = ""
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Send,
+                        contentDescription = "Send",
+                        tint = Color.White
+                    )
                 }
             }
         }

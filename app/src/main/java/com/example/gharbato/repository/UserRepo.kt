@@ -31,6 +31,11 @@ interface UserRepo {
         callback: (UserModel?) -> Unit
     )
 
+    fun getUserById(
+        userId: String,
+        callback: (Boolean, UserModel?, String) -> Unit
+    )
+
     fun updateUserName(
         userId: String,
         fullName: String,

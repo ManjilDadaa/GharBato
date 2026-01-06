@@ -8,14 +8,19 @@ import com.example.gharbato.model.UserModel
 import com.example.gharbato.view.ZegoCallActivity
 import com.example.gharbato.view.MessageDetailsActivity
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 interface MessageRepository {
     fun getOrCreateLocalUserId(context: Context): String
     fun getCurrentUser(): MessageUser?
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit)
+    fun getChatPartners(callback: (Boolean, List<UserModel>?, String) -> Unit)
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
     fun initiateCall(activity: Activity, targetUserId: String, targetUserName: String, isVideoCall: Boolean)
-    fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String)
+    fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String = "")
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -51,6 +56,68 @@ class MessageRepositoryImpl : MessageRepository {
         userRepo.getAllUsers(callback)
     }
     
+    override fun getChatPartners(callback: (Boolean, List<UserModel>?, String) -> Unit) {
+        val currentUserId = auth.currentUser?.uid ?: return callback(false, null, "No current user found")
+        
+        val database = FirebaseDatabase.getInstance()
+        val chatsRef = database.getReference("chats")
+        
+        chatsRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val chatPartnerIds = mutableSetOf<String>()
+                
+                // Find all chat rooms that involve current user
+                snapshot.children.forEach { chatSnapshot ->
+                    val chatId = chatSnapshot.key ?: return@forEach
+                    
+                    // Check if current user is part of this chat
+                    if (chatId.contains(currentUserId)) {
+                        // Extract the other user's ID from chatId
+                        val userIds = chatId.split("_")
+                        for (userId in userIds) {
+                            if (userId != currentUserId && userId.isNotBlank()) {
+                                chatPartnerIds.add(userId)
+                            }
+                        }
+                    }
+                }
+                
+                if (chatPartnerIds.isEmpty()) {
+                    callback(true, emptyList(), "")
+                    return
+                }
+                
+                // Get user details for each chat partner
+                val userRepo = com.example.gharbato.repository.UserRepoImpl()
+                val allUsers = mutableListOf<UserModel>()
+                var completedQueries = 0
+                
+                if (chatPartnerIds.isEmpty()) {
+                    callback(true, emptyList(), "")
+                    return
+                }
+                
+                chatPartnerIds.forEach { partnerId ->
+                    userRepo.getUserById(partnerId) { success, user, _ ->
+                        completedQueries++
+                        if (success && user != null) {
+                            allUsers.add(user)
+                        }
+                        
+                        // When all user queries are complete, return the result
+                        if (completedQueries == chatPartnerIds.size) {
+                            callback(true, allUsers, "")
+                        }
+                    }
+                }
+            }
+            
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Failed to load chat partners: ${error.message}")
+            }
+        })
+    }
+    
     override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
         // Delegate to existing UserRepoImpl
         val userRepo = com.example.gharbato.repository.UserRepoImpl()
@@ -76,11 +143,12 @@ class MessageRepositoryImpl : MessageRepository {
         activity.startActivity(intent)
     }
     
-    override fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String) {
+    override fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String) {
         val intent = MessageDetailsActivity.newIntent(
             activity = activity,
             otherUserId = targetUserId,
             otherUserName = targetUserName,
+            otherUserImage = targetUserImage
         )
         activity.startActivity(intent)
     }

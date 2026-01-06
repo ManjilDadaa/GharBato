@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,8 +36,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -54,6 +55,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
@@ -90,128 +92,95 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
         }
     }
     
-    Surface(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        color = Color(0xFFF8F9FA)
-    ) {
+        containerColor = Color.White
+    ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
         ) {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Messages",
-                        color = Color.White,
-                        fontSize = 20.sp,
-                        fontFamily = FontFamily.SansSerif,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Blue
-                ),
-                modifier = Modifier.shadow(4.dp)
+            // Header Title
+            Text(
+                text = "Message",
+                color = Blue, // Light Purple color
+                fontSize = 32.sp,
+                fontWeight = FontWeight.W500,
+                fontFamily = FontFamily.SansSerif,
+                modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
             
-            Column(
+            // Search Bar
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { messageViewModel.onSearchTextChanged(it) },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-            ) {
-                OutlinedTextField(
-                    value = searchText,
-                    onValueChange = { messageViewModel.onSearchTextChanged(it) },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { 
-                        Text(
-                            "Search users...",
-                            color = Gray.copy(alpha = 0.7f),
-                            fontSize = 16.sp
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_search_24),
-                            contentDescription = null,
-                            tint = Gray,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Blue,
-                        unfocusedBorderColor = Gray.copy(alpha = 0.3f),
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = Blue
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                if (isLoading) {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        CircularProgressIndicator(
-                            color = Blue,
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            "Loading users...",
-                            color = Gray,
-                            fontSize = 16.sp
-                        )
-                    }
-                } else {
-                    if (errorMessage.isNotEmpty() && users.isEmpty()) {
-                        Column(
-                            modifier = Modifier.fillMaxSize(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.outline_person_24),
-                                contentDescription = null,
-                                tint = Color.Red.copy(alpha = 0.7f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Error: $errorMessage",
-                                color = Color.Red,
-                                fontSize = 16.sp
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(users) { user ->
-                                val displayName = user.fullName.ifBlank { user.email }
-                                EnhancedMessageUserItem(
-                                    imageRes = R.drawable.outline_person_24,
-                                    name = displayName,
-                                    userId = user.userId,
-                                    userName = displayName,
-                                    onMessageClick = {
-                                        messageViewModel.navigateToChat(user.userId, displayName, activity)
-                                    },
-                                    onVideoCallClick = {
-                                        messageViewModel.initiateCall(user.userId, displayName, true, activity)
-                                    },
-                                    onVoiceCallClick = {
-                                        messageViewModel.initiateCall(user.userId, displayName, false, activity)
-                                    },
-                                    isCurrentUser = false
-                                )
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp)),
+                placeholder = { 
+                    Text(
+                        "", // Empty placeholder as per design usually or icon
+                        color = Color.Gray
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedContainerColor = Color.Transparent, // Using background modifier
+                    unfocusedContainerColor = Color.Transparent,
+                    cursorColor = Color.Black
+                ),
+                shape = RoundedCornerShape(28.dp),
+                singleLine = true
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Color(0xFFE0B0FF))
+                }
+            } else if (errorMessage.isNotEmpty() && users.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = errorMessage,
+                        color = Color.Gray,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(users) { user ->
+                        val displayName = user.fullName.ifBlank { user.email }
+                        ChatListItem(
+                            name = displayName,
+                            message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
+                            time = "Now", // Placeholder
+                            imageUrl = user.profileImageUrl,
+                            onClick = {
+                                messageViewModel.navigateToChat(user.userId, displayName, user.profileImageUrl, activity)
                             }
-                        }
+                        )
                     }
                 }
             }
@@ -220,130 +189,81 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
 }
 
 @Composable
-fun EnhancedMessageUserItem(
-    imageRes: Int,
+fun ChatListItem(
     name: String,
-    userId: String,
-    userName: String,
-    onMessageClick: () -> Unit,
-    onVideoCallClick: () -> Unit,
-    onVoiceCallClick: () -> Unit,
-    isCurrentUser: Boolean = false
+    message: String,
+    time: String,
+    imageUrl: String,
+    onClick: () -> Unit
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = RoundedCornerShape(12.dp)
-            ),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isCurrentUser) 
-                Color(0xFFE3F2FD) 
-            else 
-                Color.White
-        ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 0.dp
-        )
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        // Avatar
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onMessageClick)
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(Color(0xFFF0F0F0)),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier.size(56.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(
-                            color = if (isCurrentUser) Blue else Gray.copy(alpha = 0.2f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(imageRes),
-                        contentDescription = null,
-                        tint = if (isCurrentUser) 
-                            Color.White 
-                        else 
-                            Gray,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.width(16.dp))
-            
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = name,
-                    fontSize = 18.sp,
-                    fontFamily = FontFamily.SansSerif,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1A1A1A)
+            if (imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+            } else {
+                // Initials or placeholder
                 Text(
-                    text = "Hello, how are you?",
-                    fontSize = 14.sp,
-                    color = Gray,
-                    fontFamily = FontFamily.SansSerif
+                    text = name.take(1).uppercase(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray
                 )
-            }
-            
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = Color(0xFFE8F5E8),
-                            shape = CircleShape
-                        )
-                        .clickable(onClick = onVoiceCallClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_call_24),
-                        contentDescription = "Voice Call",
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(
-                            color = Color(0xFFE3F2FD),
-                            shape = CircleShape
-                        )
-                        .clickable(onClick = onVideoCallClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_videocam_24),
-                        contentDescription = "Video Call",
-                        tint = Blue,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
             }
         }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        // Name and Message
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Text(
+                text = name,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // We can add an icon here if needed, e.g., for "Video call"
+                Text(
+                    text = message,
+                    fontSize = 14.sp,
+                    color = Blue,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+            }
+        }
+        
+        // Time
+        Text(
+            text = time,
+            fontSize = 12.sp,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.Top)
+        )
     }
 }
+
 
 @Preview(showBackground = true)
 @Composable
