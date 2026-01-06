@@ -97,7 +97,7 @@ import com.example.gharbato.R
 import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.data.repository.PropertyRepoImpl
+
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
