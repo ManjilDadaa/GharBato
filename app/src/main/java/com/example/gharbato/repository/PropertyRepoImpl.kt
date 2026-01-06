@@ -8,6 +8,7 @@ import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyFilters
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
@@ -128,9 +129,7 @@ class PropertyRepoImpl : PropertyRepo {
                         propertyTypeMatch || descriptionMatch || marketTypeMatch
 
                 if (matches) {
-                    Log.d(TAG, "✓ Match: ${property.title} (${property.location}) - " +
-                            "title:$titleMatch, location:$locationMatch, developer:$developerMatch, " +
-                            "type:$propertyTypeMatch, desc:$descriptionMatch, market:$marketTypeMatch")
+                    Log.d(TAG, "✓ Match: ${property.title} (${property.location})")
                 }
 
                 matches
@@ -143,72 +142,97 @@ class PropertyRepoImpl : PropertyRepo {
         return result
     }
 
-    override suspend fun filterProperties(
-        marketType: String,
-        propertyType: String,
-        minPrice: Int,
-        bedrooms: Int
-    ): List<PropertyModel> {
-        Log.d(TAG, "Filtering - Market: $marketType, Type: $propertyType, MinPrice: $minPrice, Bedrooms: $bedrooms")
+    override suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel> {
+        Log.d(TAG, "Filtering properties with: $filters")
 
         val allProperties = getAllProperties()
-        Log.d(TAG, "Total properties to filter: ${allProperties.size}")
+        var filtered = allProperties
 
-        val filtered = allProperties.filter { property ->
-            // Filter by market type (Buy/Rent)
-            val matchesMarketType = if (marketType.isNotEmpty() && marketType != "All") {
-                val matches = property.marketType.equals(marketType, ignoreCase = true)
-                Log.d(TAG, "${property.title} - Market Type: ${property.marketType} vs $marketType = $matches")
-                matches
-            } else {
-                Log.d(TAG, "${property.title} - Market Type: skipped (All or empty)")
-                true
+        Log.d(TAG, "Starting with ${filtered.size} properties")
+
+        // Market Type (Buy/Rent/Book)
+        filtered = filtered.filter { property ->
+            property.marketType.equals(filters.marketType, ignoreCase = true)
+        }
+        Log.d(TAG, "After market type filter: ${filtered.size} properties")
+
+        // Property Types
+        if (filters.propertyTypes.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                filters.propertyTypes.any { type ->
+                    property.propertyType.equals(type, ignoreCase = true)
+                }
             }
-
-            // Filter by property type
-            val matchesPropertyType = if (propertyType.isNotEmpty() && propertyType != "All") {
-                val matches = property.propertyType.equals(propertyType, ignoreCase = true)
-                Log.d(TAG, "${property.title} - Property Type: ${property.propertyType} vs $propertyType = $matches")
-                matches
-            } else {
-                Log.d(TAG, "${property.title} - Property Type: skipped (All or empty)")
-                true
-            }
-
-            // Filter by minimum price
-            val priceValue = extractPriceValue(property.price)
-            val minPriceValue = minPrice * 1000
-            val matchesPrice = if (minPrice > 0) {
-                val matches = priceValue >= minPriceValue
-                Log.d(TAG, "${property.title} - Price: $priceValue vs $minPriceValue = $matches")
-                matches
-            } else {
-                Log.d(TAG, "${property.title} - Price: skipped (0)")
-                true
-            }
-
-            // Filter by bedrooms (if needed)
-            val matchesBedrooms = if (bedrooms > 0) {
-                val matches = property.bedrooms >= bedrooms
-                Log.d(TAG, "${property.title} - Bedrooms: ${property.bedrooms} vs $bedrooms = $matches")
-                matches
-            } else {
-                Log.d(TAG, "${property.title} - Bedrooms: skipped (0)")
-                true
-            }
-
-            val result = matchesMarketType && matchesPropertyType && matchesPrice && matchesBedrooms
-
-            if (result) {
-                Log.d(TAG, "✓ ${property.title} PASSES all filters")
-            } else {
-                Log.d(TAG, "✗ ${property.title} FAILS filter")
-            }
-
-            result
+            Log.d(TAG, "After property type filter: ${filtered.size} properties")
         }
 
-        Log.d(TAG, "Filter result: ${filtered.size} properties")
+        // Price Range
+        if (filters.minPrice > 0 || filters.maxPrice > 0) {
+            filtered = filtered.filter { property ->
+                val priceValue = extractPriceValue(property.price)
+                val minPriceValue = filters.minPrice * 1000
+                val maxPriceValue = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
+
+                priceValue >= minPriceValue && priceValue <= maxPriceValue
+            }
+            Log.d(TAG, "After price filter: ${filtered.size} properties")
+        }
+
+        // Bedrooms
+        if (filters.bedrooms.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                when (filters.bedrooms) {
+                    "Studio" -> property.bedrooms == 0
+                    "6+" -> property.bedrooms >= 6
+                    else -> property.bedrooms == filters.bedrooms.toIntOrNull()
+                }
+            }
+            Log.d(TAG, "After bedrooms filter: ${filtered.size} properties")
+        }
+
+        // Furnishing
+        if (filters.furnishing.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                property.furnishing.equals(filters.furnishing, ignoreCase = true)
+            }
+            Log.d(TAG, "After furnishing filter: ${filtered.size} properties")
+        }
+
+        // Parking
+        filters.parking?.let { parkingRequired ->
+            filtered = filtered.filter { property ->
+                property.parking == parkingRequired
+            }
+            Log.d(TAG, "After parking filter: ${filtered.size} properties")
+        }
+
+        // Pets Allowed
+        filters.petsAllowed?.let { petsRequired ->
+            filtered = filtered.filter { property ->
+                property.petsAllowed == petsRequired
+            }
+            Log.d(TAG, "After pets filter: ${filtered.size} properties")
+        }
+
+        // Amenities (property must have ALL selected amenities)
+        if (filters.amenities.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                filters.amenities.all { amenity ->
+                    property.amenities.any { it.equals(amenity, ignoreCase = true) }
+                }
+            }
+            Log.d(TAG, "After amenities filter: ${filtered.size} properties")
+        }
+
+        // Floor
+        if (filters.floor.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                property.floor.equals(filters.floor, ignoreCase = true)
+            }
+            Log.d(TAG, "After floor filter: ${filtered.size} properties")
+        }
+
+        Log.d(TAG, "Final filtered result: ${filtered.size} properties")
         return filtered
     }
 
@@ -226,12 +250,11 @@ class PropertyRepoImpl : PropertyRepo {
 
         val filtered = allProperties.filter { property ->
             try {
-                //
                 val distance = calculateDistance(
                     lat1 = latitude,
                     lon1 = longitude,
-                    lat2 = property.latitude,  //
-                    lon2 = property.longitude   //
+                    lat2 = property.latitude,
+                    lon2 = property.longitude
                 )
 
                 val withinRadius = distance <= radiusKm
