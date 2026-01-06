@@ -94,8 +94,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.gharbato.R
+import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -169,23 +171,26 @@ private fun sendImageMessage(
     auth: FirebaseAuth,
     context: Context
 ) {
-    // For now, we'll use the URI directly as imageUrl
-    // In a real app, you would upload to Firebase Storage first
-    val ref = db.getReference("chats")
-        .child(chatId)
-        .child("messages")
-        .push()
+    val repo = PropertyRepoImpl()
+    repo.uploadImage(context, imageUri) { imageUrl ->
+        if (!imageUrl.isNullOrEmpty()) {
+            val ref = db.getReference("chats")
+                .child(chatId)
+                .child("messages")
+                .push()
 
-    val message = ChatMessage(
-        id = ref.key ?: "",
-        senderId = myUserId,
-        senderName = auth.currentUser?.email ?: myUserId,
-        text = "",
-        imageUrl = imageUri.toString(),
-        timestamp = System.currentTimeMillis(),
-    )
+            val message = ChatMessage(
+                id = ref.key ?: "",
+                senderId = myUserId,
+                senderName = auth.currentUser?.email ?: myUserId,
+                text = "",
+                imageUrl = imageUrl,
+                timestamp = System.currentTimeMillis(),
+            )
 
-    ref.setValue(message)
+            ref.setValue(message)
+        }
+    }
 }
 
 private fun createImageFileUri(context: Context): Uri {
