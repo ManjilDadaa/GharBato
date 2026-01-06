@@ -15,11 +15,12 @@ data class PropertyModel(
     val bathrooms: Int = 0,
     val images: Map<String, List<String>> = emptyMap(),
     val location: String = "",
+    val marketType: String = "",
+
 
     // Firebase stores lat/lng separately, not LatLng object
     val latitude: Double = 27.7172,
     val longitude: Double = 85.3240,
-
     val propertyType: String = "Apartment",
     val floor: String = "3rd Floor",
     val furnishing: String = "Fully Furnished",

@@ -1,20 +1,23 @@
-package com.example.gharbato.repository
+package com.example.gharbato.data.repository
 
 import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import android.provider.OpenableColumns
+import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.model.PropertyFilters
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.*
+
+private const val TAG = "PropertyRepoImpl"
 
 class PropertyRepoImpl : PropertyRepo {
 
@@ -29,27 +32,38 @@ class PropertyRepoImpl : PropertyRepo {
         )
     )
 
-    // Get All Properties from Firebase
+    // ========== PROPERTY RETRIEVAL ==========
+
     override suspend fun getAllProperties(): List<PropertyModel> {
         return suspendCancellableCoroutine { continuation ->
+            Log.d(TAG, "Fetching all properties from Firebase...")
+
             ref.addListenerForSingleValueEvent(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val properties = mutableListOf<PropertyModel>()
 
+                    Log.d(TAG, "Firebase snapshot has ${snapshot.childrenCount} children")
+
                     for (propertySnapshot in snapshot.children) {
                         try {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
-                            property?.let { properties.add(it) }
+                            if (property != null) {
+                                properties.add(property)
+                                Log.d(TAG, "✓ Loaded: ${property.title} - ${property.location} (${property.latitude}, ${property.longitude})")
+                            } else {
+                                Log.w(TAG, "✗ Null property at key: ${propertySnapshot.key}")
+                            }
                         } catch (e: Exception) {
-                            e.printStackTrace()
-                            // Skip invalid properties
+                            Log.e(TAG, "✗ Error parsing property at key: ${propertySnapshot.key}", e)
                         }
                     }
 
+                    Log.d(TAG, "Successfully loaded ${properties.size} properties")
                     continuation.resume(properties)
                 }
 
                 override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Firebase error: ${error.message}")
                     continuation.resumeWithException(
                         Exception("Firebase error: ${error.message}")
                     )
@@ -58,19 +72,28 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // Get Property by ID from Firebase
     override suspend fun getPropertyById(id: Int): PropertyModel? {
         return suspendCancellableCoroutine { continuation ->
+            Log.d(TAG, "Fetching property by ID: $id")
+
             ref.orderByChild("id")
                 .equalTo(id.toDouble())
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
                         val property = snapshot.children.firstOrNull()
                             ?.getValue(PropertyModel::class.java)
+
+                        if (property != null) {
+                            Log.d(TAG, "Found property: ${property.title}")
+                        } else {
+                            Log.w(TAG, "No property found with ID: $id")
+                        }
+
                         continuation.resume(property)
                     }
 
                     override fun onCancelled(error: DatabaseError) {
+                        Log.e(TAG, "Firebase error: ${error.message}")
                         continuation.resumeWithException(
                             Exception("Firebase error: ${error.message}")
                         )
@@ -79,40 +102,216 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    // Search Properties
-    override suspend fun searchProperties(query: String): List<PropertyModel> {
-        val allProperties = getAllProperties()
+    // ========== SEARCH & FILTER ==========
 
-        return if (query.isEmpty()) {
+    override suspend fun searchProperties(query: String): List<PropertyModel> {
+        Log.d(TAG, "Searching properties with query: '$query'")
+
+        val allProperties = getAllProperties()
+        Log.d(TAG, "Total properties to search: ${allProperties.size}")
+
+        val result = if (query.isEmpty()) {
+            Log.d(TAG, "Empty query - returning all properties")
             allProperties
         } else {
-            allProperties.filter {
-                it.title.contains(query, ignoreCase = true) ||
-                        it.location.contains(query, ignoreCase = true) ||
-                        it.developer.contains(query, ignoreCase = true) ||
-                        it.propertyType.contains(query, ignoreCase = true)
+            val searchQuery = query.lowercase().trim()
+            Log.d(TAG, "Normalized query: '$searchQuery'")
+
+            val filtered = allProperties.filter { property ->
+                val titleMatch = property.title.lowercase().contains(searchQuery)
+                val locationMatch = property.location.lowercase().contains(searchQuery)
+                val developerMatch = property.developer.lowercase().contains(searchQuery)
+                val propertyTypeMatch = property.propertyType.lowercase().contains(searchQuery)
+                val descriptionMatch = property.description?.lowercase()?.contains(searchQuery) ?: false
+                val marketTypeMatch = property.marketType.lowercase().contains(searchQuery)
+
+                val matches = titleMatch || locationMatch || developerMatch ||
+                        propertyTypeMatch || descriptionMatch || marketTypeMatch
+
+                if (matches) {
+                    Log.d(TAG, "✓ Match: ${property.title} (${property.location})")
+                }
+
+                matches
+            }
+
+            Log.d(TAG, "Search found ${filtered.size} matching properties")
+            filtered
+        }
+
+        return result
+    }
+
+    override suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel> {
+        Log.d(TAG, "Filtering properties with: $filters")
+
+        val allProperties = getAllProperties()
+        var filtered = allProperties
+
+        Log.d(TAG, "Starting with ${filtered.size} properties")
+
+        // Market Type (Buy/Rent/Book)
+        filtered = filtered.filter { property ->
+            property.marketType.equals(filters.marketType, ignoreCase = true)
+        }
+        Log.d(TAG, "After market type filter: ${filtered.size} properties")
+
+        // Property Types
+        if (filters.propertyTypes.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                filters.propertyTypes.any { type ->
+                    property.propertyType.equals(type, ignoreCase = true)
+                }
+            }
+            Log.d(TAG, "After property type filter: ${filtered.size} properties")
+        }
+
+        // Price Range
+        if (filters.minPrice > 0 || filters.maxPrice > 0) {
+            filtered = filtered.filter { property ->
+                val priceValue = extractPriceValue(property.price)
+                val minPriceValue = filters.minPrice * 1000
+                val maxPriceValue = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
+
+                priceValue >= minPriceValue && priceValue <= maxPriceValue
+            }
+            Log.d(TAG, "After price filter: ${filtered.size} properties")
+        }
+
+        // Bedrooms
+        if (filters.bedrooms.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                when (filters.bedrooms) {
+                    "Studio" -> property.bedrooms == 0
+                    "6+" -> property.bedrooms >= 6
+                    else -> property.bedrooms == filters.bedrooms.toIntOrNull()
+                }
+            }
+            Log.d(TAG, "After bedrooms filter: ${filtered.size} properties")
+        }
+
+        // Furnishing
+        if (filters.furnishing.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                property.furnishing.equals(filters.furnishing, ignoreCase = true)
+            }
+            Log.d(TAG, "After furnishing filter: ${filtered.size} properties")
+        }
+
+        // Parking
+        filters.parking?.let { parkingRequired ->
+            filtered = filtered.filter { property ->
+                property.parking == parkingRequired
+            }
+            Log.d(TAG, "After parking filter: ${filtered.size} properties")
+        }
+
+        // Pets Allowed
+        filters.petsAllowed?.let { petsRequired ->
+            filtered = filtered.filter { property ->
+                property.petsAllowed == petsRequired
+            }
+            Log.d(TAG, "After pets filter: ${filtered.size} properties")
+        }
+
+        // Amenities (property must have ALL selected amenities)
+        if (filters.amenities.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                filters.amenities.all { amenity ->
+                    property.amenities.any { it.equals(amenity, ignoreCase = true) }
+                }
+            }
+            Log.d(TAG, "After amenities filter: ${filtered.size} properties")
+        }
+
+        // Floor
+        if (filters.floor.isNotEmpty()) {
+            filtered = filtered.filter { property ->
+                property.floor.equals(filters.floor, ignoreCase = true)
+            }
+            Log.d(TAG, "After floor filter: ${filtered.size} properties")
+        }
+
+        Log.d(TAG, "Final filtered result: ${filtered.size} properties")
+        return filtered
+    }
+
+    // ========== LOCATION-BASED SEARCH ==========
+
+    override suspend fun getPropertiesByLocation(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Float
+    ): List<PropertyModel> {
+        Log.d(TAG, "Searching by location - Lat: $latitude, Lng: $longitude, Radius: ${radiusKm}km")
+
+        val allProperties = getAllProperties()
+        Log.d(TAG, "Total properties to check: ${allProperties.size}")
+
+        val filtered = allProperties.filter { property ->
+            try {
+                val distance = calculateDistance(
+                    lat1 = latitude,
+                    lon1 = longitude,
+                    lat2 = property.latitude,
+                    lon2 = property.longitude
+                )
+
+                val withinRadius = distance <= radiusKm
+
+                Log.d(TAG, "${if (withinRadius) "✓" else "✗"} ${property.title} - " +
+                        "${String.format("%.2f", distance)}km away " +
+                        "(${property.latitude}, ${property.longitude})")
+
+                withinRadius
+            } catch (e: Exception) {
+                Log.e(TAG, "✗ Error calculating distance for ${property.title}: ${e.message}")
+                false
             }
         }
+
+        Log.d(TAG, "Location search found ${filtered.size} properties within ${radiusKm}km")
+        return filtered
     }
 
-    // Filter Properties
-    override suspend fun filterProperties(
-        marketType: String,
-        propertyType: String,
-        minPrice: Int,
-        bedrooms: Int
-    ): List<PropertyModel> {
-        val allProperties = getAllProperties()
+    /**
+     * Calculate distance between two coordinates using Haversine formula
+     * @return Distance in kilometers
+     */
+    private fun calculateDistance(
+        lat1: Double,
+        lon1: Double,
+        lat2: Double,
+        lon2: Double
+    ): Float {
+        val earthRadius = 6371.0 // Earth's radius in kilometers
 
-        return allProperties.filter { property ->
-            // Add your filtering logic here
-            // For now, return all properties
-            // You can add filters based on marketType, propertyType, etc.
-            true
-        }
+        val dLat = Math.toRadians(lat2 - lat1)
+        val dLon = Math.toRadians(lon2 - lon1)
+
+        val a = sin(dLat / 2) * sin(dLat / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(dLon / 2) * sin(dLon / 2)
+
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return (earthRadius * c).toFloat()
     }
 
-    // Add Property to Firebase (already working)
+    /**
+     * Extract numeric price value from price string
+     * Example: "NPR 25,000/month" -> 25000
+     * Example: "25000" -> 25000
+     */
+    private fun extractPriceValue(priceString: String): Int {
+        val numbers = priceString.filter { it.isDigit() }
+        val value = numbers.toIntOrNull() ?: 0
+        Log.d(TAG, "Extracted price: '$priceString' -> $value")
+        return value
+    }
+
+    // ========== PROPERTY MANAGEMENT ==========
+
     override fun addProperty(
         property: PropertyModel,
         callback: (Boolean, String?) -> Unit
@@ -127,14 +326,17 @@ class PropertyRepoImpl : PropertyRepo {
         ref.child(propertyId)
             .setValue(property.copy(id = propertyId.hashCode()))
             .addOnSuccessListener {
+                Log.d(TAG, "Property added successfully: ${property.title}")
                 callback(true, null)
             }
             .addOnFailureListener {
+                Log.e(TAG, "Failed to add property: ${it.message}")
                 callback(false, it.message)
             }
     }
 
-    //  Image Upload
+    // ========== IMAGE UPLOAD ==========
+
     override fun uploadImage(
         context: Context,
         imageUri: Uri,
@@ -169,7 +371,6 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    //  Upload Multiple Images
     override fun uploadMultipleImages(
         context: Context,
         imageUris: List<Uri>,
@@ -228,7 +429,7 @@ class PropertyRepoImpl : PropertyRepo {
         )
 
         cursor?.use {
-            val nameIndex = it.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
             if (it.moveToFirst() && nameIndex != -1) {
                 return it.getString(nameIndex)
             }

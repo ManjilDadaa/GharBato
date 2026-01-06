@@ -1,18 +1,24 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
@@ -22,9 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -33,13 +41,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.view.CustomMarkerHelper
-import com.example.gharbato.view.MessageDetailsActivity
+import com.example.gharbato.ui.view.FullSearchMapActivity
+import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
+import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import androidx.compose.foundation.layout.WindowInsets
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +63,8 @@ fun SearchScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    var showFilterSheet by remember { mutableStateOf(false) }
+
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
             listState.firstVisibleItemScrollOffset > 100
@@ -63,14 +74,40 @@ fun SearchScreen(
         label = "mapHeight"
     )
 
+    // Location picker launcher
+    val locationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val latitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0) ?: 0.0
+            val longitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0) ?: 0.0
+            val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
+            val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
+
+            viewModel.searchByLocation(latitude, longitude, address, radius)
+        }
+    }
+
     Scaffold(
         topBar = {
             SearchTopBar(
                 searchQuery = uiState.searchQuery,
-                onSearchQueryChange = { viewModel.updateSearchQuery(it) }
+                onSearchQueryChange = { query ->
+                    viewModel.updateSearchQuery(query)
+                },
+                onFilterClick = {
+                    showFilterSheet = true
+                },
+                onLocationClick = {
+                    val intent = Intent(context, LocationPickerActivity::class.java)
+                    locationPickerLauncher.launch(intent)
+                },
+                onSearchClick = {
+                    viewModel.performSearch()
+                }
             )
         },
-
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         Box(
@@ -118,17 +155,20 @@ fun SearchScreen(
                     }
                 }
 
+                // Filter Chips
                 FilterChipsSection(
                     selectedMarketType = uiState.selectedMarketType,
                     onMarketTypeChange = { viewModel.updateMarketType(it) },
                     selectedPropertyType = uiState.selectedPropertyType,
                     onPropertyTypeChange = { viewModel.updatePropertyType(it) },
                     minPrice = uiState.minPrice,
-                    onMinPriceChange = { viewModel.updateMinPrice(it) }
+                    onMinPriceChange = { viewModel.updateMinPrice(it) },
+                    onShowFilters = { showFilterSheet = true }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Properties Count
                 Text(
                     text = "${uiState.properties.size} Listings",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -136,14 +176,57 @@ fun SearchScreen(
                     fontSize = 18.sp
                 )
 
+                // Loading State
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = Color(0xFF2196F3))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "Searching properties...",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                } else if (uiState.error?.isNotEmpty() == true) {
+                    // Error State
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                uiState.error ?: "An error occurred",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "Try adjusting your search or filters",
+                                fontSize = 14.sp,
+                                color = Color.Gray
+                            )
+                        }
                     }
                 } else {
+                    // Property List
                     PropertyList(
                         properties = uiState.properties,
                         listState = listState,
@@ -160,20 +243,128 @@ fun SearchScreen(
             }
         }
     }
+
+    // Filter Bottom Sheet
+    if (showFilterSheet) {
+        FilterBottomSheet(
+            currentFilters = uiState.currentFilters,
+            onFiltersApply = { filters ->
+                viewModel.applyFilters(filters)
+                showFilterSheet = false
+            },
+            onDismiss = {
+                showFilterSheet = false
+            }
+        )
+    }
 }
 
+@Composable
+fun SearchTopBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit,
+    onLocationClick: () -> Unit,
+    onSearchClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars),
+        color = Color.White,
+        shadowElevation = 2.dp
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                placeholder = {
+                    Text(
+                        text = "Search by location, property type...",
+                        color = Color.Gray,
+                        fontSize = 15.sp
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                trailingIcon = {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Filter Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onFilterClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filters",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
 
-
+                        // Location Button
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onLocationClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Select Location",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(28.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Color(0xFF2196F3),
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5),
+                    cursorColor = Color(0xFF2196F3)
+                ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Search
+                ),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        onSearchClick()
+                    }
+                )
+            )
+        }
+    }
+}
 
 @Composable
 fun MapSection(
     properties: List<PropertyModel>,
-    context: android.content.Context,
+    context: Context,
     onMarkerClick: (PropertyModel) -> Unit,
     onMapClick: () -> Unit
 ) {
     val startLocation = properties.firstOrNull()?.latLng
-        ?: com.google.android.gms.maps.model.LatLng(27.7172, 85.3240)
+        ?: LatLng(27.7172, 85.3240)
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(startLocation, 11f)
@@ -189,7 +380,6 @@ fun MapSection(
                 mapToolbarEnabled = false
             ),
             onMapClick = {
-                //Clicking map background opens FullMapActivity
                 onMapClick()
             }
         ) {
@@ -200,9 +390,8 @@ fun MapSection(
                     snippet = property.location,
                     icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                     onClick = {
-                        // Clicking marker shows overlay
                         onMarkerClick(property)
-                        true // Consume the click event
+                        true
                     }
                 )
             }
@@ -218,7 +407,7 @@ fun MapSection(
             FloatingActionButton(
                 onClick = {
                     cameraPositionState.move(
-                        com.google.android.gms.maps.CameraUpdateFactory.zoomIn()
+                        CameraUpdateFactory.zoomIn()
                     )
                 },
                 modifier = Modifier.size(40.dp),
@@ -236,7 +425,7 @@ fun MapSection(
             FloatingActionButton(
                 onClick = {
                     cameraPositionState.move(
-                        com.google.android.gms.maps.CameraUpdateFactory.zoomOut()
+                        CameraUpdateFactory.zoomOut()
                     )
                 },
                 modifier = Modifier.size(40.dp),
@@ -270,77 +459,14 @@ fun MapSection(
 }
 
 @Composable
-fun SearchTopBar(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
-        color = Color.White,
-        shadowElevation = 2.dp
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp))
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(24.dp)
-                )
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (searchQuery.isEmpty()) {
-                        Text(
-                            text = "What are you looking for?",
-                            color = Color.Gray,
-                            fontSize = 16.sp
-                        )
-                    }
-                    Text(
-                        text = searchQuery,
-                        fontSize = 16.sp,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .background(Color(0xFF2196F3), CircleShape)
-                        .clickable { /* Handle location */ },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Location",
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun FilterChipsSection(
     selectedMarketType: String,
     onMarketTypeChange: (String) -> Unit,
     selectedPropertyType: String,
     onPropertyTypeChange: (String) -> Unit,
     minPrice: Int,
-    onMinPriceChange: (Int) -> Unit
+    onMinPriceChange: (Int) -> Unit,
+    onShowFilters: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -351,9 +477,10 @@ fun FilterChipsSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Market Type Chip (Buy/Rent)
             item {
                 FilterChip(
-                    selected = selectedMarketType == "Buy",
+                    selected = true,
                     onClick = {
                         onMarketTypeChange(if (selectedMarketType == "Buy") "Rent" else "Buy")
                     },
@@ -372,11 +499,16 @@ fun FilterChipsSection(
                 )
             }
 
+            // Property Type Chip
             item {
                 FilterChip(
-                    selected = true,
-                    onClick = { /* Handle property type */ },
-                    label = { Text(selectedPropertyType) },
+                    selected = selectedPropertyType != "All",
+                    onClick = onShowFilters,
+                    label = {
+                        Text(
+                            if (selectedPropertyType == "All") "Property Type" else selectedPropertyType
+                        )
+                    },
                     trailingIcon = {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
@@ -386,56 +518,36 @@ fun FilterChipsSection(
                     },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Color(0xFFE3F2FD),
-                        selectedLabelColor = Color(0xFF2196F3)
+                        selectedLabelColor = Color(0xFF2196F3),
+                        containerColor = Color(0xFFF5F5F5),
+                        labelColor = Color.Gray
                     )
                 )
             }
 
+            // More Filters Chip
             item {
                 FilterChip(
-                    selected = true,
-                    onClick = { /* Handle bedrooms */ },
+                    selected = minPrice > 0,
+                    onClick = onShowFilters,
                     label = {
-                        Text("9+", color = Color.White, fontWeight = FontWeight.Bold)
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF4CAF50),
-                        selectedLabelColor = Color.White
-                    )
-                )
-            }
-
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF5F5F5),
-                    modifier = Modifier.clickable { /* Handle price */ }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Text(
-                            text = "from $minPrice thousand",
-                            fontSize = 14.sp,
-                            color = Color.Gray
+                            if (minPrice > 0) "रु ${minPrice}k+" else "More Filters"
                         )
-                    }
-                }
-            }
-
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { /* Handle sort */ },
-                    label = { Text("Sort by") },
+                    },
                     trailingIcon = {
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector = Icons.Default.FilterList,
                             contentDescription = null,
                             modifier = Modifier.size(18.dp)
                         )
-                    }
+                    },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Color(0xFF4CAF50),
+                        selectedLabelColor = Color.White,
+                        containerColor = Color(0xFFF5F5F5),
+                        labelColor = Color.Gray
+                    )
                 )
             }
         }
@@ -445,7 +557,7 @@ fun FilterChipsSection(
 @Composable
 fun PropertyList(
     properties: List<PropertyModel>,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     onPropertyClick: (PropertyModel) -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit
 ) {
@@ -653,7 +765,6 @@ fun PropertyCard(
                                     otherUserName = property.ownerName.ifBlank { property.developer }
                                 )
                                 context.startActivity(intent)
-
                             }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -767,7 +878,7 @@ fun PropertyDetailOverlay(
 
 @Composable
 fun PropertyInfoChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     text: String
 ) {
     Surface(

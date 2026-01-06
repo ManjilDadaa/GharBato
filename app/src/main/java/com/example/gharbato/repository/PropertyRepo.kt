@@ -3,20 +3,36 @@ package com.example.gharbato.data.repository
 import android.content.Context
 import android.net.Uri
 import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyFilters
 
-interface PropertyRepo{
+interface PropertyRepo {
+
+    // Property Retrieval
     suspend fun getAllProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
+
+    // Search & Filter
     suspend fun searchProperties(query: String): List<PropertyModel>
+    suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel>
 
-    fun uploadImage(context: Context,
-                    imageUri: Uri,
-                    callback: (String?) -> Unit
-    ) // android.net bata
+    // Location-based Search
+    suspend fun getPropertiesByLocation(
+        latitude: Double,
+        longitude: Double,
+        radiusKm: Float
+    ): List<PropertyModel>
 
+    // Property Management
     fun addProperty(
         property: PropertyModel,
-        callback: (Boolean,String?) -> Unit
+        callback: (Boolean, String?) -> Unit
+    )
+
+    // Image Upload
+    fun uploadImage(
+        context: Context,
+        imageUri: Uri,
+        callback: (String?) -> Unit
     )
 
     fun uploadMultipleImages(
@@ -25,11 +41,8 @@ interface PropertyRepo{
         callback: (List<String>) -> Unit
     )
 
-    fun getFileNameFromUri(context: Context, imageUri: Uri) : String?
-    suspend fun filterProperties(
-        marketType: String,
-        propertyType: String,
-        minPrice: Int,
-        bedrooms: Int
-    ): List<PropertyModel>
+    fun getFileNameFromUri(
+        context: Context,
+        imageUri: Uri
+    ): String?
 }

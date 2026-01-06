@@ -36,7 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
-import com.example.gharbato.repository.PropertyRepoImpl
+import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
