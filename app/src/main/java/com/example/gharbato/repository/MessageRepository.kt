@@ -27,6 +27,17 @@ class MessageRepositoryImpl : MessageRepository {
     
     private val auth = FirebaseAuth.getInstance()
     
+    private fun sanitizeZegoId(value: String): String {
+        if (value.isBlank()) return "user"
+        return value.replace(Regex("[^A-Za-z0-9_]"), "_")
+    }
+    
+    private fun buildChatId(userA: String, userB: String): String {
+        val a = sanitizeZegoId(userA)
+        val b = sanitizeZegoId(userB)
+        return if (a <= b) "${a}_$b" else "${b}_$a"
+    }
+    
     override fun getOrCreateLocalUserId(context: Context): String {
         val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
         val existing = prefs.getString("local_user_id", null)
@@ -128,8 +139,7 @@ class MessageRepositoryImpl : MessageRepository {
         val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
         val currentUserName = auth.currentUser?.email ?: "Me"
         
-        // Use current user ID as room ID for direct call
-        val callId = currentUserId
+        val callId = buildChatId(currentUserId, targetUserId)
         
         val intent = ZegoCallActivity.newIntent(
             activity = activity,
@@ -137,7 +147,7 @@ class MessageRepositoryImpl : MessageRepository {
             userId = currentUserId,
             userName = currentUserName,
             isVideoCall = isVideoCall,
-            targetUserId = "", // Not needed for direct ZegoCloud
+            targetUserId = targetUserId,
             isIncomingCall = false
         )
         activity.startActivity(intent)
