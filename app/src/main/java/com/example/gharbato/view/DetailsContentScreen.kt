@@ -358,24 +358,40 @@ fun FurnishingDropdown(
 
         ExposedDropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .background(
+                    color = Color.White,
+                    shape = RoundedCornerShape(12.dp)
+                )
         ) {
             furnishingOptions.forEach { option ->
+                val isSelected = selectedFurnishing == option
+
                 DropdownMenuItem(
                     text = {
                         Text(
                             option,
-                            color = if (selectedFurnishing == option) Blue else Color.Black,
-                            fontWeight = if (selectedFurnishing == option) FontWeight.SemiBold else FontWeight.Normal
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) Blue else Color.DarkGray
                         )
                     },
                     onClick = {
                         onFurnishingChange(option)
                         expanded = false
-                    }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            if (isSelected) Blue.copy(alpha = 0.08f) else Color.Transparent,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(horizontal = 8.dp)
                 )
             }
         }
+
     }
 }
 
