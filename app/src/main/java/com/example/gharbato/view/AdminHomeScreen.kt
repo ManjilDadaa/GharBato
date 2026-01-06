@@ -38,6 +38,22 @@ fun AdminHomeScreen(){
                     modifier = Modifier
                         .fillMaxSize()
                 ){
+                    Text("Pending Listings")
+                    Text("17")
+                }
+            }
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(250.dp)
+                    .padding(20.dp)
+            ){
+                Column (
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                ){
                     Text("Reported Listings")
                     Text("17")
                 }
@@ -55,22 +71,6 @@ fun AdminHomeScreen(){
                         .fillMaxSize()
                 ){
                     Text("Reported Users")
-                    Text("17")
-                }
-            }
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .padding(20.dp)
-            ){
-                Column (
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    Text("Pending Listings")
                     Text("17")
                 }
             }
