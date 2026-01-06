@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.RepositoryProvider
+import com.example.gharbato.model.SortOption
 import com.example.gharbato.ui.view.FullSearchMapActivity
 import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
@@ -184,7 +186,7 @@ fun SearchScreen(
                             )
                         }
                     }
-                } else if (uiState.error?.isNotEmpty() == true ) {
+                } else if (uiState.error?.isNotEmpty() == true) {
                     // Error State
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -237,9 +239,10 @@ fun SearchScreen(
     // Filter Bottom Sheet
     if (showFilterSheet) {
         FilterBottomSheet(
-            currentFilters = viewModel.getCurrentFilters(),
+            currentFilters = uiState.currentFilters,
             onFiltersApply = { filters ->
                 viewModel.applyFilters(filters)
+                showFilterSheet = false
             },
             onDismiss = {
                 showFilterSheet = false
@@ -387,8 +390,7 @@ fun SortBar(
                 onClick = onSortClick,
                 shape = RoundedCornerShape(20.dp),
                 color = Color(0xFFF5F5F5),
-                modifier = Modifier
-                    .height(40.dp)
+                modifier = Modifier.height(40.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -396,21 +398,13 @@ fun SortBar(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Sort,
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
                         contentDescription = "Sort",
                         tint = Color(0xFF2196F3),
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = when (currentSort) {
-                            SortOption.POPULARITY -> "Popular"
-                            SortOption.PRICE_LOW_TO_HIGH -> "Price ↑"
-                            SortOption.PRICE_HIGH_TO_LOW -> "Price ↓"
-                            SortOption.AREA_SMALL_TO_LARGE -> "Area ↑"
-                            SortOption.AREA_LARGE_TO_SMALL -> "Area ↓"
-                            SortOption.DATE_NEWEST -> "Newest"
-                            SortOption.DATE_OLDEST -> "Oldest"
-                        },
+                        text = currentSort.getShortName(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.Black
@@ -740,7 +734,6 @@ fun PropertyCard(
                                     otherUserName = property.ownerName.ifBlank { property.developer }
                                 )
                                 context.startActivity(intent)
-
                             }
                     ) {
                         Box(contentAlignment = Alignment.Center) {

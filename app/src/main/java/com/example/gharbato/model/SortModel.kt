@@ -2,6 +2,7 @@ package com.example.gharbato.model
 
 /**
  * Enum representing all available sort options for properties
+ * This is the MODEL in MVVM architecture
  */
 enum class SortOption(val displayName: String, val description: String) {
     POPULARITY("By Popularity", "Most viewed and favorited properties"),
@@ -26,29 +27,19 @@ enum class SortOption(val displayName: String, val description: String) {
             DATE_OLDEST -> "Oldest"
         }
     }
+
+    /**
+     * Get icon description for accessibility
+     */
+    fun getIconDescription(): String {
+        return when (this) {
+            POPULARITY -> "Sort by popularity"
+            PRICE_LOW_TO_HIGH -> "Sort by price ascending"
+            PRICE_HIGH_TO_LOW -> "Sort by price descending"
+            AREA_SMALL_TO_LARGE -> "Sort by area ascending"
+            AREA_LARGE_TO_SMALL -> "Sort by area descending"
+            DATE_NEWEST -> "Sort by newest"
+            DATE_OLDEST -> "Sort by oldest"
+        }
+    }
 }
-
-/**
- * Data class representing sort preferences
- */
-data class SortPreferences(
-    val currentSort: SortOption = SortOption.DATE_NEWEST,
-    val sortAscending: Boolean = true
-)
-
-/**
- * Sealed class for sort-related events
- */
-sealed class SortEvent {
-    data class SortApplied(val sortOption: SortOption) : SortEvent()
-    object SortReset : SortEvent()
-}
-
-/**
- * Data class for sort state management
- */
-data class SortState(
-    val availableSorts: List<SortOption> = SortOption.entries,
-    val selectedSort: SortOption = SortOption.DATE_NEWEST,
-    val isLoading: Boolean = false
-)
