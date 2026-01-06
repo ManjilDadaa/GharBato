@@ -55,8 +55,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.view.CustomMarkerHelper
+import com.example.gharbato.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -84,11 +84,7 @@ class FullSearchMapActivity : ComponentActivity() {
 fun FullSearchMapScreen(
     onBack: () -> Unit,
     viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
-    )
+        factory = PropertyViewModelFactory(LocalContext.current)    )
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -129,7 +125,6 @@ fun FullSearchMapScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Google Map with all properties
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -153,7 +148,6 @@ fun FullSearchMapScreen(
                 }
             }
 
-            // Property overlay when marker clicked
             uiState.selectedProperty?.let { property ->
                 Card(
                     modifier = Modifier
@@ -247,7 +241,6 @@ fun FullSearchMapScreen(
                 }
             }
 
-            // Zoom Controls
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)

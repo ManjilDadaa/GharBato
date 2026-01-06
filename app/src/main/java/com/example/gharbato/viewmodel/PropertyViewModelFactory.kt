@@ -1,19 +1,28 @@
 package com.example.gharbato.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.example.gharbato.data.repository.PropertyRepo
-import com.example.gharbato.repository.SavedPropertiesRepository
+import com.example.gharbato.data.repository.PropertyRepoImpl
+import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
+import com.example.gharbato.repository.SearchFilterRepoImpl
+
 
 class PropertyViewModelFactory(
-    private val repository: PropertyRepo,
-    private val savedPropertiesRepository: SavedPropertiesRepository
+    private val context: Context  
 ) : ViewModelProvider.Factory {
+
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(PropertyViewModel::class.java)) {
-            return PropertyViewModel(repository, savedPropertiesRepository) as T
+        return when {
+            modelClass.isAssignableFrom(PropertyViewModel::class.java) -> {
+                PropertyViewModel(
+                    repository = PropertyRepoImpl(),
+                    savedPropertiesRepository = SavedPropertiesRepositoryImpl(),
+                    searchFilterRepo = SearchFilterRepoImpl()
+                ) as T
+            }
+            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
         }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }

@@ -40,10 +40,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.model.SortOption
 import com.example.gharbato.ui.view.FullSearchMapActivity
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -55,10 +53,7 @@ import com.google.maps.android.compose.*
 @Composable
 fun SearchScreen(
     viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
+        factory = PropertyViewModelFactory(LocalContext.current)
     )
 ) {
     val context = LocalContext.current
@@ -76,7 +71,6 @@ fun SearchScreen(
         label = "mapHeight"
     )
 
-    // Location picker launcher
     val locationPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -119,7 +113,6 @@ fun SearchScreen(
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Map Section
                 if (mapHeight > 0.dp) {
                     Box(
                         modifier = Modifier
@@ -157,7 +150,6 @@ fun SearchScreen(
                     }
                 }
 
-                // Sort Bar
                 SortBar(
                     propertiesCount = uiState.properties.size,
                     currentSort = uiState.currentSort,
@@ -168,7 +160,6 @@ fun SearchScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Loading State
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -187,7 +178,6 @@ fun SearchScreen(
                         }
                     }
                 } else if (uiState.error?.isNotEmpty() == true) {
-                    // Error State
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -218,7 +208,6 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                    // Property List
                     PropertyList(
                         properties = uiState.properties,
                         listState = listState,
@@ -236,7 +225,6 @@ fun SearchScreen(
         }
     }
 
-    // Filter Bottom Sheet
     if (showFilterSheet) {
         FilterBottomSheet(
             currentFilters = uiState.currentFilters,
@@ -250,7 +238,6 @@ fun SearchScreen(
         )
     }
 
-    // Sort Bottom Sheet
     if (showSortSheet) {
         SortBottomSheet(
             currentSort = uiState.currentSort,
@@ -306,7 +293,6 @@ fun SearchTopBar(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Filter Button
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -322,7 +308,6 @@ fun SearchTopBar(
                             )
                         }
 
-                        // Location Button
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
@@ -462,7 +447,6 @@ fun MapSection(
             }
         }
 
-        // Zoom Controls
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -504,7 +488,6 @@ fun MapSection(
             }
         }
 
-        // Fullscreen button
         FloatingActionButton(
             onClick = onMapClick,
             modifier = Modifier
@@ -603,7 +586,7 @@ fun PropertyCard(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
-                        onClick = { /* Handle more options */ },
+                        onClick = { },
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
