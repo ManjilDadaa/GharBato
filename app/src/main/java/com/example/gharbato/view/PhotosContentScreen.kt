@@ -142,37 +142,25 @@ fun PhotosContentScreen(
             ImageCategorySection(
                 category = category,
                 onImagesSelected = { uris ->
-                    // Create a mutable copy of the categories list
                     val updatedCategories = imageCategories.toMutableList()
-
-                    // Create a NEW mutable list from current images
                     val currentImages = category.images.toMutableList()
 
-                    // Add new URIs to the NEW list
+                    //  Add only images that aren't already in the list
                     uris.forEach { uri ->
-                        if (currentImages.size < category.maxImages) {
-                            currentImages.add(uri.toString())
+                        val uriString = uri.toString()
+                        if (!currentImages.contains(uriString) && currentImages.size < category.maxImages) {
+                            currentImages.add(uriString)
                         }
                     }
 
-                    // Create a NEW category object with the NEW images list
                     updatedCategories[index] = category.copy(images = currentImages)
-
-                    // Notify parent with the completely new list
                     onCategoriesChange(updatedCategories)
                 },
                 onImageRemoved = { uriString ->
-                    // Create a mutable copy of the categories list
                     val updatedCategories = imageCategories.toMutableList()
-
-                    // Create a NEW mutable list from current images
                     val currentImages = category.images.toMutableList()
                     currentImages.remove(uriString)
-
-                    // Create a NEW category object with the NEW images list
                     updatedCategories[index] = category.copy(images = currentImages)
-
-                    // Notify parent with the completely new list
                     onCategoriesChange(updatedCategories)
                 }
             )
@@ -250,11 +238,36 @@ fun ImageCategorySection(
     onImagesSelected: (List<Uri>) -> Unit,
     onImageRemoved: (String) -> Unit
 ) {
+    //  For cover photo, only allow single selection
+    val isCoverPhoto = category.id == "cover"
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (uris.isNotEmpty()) {
-            onImagesSelected(uris)
+        contract = if (isCoverPhoto) {
+            ActivityResultContracts.GetContent() //  Single selection for cover
+        } else {
+            ActivityResultContracts.GetMultipleContents() // Multiple for others
+        }
+    ) { result ->
+        when (result) {
+            is Uri -> {
+                // Single URI (cover photo)
+                if (!category.images.contains(result.toString())) {
+                    onImagesSelected(listOf(result))
+                }
+            }
+            is List<*> -> {
+                // Multiple URIs (other categories)
+                val uris = result.filterIsInstance<Uri>()
+                if (uris.isNotEmpty()) {
+                    //  Filter out already selected images
+                    val newUris = uris.filter { uri ->
+                        !category.images.contains(uri.toString())
+                    }
+                    if (newUris.isNotEmpty()) {
+                        onImagesSelected(newUris)
+                    }
+                }
+            }
         }
     }
 
@@ -368,8 +381,8 @@ fun ImageCategorySection(
                         )
                     }
 
-                    // Add more button
-                    if (canAddMore) {
+                    // Add more button (only if not cover photo and can add more)
+                    if (canAddMore && !isCoverPhoto) {
                         item {
                             AddImageButton(
                                 onClick = { imagePickerLauncher.launch("image/*") }
