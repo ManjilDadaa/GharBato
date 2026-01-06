@@ -10,16 +10,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.gharbato.ui.theme.Green
+import com.example.gharbato.view.ui.theme.LightBlue
+import com.example.gharbato.view.ui.theme.LightGreen
+import com.example.gharbato.view.ui.theme.ReportedRed
 
 @Composable
 fun AdminHomeScreen(){
-    Scaffold { padding ->
+    Scaffold (
+        containerColor = Color.White
+    ){ padding ->
         Column(
             modifier = Modifier
                 .padding(top = padding.calculateTopPadding())
@@ -30,7 +41,11 @@ fun AdminHomeScreen(){
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(20.dp)
+                    .padding(15.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = LightGreen,
+                    contentColor = Color.White
+                )
             ){
                 Column (
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -38,15 +53,28 @@ fun AdminHomeScreen(){
                     modifier = Modifier
                         .fillMaxSize()
                 ){
-                    Text("Pending Listings")
-                    Text("17")
+                    Text("Pending Listings",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ))
+                    Text("17",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 25.sp
+                        )
+                    )
                 }
             }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(20.dp)
+                    .padding(15.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = LightBlue,
+                    contentColor = Color.White
+                )
             ){
                 Column (
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -54,15 +82,27 @@ fun AdminHomeScreen(){
                     modifier = Modifier
                         .fillMaxSize()
                 ){
-                    Text("Reported Listings")
-                    Text("17")
+                    Text("Reported Listings",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ))
+                    Text("17",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 25.sp
+                        ))
                 }
             }
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(20.dp)
+                    .padding(15.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = ReportedRed,
+                    contentColor = Color.White
+                )
             ){
                 Column (
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -70,8 +110,16 @@ fun AdminHomeScreen(){
                     modifier = Modifier
                         .fillMaxSize()
                 ){
-                    Text("Reported Users")
-                    Text("17")
+                    Text("Reported Users",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        ))
+                    Text("17",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 25.sp
+                        ))
                 }
             }
 
