@@ -99,9 +99,7 @@ import com.example.gharbato.ui.view.FullMapActivity
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
-        PropertyViewModelFactory(
-
-        )
+        PropertyViewModelFactory(this@PropertyDetailActivity)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,6 +140,7 @@ class PropertyDetailActivity : ComponentActivity() {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PropertyDetailScreen(

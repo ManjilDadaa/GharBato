@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.view.CustomMarkerHelper
 import com.example.gharbato.view.PropertyDetailActivity
+import com.example.gharbato.viewmodel.MapViewModelFactory
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -82,11 +83,13 @@ class FullSearchMapActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullSearchMapScreen(
-    onBack: () -> Unit,
-    viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(LocalContext.current)    )
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(context)
+    )
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val startLocation = uiState.properties.firstOrNull()?.latLng

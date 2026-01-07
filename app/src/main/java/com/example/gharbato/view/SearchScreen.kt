@@ -51,12 +51,13 @@ import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(
-    viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(LocalContext.current)
-    )
-) {
+fun SearchScreen() {
+    // Initialize context and viewModel inside composable body
     val context = LocalContext.current
+    val viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(context)
+    )
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var showFilterSheet by remember { mutableStateOf(false) }
@@ -250,7 +251,6 @@ fun SearchScreen(
         )
     }
 }
-
 @Composable
 fun SearchTopBar(
     searchQuery: String,

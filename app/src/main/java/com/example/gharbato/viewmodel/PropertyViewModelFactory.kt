@@ -7,22 +7,21 @@ import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.repository.SavedPropertiesRepositoryImpl
 import com.example.gharbato.repository.SearchFilterRepoImpl
 
-
-class PropertyViewModelFactory(
-    private val context: Context  
-) : ViewModelProvider.Factory {
+class PropertyViewModelFactory(context: Context) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        return when {
-            modelClass.isAssignableFrom(PropertyViewModel::class.java) -> {
-                PropertyViewModel(
-                    repository = PropertyRepoImpl(),
-                    savedPropertiesRepository = SavedPropertiesRepositoryImpl(),
-                    searchFilterRepo = SearchFilterRepoImpl()
-                ) as T
-            }
-            else -> throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
+        if (modelClass.isAssignableFrom(PropertyViewModel::class.java)) {
+            val propertyRepo = PropertyRepoImpl()
+            val savedPropertiesRepo = SavedPropertiesRepositoryImpl()
+            val searchFilterRepo = SearchFilterRepoImpl()
+
+            return PropertyViewModel(
+                propertyRepo,
+                savedPropertiesRepo,
+                searchFilterRepo
+            ) as T
         }
+        throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
     }
 }
