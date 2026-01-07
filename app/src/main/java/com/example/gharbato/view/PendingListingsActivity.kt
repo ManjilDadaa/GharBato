@@ -26,7 +26,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -116,10 +115,10 @@ fun PendingListingsBody() {
                             expandedCard = if (expandedCard == listing.id.toString()) null else listing.id.toString()
                         },
                         onApprove = {
-//                            viewModel.approveProperty(listing.id)
+                            viewModel.approveProperty(listing.id)
                         },
                         onReject = {
-//                            viewModel.rejectProperty(listing.id)
+                            viewModel.rejectProperty(listing.id)
                         }
                     )
                 }
@@ -155,7 +154,6 @@ fun PendingHeaderCard(total: Int) {
 }
 
 @Composable
-
 fun PendingListingCard(
     listing: PropertyModel,
     isExpanded: Boolean,
@@ -230,6 +228,74 @@ fun PendingListingCard(
             }
 
             Column(Modifier.padding(horizontal = 16.dp)) {
+                // User Profile Section
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // User Avatar
+                        Surface(
+                            modifier = Modifier.size(40.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            color = LightGreen.copy(alpha = 0.2f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = listing.ownerName.firstOrNull()?.uppercase() ?: "U",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LightGreen
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        // User Info
+                        Column {
+                            Text(
+                                text = listing.ownerName.ifEmpty { "Unknown User" },
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Posted by",
+                                fontSize = 12.sp,
+                                color = Gray
+                            )
+                        }
+                    }
+
+                    // View Profile Button
+                    val context = LocalContext.current
+                    TextButton(
+                        onClick = {
+//                            val intent = Intent(context, UserProfileActivity::class.java)
+//                            intent.putExtra("userId", listing.ownerId)
+//                            intent.putExtra("userName", listing.ownerName)
+//                            context.startActivity(intent)
+                        }
+                    ) {
+                        Text("View Profile", color = LightGreen, fontSize = 13.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = LightGreen
+                        )
+                    }
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
                 // Title
                 Text(
                     listing.title,
@@ -321,7 +387,7 @@ fun PendingListingCard(
 
                 // Additional Details (Collapsible)
                 if (isExpanded) {
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // Floor & Furnishing
                     PropertyInfoRow("Floor", listing.floor)

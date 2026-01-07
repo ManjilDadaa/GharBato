@@ -28,18 +28,18 @@ class PendingPropertiesViewModel(
             _isLoading.value = false
         }
     }
-//
-//    fun approveProperty(propertyId: Int) {
-//        viewModelScope.launch {
-//            repository.approveProperty(propertyId)
-//            fetchPendingProperties() // Refresh list
-//        }
-//    }
-//
-//    fun rejectProperty(propertyId: Int) {
-//        viewModelScope.launch {
-//            repository.rejectProperty(propertyId)
-//            fetchPendingProperties() // Refresh list
-//        }
-//    }
+
+    fun approveProperty(propertyId: Int) {
+        viewModelScope.launch {
+            repository.approveProperty(propertyId)
+            fetchPendingProperties() // Refresh list
+        }
+    }
+
+    fun rejectProperty(propertyId: Int) {
+        viewModelScope.launch {
+            repository.rejectProperty(propertyId)
+            fetchPendingProperties() // Refresh list
+        }
+    }
 }
