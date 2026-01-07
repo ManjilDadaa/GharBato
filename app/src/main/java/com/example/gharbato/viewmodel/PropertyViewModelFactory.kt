@@ -18,8 +18,7 @@ class PropertyViewModelFactory(context: Context) : ViewModelProvider.Factory {
 
             return PropertyViewModel(
                 propertyRepo,
-                savedPropertiesRepo,
-                searchFilterRepo
+                savedPropertiesRepo
             ) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class: ${modelClass.name}")
