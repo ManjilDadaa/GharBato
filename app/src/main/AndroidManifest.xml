@@ -24,6 +24,39 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
+            android:name=".view.ReportedUsersActivity"
+            android:exported="true"
+            android:label="@string/title_activity_reported_users"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.ReportedPropertiesActivity"
+            android:exported="true"
+            android:label="@string/title_activity_reported_properties"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.PendingListingsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_pending_listing"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.AdminActivity"
             android:exported="true"
             android:label="@string/title_activity_admin"
@@ -125,6 +158,10 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.NotificationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".view.ForgotActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
@@ -163,7 +200,7 @@
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
         <activity
-            android:name=".view.NotificationActivity"
+            android:name=".view.ProfileScreenActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
