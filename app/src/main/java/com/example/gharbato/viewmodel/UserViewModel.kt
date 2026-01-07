@@ -75,7 +75,7 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         }
     }
 
-
+    // ---------- NEW: PROFILE WITH IMAGE ----------
 
     fun updateUserProfile(newName: String, profileImageUrl: String) {
         val userId = repo.getCurrentUserId() ?: return
@@ -131,5 +131,85 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
 
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit){
         repo.searchUsers(query, callback)
+    }
+
+    // ------------------ NOTIFICATIONS ------------------
+
+    private val _notifications = MutableLiveData<List<com.example.gharbato.model.NotificationModel>>()
+    val notifications: LiveData<List<com.example.gharbato.model.NotificationModel>> get() = _notifications
+
+    private val _unreadCount = MutableLiveData<Int>()
+    val unreadCount: LiveData<Int> get() = _unreadCount
+
+    fun loadNotifications() {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.getUserNotifications(userId) { success, notificationList, message ->
+            if (success && notificationList != null) {
+                _notifications.postValue(notificationList)
+            }
+        }
+    }
+
+    fun loadUnreadCount() {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.getUnreadNotificationCount(userId) { count ->
+            _unreadCount.postValue(count)
+        }
+    }
+
+    fun markNotificationAsRead(notificationId: String) {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.markNotificationAsRead(userId, notificationId) { _, _ ->
+            loadNotifications()
+            loadUnreadCount()
+        }
+    }
+
+    fun markAllAsRead() {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.markAllNotificationsAsRead(userId) { _, _ ->
+            loadNotifications()
+            loadUnreadCount()
+        }
+    }
+
+    fun deleteNotification(notificationId: String) {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.deleteNotification(userId, notificationId) { _, _ ->
+            loadNotifications()
+            loadUnreadCount()
+        }
+    }
+
+    // ---------- NOTIFICATION CREATION ----------
+
+    fun createNotification(
+        userId: String,
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = ""
+    ) {
+        repo.createNotification(userId, title, message, type, imageUrl, actionData) { _, _ ->
+            // Notification created
+        }
+    }
+
+    fun notifyAllUsers(
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = ""
+    ) {
+        repo.notifyAllUsers(title, message, type, imageUrl, actionData) { _, _ ->
+            // All users notified
+        }
     }
 }

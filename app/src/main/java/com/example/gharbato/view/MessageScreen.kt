@@ -65,7 +65,7 @@ class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { 
+        setContent {
             MessageScreen()
         }
     }
@@ -81,17 +81,17 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val currentUser by messageViewModel.currentUser
     val context = LocalContext.current
     val activity = context as Activity
-    
+
     LaunchedEffect(Unit) {
         messageViewModel.loadUsers()
     }
-    
+
     LaunchedEffect(searchText) {
         if (!isLoading) {
             messageViewModel.searchUsers()
         }
     }
-    
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.White
@@ -111,7 +111,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 fontFamily = FontFamily.SansSerif,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
-            
+
             // Search Bar
             OutlinedTextField(
                 value = searchText,
@@ -120,7 +120,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     .fillMaxWidth()
                     .height(56.dp)
                     .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp)),
-                placeholder = { 
+                placeholder = {
                     Text(
                         "", // Empty placeholder as per design usually or icon
                         color = Color.Gray
@@ -144,9 +144,9 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 shape = RoundedCornerShape(28.dp),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -228,9 +228,9 @@ fun ChatListItem(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         // Name and Message
         Column(
             modifier = Modifier.weight(1f)
@@ -253,7 +253,7 @@ fun ChatListItem(
                 )
             }
         }
-        
+
         // Time
         Text(
             text = time,
