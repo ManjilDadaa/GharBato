@@ -163,7 +163,7 @@
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
         <activity
-            android:name=".view.ProfileScreenActivity"
+            android:name=".view.NotificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity

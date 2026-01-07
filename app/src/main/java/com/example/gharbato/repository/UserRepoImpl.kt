@@ -136,27 +136,6 @@ class UserRepoImpl : UserRepo{
             })
     }
 
-    override fun getUserById(
-        userId: String,
-        callback: (Boolean, UserModel?, String) -> Unit
-    ) {
-        ref.child(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    val user = snapshot.getValue(UserModel::class.java)
-                    if (user != null) {
-                        callback(true, user, "")
-                    } else {
-                        callback(false, null, "User not found")
-                    }
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    callback(false, null, "Database error: ${error.message}")
-                }
-            })
-    }
-
     override fun updateUserName(
         userId: String,
         fullName: String,
@@ -398,6 +377,215 @@ class UserRepoImpl : UserRepo{
             override fun onCancelled(error: DatabaseError) {
                 android.util.Log.e("UserRepoImpl", "Search database error: ${error.message}")
                 callback(false, null, "Database error: ${error.message}")
+            }
+        })
+    }
+
+    // ---------- NOTIFICATIONS ----------
+
+    override fun getUserNotifications(
+        userId: String,
+        callback: (Boolean, List<com.example.gharbato.model.NotificationModel>?, String) -> Unit
+    ) {
+        val notificationsRef = database.getReference("Notifications").child(userId)
+
+        notificationsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val notifications = mutableListOf<com.example.gharbato.model.NotificationModel>()
+
+                for (notificationSnapshot in snapshot.children) {
+                    val notification = notificationSnapshot.getValue(com.example.gharbato.model.NotificationModel::class.java)
+                    if (notification != null) {
+                        notifications.add(notification.copy(notificationId = notificationSnapshot.key ?: ""))
+                    }
+                }
+
+                // Sort by timestamp (newest first)
+                notifications.sortByDescending { it.timestamp }
+                callback(true, notifications, "Notifications fetched successfully")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Error: ${error.message}")
+            }
+        })
+    }
+
+    override fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val notificationRef = database.getReference("Notifications")
+            .child(userId)
+            .child(notificationId)
+
+        notificationRef.updateChildren(mapOf("isRead" to true))
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(true, "Notification marked as read")
+                } else {
+                    callback(false, "Failed to update notification")
+                }
+            }
+    }
+
+    override fun markAllNotificationsAsRead(
+        userId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val notificationsRef = database.getReference("Notifications").child(userId)
+
+        notificationsRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val updates = mutableMapOf<String, Any>()
+
+                for (notificationSnapshot in snapshot.children) {
+                    updates["${notificationSnapshot.key}/isRead"] = true
+                }
+
+                if (updates.isNotEmpty()) {
+                    notificationsRef.updateChildren(updates)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                callback(true, "All notifications marked as read")
+                            } else {
+                                callback(false, "Failed to update notifications")
+                            }
+                        }
+                } else {
+                    callback(true, "No notifications to update")
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, "Error: ${error.message}")
+            }
+        })
+    }
+
+    override fun deleteNotification(
+        userId: String,
+        notificationId: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val notificationRef = database.getReference("Notifications")
+            .child(userId)
+            .child(notificationId)
+
+        notificationRef.removeValue()
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(true, "Notification deleted")
+                } else {
+                    callback(false, "Failed to delete notification")
+                }
+            }
+    }
+
+    override fun getUnreadNotificationCount(
+        userId: String,
+        callback: (Int) -> Unit
+    ) {
+        val notificationsRef = database.getReference("Notifications").child(userId)
+
+        notificationsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var unreadCount = 0
+
+                for (notificationSnapshot in snapshot.children) {
+                    val notification = notificationSnapshot.getValue(com.example.gharbato.model.NotificationModel::class.java)
+                    if (notification != null && !notification.isRead) {
+                        unreadCount++
+                    }
+                }
+
+                callback(unreadCount)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(0)
+            }
+        })
+    }
+
+    // ---------- NOTIFICATION CREATION ----------
+
+    override fun createNotification(
+        userId: String,
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String,
+        actionData: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        val notificationRef = database.getReference("Notifications").child(userId)
+        val newNotificationRef = notificationRef.push()
+
+        val notification = mapOf(
+            "title" to title,
+            "message" to message,
+            "type" to type,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to imageUrl,
+            "actionData" to actionData
+        )
+
+        newNotificationRef.setValue(notification)
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    callback(true, "Notification created")
+                } else {
+                    callback(false, "Failed to create notification")
+                }
+            }
+    }
+
+    override fun notifyAllUsers(
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String,
+        actionData: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        // Get all user IDs
+        ref.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var successCount = 0
+                var totalUsers = 0
+
+                for (userSnapshot in snapshot.children) {
+                    val userId = userSnapshot.key ?: continue
+                    totalUsers++
+
+                    // Create notification for each user
+                    createNotification(
+                        userId = userId,
+                        title = title,
+                        message = message,
+                        type = type,
+                        imageUrl = imageUrl,
+                        actionData = actionData
+                    ) { success, _ ->
+                        if (success) successCount++
+
+                        // Check if all notifications sent
+                        if (successCount + (totalUsers - successCount) == totalUsers) {
+                            callback(true, "Notified $successCount users")
+                        }
+                    }
+                }
+
+                if (totalUsers == 0) {
+                    callback(false, "No users to notify")
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, "Error: ${error.message}")
             }
         })
     }

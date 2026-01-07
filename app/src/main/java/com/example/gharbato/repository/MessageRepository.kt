@@ -3,7 +3,6 @@ package com.example.gharbato.repository
 import android.app.Activity
 import android.content.Context
 import com.example.gharbato.model.MessageUser
-import com.example.gharbato.model.CallRequest
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.view.ZegoCallActivity
 import com.example.gharbato.view.MessageDetailsActivity
@@ -24,9 +23,10 @@ interface MessageRepository {
 }
 
 class MessageRepositoryImpl : MessageRepository {
-    
+
     private val auth = FirebaseAuth.getInstance()
-    
+    private val database = FirebaseDatabase.getInstance()
+
     override fun getOrCreateLocalUserId(context: Context): String {
         val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
         val existing = prefs.getString("local_user_id", null)
@@ -36,7 +36,7 @@ class MessageRepositoryImpl : MessageRepository {
         prefs.edit().putString("local_user_id", newId).apply()
         return newId
     }
-    
+
     override fun getCurrentUser(): MessageUser? {
         val currentUser = auth.currentUser
         return if (currentUser != null) {
@@ -49,27 +49,30 @@ class MessageRepositoryImpl : MessageRepository {
             null
         }
     }
-    
+
     override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
-        // Delegate to existing UserRepoImpl
-        val userRepo = com.example.gharbato.repository.UserRepoImpl()
+        val userRepo = UserRepoImpl()
         userRepo.getAllUsers(callback)
     }
-    
+
     override fun getChatPartners(callback: (Boolean, List<UserModel>?, String) -> Unit) {
-        val currentUserId = auth.currentUser?.uid ?: return callback(false, null, "No current user found")
-        
-        val database = FirebaseDatabase.getInstance()
+        val currentUserId = auth.currentUser?.uid
+
+        if (currentUserId == null) {
+            callback(false, null, "No current user found")
+            return
+        }
+
         val chatsRef = database.getReference("chats")
-        
+
         chatsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val chatPartnerIds = mutableSetOf<String>()
-                
+
                 // Find all chat rooms that involve current user
-                snapshot.children.forEach { chatSnapshot ->
-                    val chatId = chatSnapshot.key ?: return@forEach
-                    
+                for (chatSnapshot in snapshot.children) {
+                    val chatId = chatSnapshot.key ?: continue
+
                     // Check if current user is part of this chat
                     if (chatId.contains(currentUserId)) {
                         // Extract the other user's ID from chatId
@@ -81,69 +84,93 @@ class MessageRepositoryImpl : MessageRepository {
                         }
                     }
                 }
-                
+
                 if (chatPartnerIds.isEmpty()) {
                     callback(true, emptyList(), "")
                     return
                 }
-                
+
                 // Get user details for each chat partner
-                val userRepo = com.example.gharbato.repository.UserRepoImpl()
-                val allUsers = mutableListOf<UserModel>()
-                var completedQueries = 0
-                
-                if (chatPartnerIds.isEmpty()) {
-                    callback(true, emptyList(), "")
-                    return
-                }
-                
-                chatPartnerIds.forEach { partnerId ->
-                    userRepo.getUserById(partnerId) { success, user, _ ->
-                        completedQueries++
-                        if (success && user != null) {
-                            allUsers.add(user)
-                        }
-                        
-                        // When all user queries are complete, return the result
-                        if (completedQueries == chatPartnerIds.size) {
-                            callback(true, allUsers, "")
-                        }
-                    }
+                fetchUsersByIds(chatPartnerIds.toList()) { users ->
+                    callback(true, users, "")
                 }
             }
-            
+
             override fun onCancelled(error: DatabaseError) {
                 callback(false, null, "Failed to load chat partners: ${error.message}")
             }
         })
     }
-    
+
+    private fun fetchUsersByIds(userIds: List<String>, callback: (List<UserModel>) -> Unit) {
+        if (userIds.isEmpty()) {
+            callback(emptyList())
+            return
+        }
+
+        val usersRef = database.getReference("users")
+        val allUsers = mutableListOf<UserModel>()
+        var completedQueries = 0
+
+        for (userId in userIds) {
+            usersRef.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val user = snapshot.getValue(UserModel::class.java)
+                    if (user != null) {
+                        allUsers.add(user)
+                    }
+
+                    completedQueries++
+                    if (completedQueries == userIds.size) {
+                        callback(allUsers)
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    completedQueries++
+                    if (completedQueries == userIds.size) {
+                        callback(allUsers)
+                    }
+                }
+            })
+        }
+    }
+
     override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
-        // Delegate to existing UserRepoImpl
-        val userRepo = com.example.gharbato.repository.UserRepoImpl()
+        val userRepo = UserRepoImpl()
         userRepo.searchUsers(query, callback)
     }
-    
-    override fun initiateCall(activity: Activity, targetUserId: String, targetUserName: String, isVideoCall: Boolean) {
+
+    override fun initiateCall(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        isVideoCall: Boolean
+    ) {
         val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
         val currentUserName = auth.currentUser?.email ?: "Me"
-        
+
         // Use current user ID as room ID for direct call
         val callId = currentUserId
-        
+
         val intent = ZegoCallActivity.newIntent(
             activity = activity,
             callId = callId,
             userId = currentUserId,
             userName = currentUserName,
             isVideoCall = isVideoCall,
-            targetUserId = "", // Not needed for direct ZegoCloud
+            targetUserId = "",
             isIncomingCall = false
         )
         activity.startActivity(intent)
     }
-    
-    override fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String) {
+
+    override fun navigateToChat(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        targetUserImage: String
+    ) {
         val intent = MessageDetailsActivity.newIntent(
             activity = activity,
             otherUserId = targetUserId,

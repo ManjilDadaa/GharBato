@@ -2,12 +2,14 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepo
-import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
+import com.example.gharbato.model.PropertyListingState
+import com.example.gharbato.repository.UserRepoImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -25,141 +27,133 @@ class ListingViewModel(
     private val _uploadSuccess = MutableStateFlow<Boolean?>(null)
     val uploadSuccess: StateFlow<Boolean?> = _uploadSuccess
 
-    // ✅ STEP 1 VALIDATION - Purpose & Property Type
+    /* -------------------------------- VALIDATIONS -------------------------------- */
+
     fun validateStep1(state: PropertyListingState): ListingValidationResult {
         return when {
-            state.selectedPurpose.isBlank() -> {
+            state.selectedPurpose.isBlank() ->
                 ListingValidationResult(false, "Please select a purpose (Sell/Rent/Book)")
-            }
-            state.selectedPropertyType.isBlank() -> {
+
+            state.selectedPropertyType.isBlank() ->
                 ListingValidationResult(false, "Please select a property type")
-            }
+
             else -> ListingValidationResult(true)
         }
     }
 
-    // ✅ STEP 2 VALIDATION - Property Details
     fun validateStep2(state: PropertyListingState): ListingValidationResult {
         return when {
-            state.title.isBlank() -> {
+            state.title.isBlank() ->
                 ListingValidationResult(false, "Property title is required")
-            }
-            state.title.length < 10 -> {
+
+            state.title.length < 10 ->
                 ListingValidationResult(false, "Property title must be at least 10 characters")
-            }
-            state.developer.isBlank() -> {
+
+            state.developer.isBlank() ->
                 ListingValidationResult(false, "Owner/Developer name is required")
-            }
-            state.price.isBlank() -> {
+
+            state.price.isBlank() ->
                 ListingValidationResult(false, "Price is required")
-            }
-            state.price.toIntOrNull() == null -> {
+
+            state.price.toIntOrNull() == null ->
                 ListingValidationResult(false, "Please enter a valid price")
-            }
-            state.price.toInt() <= 0 -> {
+
+            state.price.toInt() <= 0 ->
                 ListingValidationResult(false, "Price must be greater than 0")
-            }
-            state.area.isBlank() -> {
+
+            state.area.isBlank() ->
                 ListingValidationResult(false, "Area is required")
-            }
-            state.area.toIntOrNull() == null -> {
+
+            state.area.toIntOrNull() == null ->
                 ListingValidationResult(false, "Please enter a valid area")
-            }
-            state.area.toInt() <= 0 -> {
+
+            state.area.toInt() <= 0 ->
                 ListingValidationResult(false, "Area must be greater than 0")
-            }
-            state.location.isBlank() -> {
+
+            state.location.isBlank() ->
                 ListingValidationResult(false, "Location is required")
-            }
-            state.floor.isBlank() -> {
+
+            state.floor.isBlank() ->
                 ListingValidationResult(false, "Floor information is required")
-            }
-            state.furnishing.isBlank() -> {
+
+            state.furnishing.isBlank() ->
                 ListingValidationResult(false, "Please select furnishing type")
-            }
-            state.bedrooms.isBlank() -> {
+
+            state.bedrooms.isBlank() ->
                 ListingValidationResult(false, "Number of bedrooms is required")
-            }
-            state.bedrooms.toIntOrNull() == null -> {
+
+            state.bedrooms.toIntOrNull() == null ->
                 ListingValidationResult(false, "Please enter a valid number of bedrooms")
-            }
-            state.bathrooms.isBlank() -> {
+
+            state.bathrooms.isBlank() ->
                 ListingValidationResult(false, "Number of bathrooms is required")
-            }
-            state.bathrooms.toIntOrNull() == null -> {
+
+            state.bathrooms.toIntOrNull() == null ->
                 ListingValidationResult(false, "Please enter a valid number of bathrooms")
-            }
-            state.description.isBlank() -> {
+
+            state.description.isBlank() ->
                 ListingValidationResult(false, "Property description is required")
-            }
-            state.description.length < 20 -> {
+
+            state.description.length < 20 ->
                 ListingValidationResult(false, "Description must be at least 20 characters")
-            }
+
             else -> ListingValidationResult(true)
         }
     }
 
-    // ✅ STEP 3 VALIDATION - Photos
     fun validateStep3(state: PropertyListingState): ListingValidationResult {
-        val coverPhotos = state.imageCategories.find { it.id == "cover" }?.images ?: emptyList()
-        val bedroomPhotos = state.imageCategories.find { it.id == "bedrooms" }?.images ?: emptyList()
+        val coverPhotos =
+            state.imageCategories.find { it.id == "cover" }?.images ?: emptyList()
+        val bedroomPhotos =
+            state.imageCategories.find { it.id == "bedrooms" }?.images ?: emptyList()
         val totalPhotos = state.imageCategories.sumOf { it.images.size }
 
         return when {
-            coverPhotos.isEmpty() -> {
+            coverPhotos.isEmpty() ->
                 ListingValidationResult(false, "Cover photo is required")
-            }
-            bedroomPhotos.isEmpty() -> {
+
+            bedroomPhotos.isEmpty() ->
                 ListingValidationResult(false, "At least one bedroom photo is required")
-            }
-            totalPhotos < 3 -> {
-                ListingValidationResult(false, "Please add at least 3 photos in total")
-            }
+
+            totalPhotos < 3 ->
+                ListingValidationResult(false, "Please add at least 3 photos")
+
             else -> ListingValidationResult(true)
         }
     }
 
-    // ✅ STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
     fun validateStep4(state: PropertyListingState): ListingValidationResult {
-        // Skip validation if selling
-        if (state.selectedPurpose == "Sell") {
-            return ListingValidationResult(true)
-        }
+        if (state.selectedPurpose == "Sell") return ListingValidationResult(true)
 
         return when {
-            state.utilitiesIncluded.isBlank() -> {
+            state.utilitiesIncluded.isBlank() ->
                 ListingValidationResult(false, "Please select utilities option")
-            }
-            state.commission.isBlank() -> {
+
+            state.commission.isBlank() ->
                 ListingValidationResult(false, "Please select commission terms")
-            }
-            state.advancePayment.isBlank() -> {
+
+            state.advancePayment.isBlank() ->
                 ListingValidationResult(false, "Please select advance payment terms")
-            }
-            state.securityDeposit.isBlank() -> {
+
+            state.securityDeposit.isBlank() ->
                 ListingValidationResult(false, "Please select security deposit terms")
-            }
-            state.minimumLease.isBlank() -> {
+
+            state.minimumLease.isBlank() ->
                 ListingValidationResult(false, "Please select minimum lease period")
-            }
-            state.availableFrom.isBlank() -> {
+
+            state.availableFrom.isBlank() ->
                 ListingValidationResult(false, "Please select availability date")
-            }
+
             else -> ListingValidationResult(true)
         }
     }
 
-    // ✅ STEP 5 VALIDATION - Amenities
     fun validateStep5(state: PropertyListingState): ListingValidationResult {
-        return when {
-            state.amenities.isEmpty() -> {
-                ListingValidationResult(false, "Please select at least one amenity")
-            }
-            else -> ListingValidationResult(true)
-        }
+        return if (state.amenities.isEmpty()) {
+            ListingValidationResult(false, "Please select at least one amenity")
+        } else ListingValidationResult(true)
     }
 
-    // ✅ Master validation function
     fun validateStep(step: Int, state: PropertyListingState): ListingValidationResult {
         return when (step) {
             1 -> validateStep1(state)
@@ -170,6 +164,8 @@ class ListingViewModel(
             else -> ListingValidationResult(false, "Invalid step")
         }
     }
+
+    /* -------------------------------- SUBMIT LISTING -------------------------------- */
 
     fun submitListing(
         context: Context,
@@ -182,49 +178,40 @@ class ListingViewModel(
                 _isUploading.value = true
                 _uploadProgress.value = "Preparing images..."
 
-                // Collect all image URIs from categories
                 val allImageUris = mutableListOf<Uri>()
                 state.imageCategories.forEach { category ->
-                    category.images.forEach { uriString ->
-                        try {
-                            allImageUris.add(Uri.parse(uriString))
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
+                    category.images.forEach {
+                        runCatching { Uri.parse(it) }.onSuccess(allImageUris::add)
                     }
                 }
 
                 if (allImageUris.isEmpty()) {
-                    _uploadProgress.value = "No images selected"
                     createAndSubmitProperty(state, emptyList(), onSuccess, onError)
                     return@launch
                 }
 
-                // Upload images to Cloudinary
-                _uploadProgress.value = "Uploading ${allImageUris.size} images..."
+                _uploadProgress.value = "Uploading images..."
 
                 repository.uploadMultipleImages(context, allImageUris) { uploadedUrls ->
                     viewModelScope.launch {
                         if (uploadedUrls.isEmpty()) {
                             _isUploading.value = false
                             _uploadSuccess.value = false
-                            onError("Failed to upload images. Please check your internet connection.")
+                            onError("Image upload failed")
                         } else {
-                            _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving to database..."
                             createAndSubmitProperty(state, uploadedUrls, onSuccess, onError)
                         }
                     }
                 }
-
             } catch (e: Exception) {
-                e.printStackTrace()
                 _isUploading.value = false
                 _uploadSuccess.value = false
-                _uploadProgress.value = ""
-                onError("Error: ${e.message}")
+                onError(e.message ?: "Upload error")
             }
         }
     }
+
+    /* -------------------------------- CREATE PROPERTY + NOTIFICATION -------------------------------- */
 
     private suspend fun createAndSubmitProperty(
         state: PropertyListingState,
@@ -233,39 +220,29 @@ class ListingViewModel(
         onError: (String) -> Unit
     ) {
         try {
-            // Categorize images by their category IDs
             val categorizedImages = mutableMapOf<String, List<String>>()
-            var currentIndex = 0
+            var index = 0
 
             state.imageCategories.forEach { category ->
                 val count = category.images.size
                 if (count > 0) {
-                    val urlsForCategory = uploadedUrls
-                        .drop(currentIndex)
-                        .take(count)
-
-                    categorizedImages[category.id] = urlsForCategory
-                    currentIndex += count
+                    categorizedImages[category.id] =
+                        uploadedUrls.drop(index).take(count)
+                    index += count
                 }
             }
 
-            // Create property model with all data
             val property = PropertyModel(
                 id = System.currentTimeMillis().toInt(),
                 title = state.title,
                 developer = state.developer,
-                price = when (state.selectedPurpose) {
-                    "Sell" -> "Rs ${state.price}"
-                    "Rent" -> "Rs ${state.price}/month"
-                    "Book" -> "Rs ${state.price}/night"
-                    else -> "Rs ${state.price}"
-                },
+                price = "Rs ${state.price}",
                 sqft = "${state.area} sq.ft",
-                bedrooms = state.bedrooms.toIntOrNull() ?: 0,
-                bathrooms = state.bathrooms.toIntOrNull() ?: 0,
+                bedrooms = state.bedrooms.toInt(),
+                bathrooms = state.bathrooms.toInt(),
                 images = categorizedImages,
                 location = state.location,
-                latitude = 27.7172,  // Default Kathmandu coordinates
+                latitude = 27.7172,
                 longitude = 85.3240,
                 propertyType = state.selectedPropertyType,
                 floor = state.floor,
@@ -273,42 +250,41 @@ class ListingViewModel(
                 parking = state.parking,
                 petsAllowed = state.petsAllowed,
                 description = state.description,
-
-                // ✅ Rental Terms (only applicable for Rent/Book)
-                utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
-                commission = if (state.selectedPurpose != "Sell") state.commission else null,
-                advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
-                securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
-                minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
-                availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
-
-                // ✅ Amenities
                 amenities = state.amenities,
-
                 isFavorite = false
             )
 
-            _uploadProgress.value = "Saving to database..."
-
             repository.addProperty(property) { success, error ->
                 _isUploading.value = false
+
                 if (success) {
+                    _uploadProgress.value = "Notifying users..."
+
+                    val imageUrl =
+                        property.images.values.firstOrNull()?.firstOrNull() ?: ""
+
+                    UserRepoImpl().notifyAllUsers(
+                        title = "🏠 New Listing Available!",
+                        message = "Check out: ${property.title}",
+                        type = "property",
+                        imageUrl = imageUrl,
+                        actionData = property.id.toString()
+                    ) { _, msg ->
+                        Log.d("ListingViewModel", msg)
+                    }
+
                     _uploadSuccess.value = true
                     _uploadProgress.value = "✅ Listing created successfully!"
                     onSuccess()
                 } else {
                     _uploadSuccess.value = false
-                    _uploadProgress.value = ""
                     onError(error ?: "Failed to save property")
                 }
             }
-
         } catch (e: Exception) {
-            e.printStackTrace()
             _isUploading.value = false
             _uploadSuccess.value = false
-            _uploadProgress.value = ""
-            onError(e.message ?: "Unknown error")
+            onError(e.message ?: "Error creating listing")
         }
     }
 

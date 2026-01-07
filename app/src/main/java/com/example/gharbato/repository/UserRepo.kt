@@ -31,18 +31,13 @@ interface UserRepo {
         callback: (UserModel?) -> Unit
     )
 
-    fun getUserById(
-        userId: String,
-        callback: (Boolean, UserModel?, String) -> Unit
-    )
-
     fun updateUserName(
         userId: String,
         fullName: String,
         callback: (Boolean, String) -> Unit
     )
 
-
+    // NEW: Update profile with image
     fun updateUserProfile(
         userId: String,
         fullName: String,
@@ -50,7 +45,7 @@ interface UserRepo {
         callback: (Boolean, String) -> Unit
     )
 
-
+    // NEW: Upload profile image to Cloudinary
     fun uploadProfileImage(
         context: Context,
         imageUri: Uri,
@@ -74,4 +69,51 @@ interface UserRepo {
 
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
 
+    // NOTIFICATIONS
+    fun getUserNotifications(
+        userId: String,
+        callback: (Boolean, List<com.example.gharbato.model.NotificationModel>?, String) -> Unit
+    )
+
+    fun markNotificationAsRead(
+        userId: String,
+        notificationId: String,
+        callback: (Boolean, String) -> Unit
+    )
+
+    fun markAllNotificationsAsRead(
+        userId: String,
+        callback: (Boolean, String) -> Unit
+    )
+
+    fun deleteNotification(
+        userId: String,
+        notificationId: String,
+        callback: (Boolean, String) -> Unit
+    )
+
+    fun getUnreadNotificationCount(
+        userId: String,
+        callback: (Int) -> Unit
+    )
+
+    // NOTIFICATION CREATION
+    fun createNotification(
+        userId: String,
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = "",
+        callback: (Boolean, String) -> Unit
+    )
+
+    fun notifyAllUsers(
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = "",
+        callback: (Boolean, String) -> Unit
+    )
 }

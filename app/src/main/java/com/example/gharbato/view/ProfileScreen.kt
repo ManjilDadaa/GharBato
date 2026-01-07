@@ -47,6 +47,7 @@ fun ProfileScreen() {
 
     // Observe user data from ViewModel
     val userData by userViewModel.userData.observeAsState()
+    val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -54,6 +55,7 @@ fun ProfileScreen() {
     // Load user profile when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
+        userViewModel.loadUnreadCount()
         isLoading = false
     }
 
@@ -62,6 +64,7 @@ fun ProfileScreen() {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 userViewModel.loadUserProfile()
+                userViewModel.loadUnreadCount()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -88,12 +91,40 @@ fun ProfileScreen() {
                 containerColor = Color.White
             ),
             actions = {
-                IconButton(onClick = { }) {
-                    Icon(
-                        painter = painterResource(R.drawable.outline_notifications_24),
-                        contentDescription = "Notifications",
-                        tint = Blue
-                    )
+                // Notification icon with badge
+                Box(
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
+                    IconButton(onClick = {
+                        // Navigate to NotificationActivity
+                        context.startActivity(Intent(context, NotificationActivity::class.java))
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.outline_notifications_24),
+                            contentDescription = "Notifications",
+                            tint = Blue
+                        )
+                    }
+
+                    // Badge with count
+                    if (unreadCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(Color.Red)
+                                .align(Alignment.TopEnd)
+                                .offset(x = (-4).dp, y = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         )
