@@ -6,22 +6,22 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -31,87 +31,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.R
+import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.LightGreen
+import com.example.gharbato.viewmodel.PendingPropertiesViewModel
 
 class PendingListingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            PendingListingsScreen()
+            PendingListingsBody()
         }
     }
 }
 
-// Data model
-data class PendingListing(
-    val id: String,
-    val title: String,
-    val userName: String,
-    val userEmail: String,
-    val propertyType: String,
-    val purpose: String,
-    val price: String,
-    val location: String,
-    val bedrooms: String,
-    val bathrooms: String,
-    val area: String,
-    val description: String,
-    val images: List<String>,
-    val submittedDate: String
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PendingListingsScreen() {
-    // Sample data - Replace with Firebase data
-    val pendingListings = remember {
-        listOf(
-            PendingListing(
-                id = "1",
-                title = "Luxury Villa in Kathmandu",
-                userName = "John Doe",
-                userEmail = "john@example.com",
-                propertyType = "Villa",
-                purpose = "Sell",
-                price = "50,00,000",
-                location = "Kathmandu, Nepal",
-                bedrooms = "4",
-                bathrooms = "3",
-                area = "2500",
-                description = "Beautiful villa with modern amenities",
-                images = listOf(
-                    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-                    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800"
-                ),
-                submittedDate = "2 hours ago"
-            ),
-            PendingListing(
-                id = "2",
-                title = "Modern Apartment Downtown",
-                userName = "Jane Smith",
-                userEmail = "jane@example.com",
-                propertyType = "Apartment",
-                purpose = "Rent",
-                price = "25,000/month",
-                location = "Lalitpur, Nepal",
-                bedrooms = "2",
-                bathrooms = "2",
-                area = "1200",
-                description = "Fully furnished apartment",
-                images = listOf(
-                    "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800"
-                ),
-                submittedDate = "5 hours ago"
-            )
-        )
-    }
+fun PendingListingsBody() {
+
+    // Initialize ViewModel manually like in your AddProduct example
+    val viewModel = remember { PendingPropertiesViewModel(PendingPropertiesRepoImpl()) }
+
+    val pendingProperties by viewModel.pendingProperties.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var expandedCard by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val activity = context as Activity
+
+    // Fetch data on first composition
+    LaunchedEffect(Unit) {
+        viewModel.fetchPendingProperties()
+    }
 
     Scaffold(
         topBar = {
@@ -119,74 +73,100 @@ fun PendingListingsScreen() {
                 title = { Text("Pending Listings", color = Color.White) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        val intent = Intent(context, AdminActivity::class.java)
-                        context.startActivity(intent)
+                        context.startActivity(Intent(context, AdminActivity::class.java))
                         activity.finish()
                     }) {
-                        Icon(Icons.Default.ArrowBack, null, tint = Color.White)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = LightGreen)
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(Color(0xFFF5F5F5)),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header card
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(Blue.copy(0.1f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(painter = painterResource(R.drawable.baseline_pending_actions_24),
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = Blue
-                        )
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Total Pending", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text("${pendingListings.size} properties waiting for review", fontSize = 13.sp, color = Gray)
-                        }
-                    }
-                }
-            }
 
-            // Listings
-            items(pendingListings) { listing ->
-                PendingListingCard(
-                    listing = listing,
-                    isExpanded = expandedCard == listing.id,
-                    onExpandToggle = {
-                        expandedCard = if (expandedCard == listing.id) null else listing.id
-                    }
-                )
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .background(Color(0xFFF5F5F5)),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header card
+                item {
+                    PendingHeaderCard(total = pendingProperties.size)
+                }
+
+                // Listing cards
+                items(pendingProperties) { listing ->
+                    PendingListingCard(
+                        listing = listing,
+                        isExpanded = expandedCard == listing.id.toString(),
+                        onExpandToggle = {
+                            expandedCard = if (expandedCard == listing.id.toString()) null else listing.id.toString()
+                        },
+                        onApprove = {
+//                            viewModel.approveProperty(listing.id)
+                        },
+                        onReject = {
+//                            viewModel.rejectProperty(listing.id)
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
+fun PendingHeaderCard(total: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(Blue.copy(0.1f)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.baseline_pending_actions_24),
+                contentDescription = null,
+                modifier = Modifier.size(32.dp),
+                tint = Blue
+            )
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text("Total Pending", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text("$total properties waiting for review", fontSize = 13.sp, color = Gray)
+            }
+        }
+    }
+}
+
+@Composable
+
 fun PendingListingCard(
-    listing: PendingListing,
+    listing: PropertyModel,
     isExpanded: Boolean,
-    onExpandToggle: () -> Unit
+    onExpandToggle: () -> Unit,
+    onApprove: () -> Unit,
+    onReject: () -> Unit
 ) {
     var showRejectDialog by remember { mutableStateOf(false) }
     var showApproveDialog by remember { mutableStateOf(false) }
 
-    // Dialogs
+    // Reject dialog
     if (showRejectDialog) {
         AlertDialog(
             onDismissRequest = { showRejectDialog = false },
@@ -194,23 +174,17 @@ fun PendingListingCard(
             text = { Text("Are you sure you want to reject '${listing.title}'?") },
             confirmButton = {
                 Button(
-                    onClick = {
-                        // Handle rejection
-                        showRejectDialog = false
-                    },
+                    onClick = { showRejectDialog = false; onReject() },
                     colors = ButtonDefaults.buttonColors(Color.Red)
-                ) {
-                    Text("Reject")
-                }
+                ) { Text("Reject") }
             },
             dismissButton = {
-                TextButton(onClick = { showRejectDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showRejectDialog = false }) { Text("Cancel") }
             }
         )
     }
 
+    // Approve dialog
     if (showApproveDialog) {
         AlertDialog(
             onDismissRequest = { showApproveDialog = false },
@@ -218,23 +192,17 @@ fun PendingListingCard(
             text = { Text("Are you sure you want to approve '${listing.title}'?") },
             confirmButton = {
                 Button(
-                    onClick = {
-                        // Handle approval
-                        showApproveDialog = false
-                    },
+                    onClick = { showApproveDialog = false; onApprove() },
                     colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))
-                ) {
-                    Text("Approve")
-                }
+                ) { Text("Approve") }
             },
             dismissButton = {
-                TextButton(onClick = { showApproveDialog = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showApproveDialog = false }) { Text("Cancel") }
             }
         )
     }
 
+    // Listing card UI
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -248,7 +216,7 @@ fun PendingListingCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(16.dp)
                 ) {
-                    items(listing.images) { imageUrl ->
+                    items(listing.images.values.flatten()) { imageUrl ->
                         AsyncImage(
                             model = imageUrl,
                             contentDescription = null,
@@ -263,213 +231,316 @@ fun PendingListingCard(
 
             Column(Modifier.padding(horizontal = 16.dp)) {
                 // Title
-                Row(
-                    Modifier.fillMaxWidth(),
-                    Arrangement.SpaceBetween,
-                    Alignment.CenterVertically
-                ) {
-                    Text(
-                        listing.title,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = if (isExpanded) Int.MAX_VALUE else 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(onClick = onExpandToggle) {
-                        Icon(
-                            if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            null
-                        )
-                    }
-                }
+                Text(
+                    listing.title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
-                // Tags row
+                // Price - Fixed: Only show Rs once
+                Text(
+                    listing.price,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = LightGreen,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                // Property Type & Market Type
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Surface(
-                        color = Blue.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = listing.purpose,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = Blue,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Surface(
-                        color = Color(0xFF4CAF50).copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = "Rs. ${listing.price}",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            color = Color(0xFF4CAF50),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    PropertyChip(label = listing.propertyType)
+                    PropertyChip(label = listing.marketType)
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-// Quick info
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Bed,
-                            contentDescription = null,
-                            tint = Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "${listing.bedrooms} Bed",
-                            fontSize = 13.sp,
-                            color = Color.DarkGray
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Bathtub,
-                            contentDescription = null,
-                            tint = Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "${listing.bathrooms} Bath",
-                            fontSize = 13.sp,
-                            color = Color.DarkGray
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.SquareFoot,
-                            contentDescription = null,
-                            tint = Gray,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "${listing.area} sqft",
-                            fontSize = 13.sp,
-                            color = Color.DarkGray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
 
                 // Location
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
-                        imageVector = Icons.Default.LocationOn,
+                        painter = painterResource(R.drawable.baseline_location_on_24),
                         contentDescription = null,
-                        tint = Gray,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(16.dp),
+                        tint = Gray
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        text = listing.location,
-                        fontSize = 13.sp,
+                        listing.location,
+                        fontSize = 14.sp,
                         color = Gray
                     )
                 }
 
-                // Expanded details
-                AnimatedVisibility(visible = isExpanded) {
-                    Column {
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-                        Text("Submitted by:", fontSize = 12.sp, color = Gray)
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = listing.userName,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = listing.userEmail,
-                            fontSize = 12.sp,
-                            color = Gray
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text("Description:", fontSize = 12.sp, color = Gray)
-                        Text(
-                            text = listing.description,
-                            fontSize = 14.sp
-                        )
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(
-                            text = "Submitted: ${listing.submittedDate}",
-                            fontSize = 12.sp,
-                            color = Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Action buttons
+                // Property Details Row - Fixed: sqft only shown once
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = { showRejectDialog = true },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color.Red
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.dp,
-                            brush = SolidColor(Color.Red)
+                    PropertyDetailItem(
+                        icon = R.drawable.baseline_bedroom_child_24,
+                        value = "${listing.bedrooms} Beds"
+                    )
+                    PropertyDetailItem(
+                        icon = R.drawable.baseline_bathroom_24,
+                        value = "${listing.bathrooms} Baths"
+                    )
+                    if (listing.sqft.isNotEmpty()) {
+                        PropertyDetailItem(
+                            icon = R.drawable.baseline_language_24,
+                            value = listing.sqft
                         )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Reject")
-                    }
-
-                    Button(
-                        onClick = { showApproveDialog = true },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text("Approve")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Developer/Owner
+                if (listing.developer.isNotEmpty()) {
+                    Text(
+                        "Developer: ${listing.developer}",
+                        fontSize = 14.sp,
+                        color = Gray,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
 
+                if (listing.ownerName.isNotEmpty()) {
+                    Text(
+                        "Owner: ${listing.ownerName}",
+                        fontSize = 14.sp,
+                        color = Gray,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                // Additional Details (Collapsible)
+                if (isExpanded) {
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+
+                    // Floor & Furnishing
+                    PropertyInfoRow("Floor", listing.floor)
+                    PropertyInfoRow("Furnishing", listing.furnishing)
+
+                    // Parking & Pets
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        PropertyInfoChip(
+                            label = if (listing.parking) "Parking Available" else "No Parking",
+                            color = if (listing.parking) Color(0xFF4CAF50) else Color.Red
+                        )
+                        PropertyInfoChip(
+                            label = if (listing.petsAllowed) "Pets Allowed" else "No Pets",
+                            color = if (listing.petsAllowed) Color(0xFF4CAF50) else Color.Red
+                        )
+                    }
+
+                    // Description
+                    if (!listing.description.isNullOrEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Description",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Text(
+                            listing.description!!,
+                            fontSize = 13.sp,
+                            color = Gray
+                        )
+                    }
+
+                    // Amenities
+                    if (listing.amenities.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Amenities",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        listing.amenities.chunked(2).forEach { rowAmenities ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowAmenities.forEach { amenity ->
+                                    Text(
+                                        "• $amenity",
+                                        fontSize = 13.sp,
+                                        color = Gray,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Financial Details
+                    if (!listing.commission.isNullOrEmpty() ||
+                        !listing.advancePayment.isNullOrEmpty() ||
+                        !listing.securityDeposit.isNullOrEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Financial Details",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        listing.commission?.let { if (it.isNotEmpty()) PropertyInfoRow("Commission", it) }
+                        listing.advancePayment?.let { if (it.isNotEmpty()) PropertyInfoRow("Advance Payment", it) }
+                        listing.securityDeposit?.let { if (it.isNotEmpty()) PropertyInfoRow("Security Deposit", it) }
+                    }
+
+                    // Lease Details
+                    if (!listing.minimumLease.isNullOrEmpty() || !listing.availableFrom.isNullOrEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        listing.minimumLease?.let { if (it.isNotEmpty()) PropertyInfoRow("Minimum Lease", it) }
+                        listing.availableFrom?.let { if (it.isNotEmpty()) PropertyInfoRow("Available From", it) }
+                    }
+                }
+
+                // Expand/Collapse button
+                TextButton(
+                    onClick = onExpandToggle,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        if (isExpanded) "Show Less" else "Show More",
+                        color = LightGreen
+                    )
+                    Icon(
+                        if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = LightGreen
+                    )
+                }
+            }
+
+            // Action Buttons
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Reject Button
+                Button(
+                    onClick = { showRejectDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Red.copy(alpha = 0.1f),
+                        contentColor = Color.Red
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_close_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Reject")
+                }
+
+                // Approve Button
+                Button(
+                    onClick = { showApproveDialog = true },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF4CAF50)
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_check_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Approve")
+                }
             }
         }
+    }
+}
+
+// Helper Composables
+@Composable
+fun PropertyChip(label: String) {
+    Surface(
+        color = LightGreen.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            label,
+            fontSize = 12.sp,
+            color = LightGreen,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
+fun PropertyDetailItem(icon: Int, value: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = Gray
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            value,
+            fontSize = 13.sp,
+            color = Gray
+        )
+    }
+}
+
+@Composable
+fun PropertyInfoRow(label: String, value: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            label,
+            fontSize = 13.sp,
+            color = Gray
+        )
+        Text(
+            value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+fun PropertyInfoChip(label: String, color: Color) {
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Text(
+            label,
+            fontSize = 12.sp,
+            color = color,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }

@@ -12,6 +12,8 @@ interface PropertyRepo {
     suspend fun getAllApprovedProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
 
+
+
     // Search & Filter
     suspend fun searchProperties(query: String): List<PropertyModel>
     suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel>
