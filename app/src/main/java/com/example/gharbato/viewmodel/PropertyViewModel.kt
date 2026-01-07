@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
+import com.example.gharbato.model.SortOption
 import com.example.gharbato.repository.SavedPropertiesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "PropertyViewModel"
+
+// ========== UI STATE ==========
 
 data class PropertyUiState(
     val properties: List<PropertyModel> = emptyList(),
@@ -27,7 +30,8 @@ data class PropertyUiState(
     val minPrice: Int = 0,
     val showMap: Boolean = true,
     val searchLocation: SearchLocation? = null,
-    val currentFilters: PropertyFilters = PropertyFilters()
+    val currentFilters: PropertyFilters = PropertyFilters(),
+    val currentSort: SortOption = SortOption.DATE_NEWEST
 )
 
 data class SearchLocation(
@@ -74,14 +78,20 @@ class PropertyViewModel(
                 }
 
                 // Don't apply filters on initial load - show all properties
-                Log.d(TAG, "Initial load - showing all ${propertiesWithFavoriteStatus.size} properties")
+                // Apply current sort
+                val sortedProperties = applySortToProperties(
+                    propertiesWithFavoriteStatus,
+                    _uiState.value.currentSort
+                )
+
+                Log.d(TAG, "Initial load - showing all ${sortedProperties.size} properties")
 
                 _uiState.value = _uiState.value.copy(
-                    properties = propertiesWithFavoriteStatus,
+                    properties = sortedProperties,
                     isLoading = false,
-                    error = if (propertiesWithFavoriteStatus.isEmpty()) "No properties found" else null
+                    error = if (sortedProperties.isEmpty()) "No properties found" else null
                 )
-                Log.d(TAG, "UI updated with ${propertiesWithFavoriteStatus.size} properties")
+                Log.d(TAG, "UI updated with ${sortedProperties.size} properties")
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading properties", e)
                 _uiState.value = _uiState.value.copy(
@@ -164,12 +174,18 @@ class PropertyViewModel(
                 // Apply market type filter (always visible in UI) + any other active filters
                 val filteredProperties = applyFiltersToList(propertiesWithFavoriteStatus)
 
-                Log.d(TAG, "Final result: ${filteredProperties.size} properties")
+                // Apply current sort
+                val sortedProperties = applySortToProperties(
+                    filteredProperties,
+                    _uiState.value.currentSort
+                )
+
+                Log.d(TAG, "Final result: ${sortedProperties.size} properties")
 
                 _uiState.value = _uiState.value.copy(
-                    properties = filteredProperties,
+                    properties = sortedProperties,
                     isLoading = false,
-                    error = if (filteredProperties.isEmpty()) "No properties found" else null
+                    error = if (sortedProperties.isEmpty()) "No properties found" else null
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error during search", e)
@@ -211,12 +227,19 @@ class PropertyViewModel(
                     )
                 }
 
+                // Apply market type filter (always visible in UI) + any other active filters
                 val filteredProperties = applyFiltersToList(propertiesWithFavoriteStatus)
 
+                // Apply current sort
+                val sortedProperties = applySortToProperties(
+                    filteredProperties,
+                    _uiState.value.currentSort
+                )
+
                 _uiState.value = _uiState.value.copy(
-                    properties = filteredProperties,
+                    properties = sortedProperties,
                     isLoading = false,
-                    error = if (filteredProperties.isEmpty())
+                    error = if (sortedProperties.isEmpty())
                         "No properties found in this area" else null
                 )
             } catch (e: Exception) {
@@ -333,9 +356,15 @@ class PropertyViewModel(
                 // Apply filters
                 val filteredProperties = applyFiltersToList(propertiesWithFavoriteStatus)
 
+                // Apply current sort
+                val sortedProperties = applySortToProperties(
+                    filteredProperties,
+                    _uiState.value.currentSort
+                )
+
                 _uiState.value = _uiState.value.copy(
-                    properties = filteredProperties,
-                    error = if (filteredProperties.isEmpty()) "No properties match your filters" else null
+                    properties = sortedProperties,
+                    error = if (sortedProperties.isEmpty()) "No properties match your filters" else null
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error applying filters", e)
@@ -477,6 +506,77 @@ class PropertyViewModel(
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
+    }
+
+    // ========== SORTING ==========
+
+    /**
+     * Update the sort option and re-sort the current properties
+     */
+    fun updateSort(sortOption: SortOption) {
+        Log.d(TAG, "Updating sort to: $sortOption")
+
+        val currentProperties = _uiState.value.properties
+        val sortedProperties = applySortToProperties(currentProperties, sortOption)
+
+        _uiState.value = _uiState.value.copy(
+            properties = sortedProperties,
+            currentSort = sortOption
+        )
+
+        Log.d(TAG, "Properties re-sorted with: $sortOption")
+    }
+
+    /**
+     * Apply sorting to a list of properties
+     */
+    private fun applySortToProperties(
+        properties: List<PropertyModel>,
+        sortOption: SortOption
+    ): List<PropertyModel> {
+        Log.d(TAG, "Applying sort: $sortOption to ${properties.size} properties")
+
+        return when (sortOption) {
+            SortOption.POPULARITY -> {
+                // Sort by favorites first, then by view count if available
+                properties.sortedByDescending { it.isFavorite }
+            }
+
+            SortOption.PRICE_LOW_TO_HIGH -> {
+                properties.sortedBy { extractPriceValue(it.price) }
+            }
+
+            SortOption.PRICE_HIGH_TO_LOW -> {
+                properties.sortedByDescending { extractPriceValue(it.price) }
+            }
+
+            SortOption.AREA_SMALL_TO_LARGE -> {
+                properties.sortedBy { extractAreaValue(it.sqft) }
+            }
+
+            SortOption.AREA_LARGE_TO_SMALL -> {
+                properties.sortedByDescending { extractAreaValue(it.sqft) }
+            }
+
+            SortOption.DATE_NEWEST -> {
+                // Sort by ID descending (assuming higher ID = newer)
+                properties.sortedByDescending { it.id }
+            }
+
+            SortOption.DATE_OLDEST -> {
+                // Sort by ID ascending (assuming lower ID = older)
+                properties.sortedBy { it.id }
+            }
+        }
+    }
+
+    /**
+     * Extract numeric area value from area string
+     * Example: "1500 sq ft" -> 1500
+     */
+    private fun extractAreaValue(areaString: String): Int {
+        val numbers = areaString.filter { it.isDigit() }
+        return numbers.toIntOrNull() ?: 0
     }
 
     // ========== UI STATE ==========

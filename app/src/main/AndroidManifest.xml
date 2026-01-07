@@ -88,7 +88,7 @@
             android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
-            android:name=".ui.view.PropertyDetailActivity"
+            android:name=".view.PropertyDetailActivity"
             android:exported="true"
             android:label="@string/title_activity_property_detail"
             android:theme="@style/Theme.GharBato">
