@@ -59,7 +59,7 @@ class PropertyViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 Log.d(TAG, "Loading all properties...")
-                val properties = repository.getAllProperties()
+                val properties = repository.getAllApprovedProperties()
                 Log.d(TAG, "Loaded ${properties.size} properties from repository")
 
                 val propertiesWithFavoriteStatus = properties.map { property ->

@@ -8,7 +8,8 @@ import com.example.gharbato.model.PropertyFilters
 interface PropertyRepo {
 
     // Property Retrieval
-    suspend fun getAllProperties(): List<PropertyModel>
+    suspend fun getAllProperties(): List<PropertyModel> // For admins only
+    suspend fun getAllApprovedProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
 
     // Search & Filter

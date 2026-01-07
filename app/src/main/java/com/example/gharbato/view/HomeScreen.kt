@@ -69,7 +69,7 @@ fun HomeScreen(
 ) {
     var search by remember { mutableStateOf("") }
 
-    // ✅ Get UI state from ViewModel
+    //  Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // variables required for multi selection FilterChips
@@ -114,7 +114,7 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        // ✅ Show loading state
+        //  Show loading state
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
@@ -140,7 +140,7 @@ fun HomeScreen(
                         value = search,
                         onValueChange = { data ->
                             search = data
-                            // ✅ Optional: trigger search
+                            // Optional: trigger search
                             // viewModel.updateSearchQuery(data)
                         },
                         keyboardOptions = KeyboardOptions(
@@ -206,7 +206,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ✅ Use properties from ViewModel's state
+                //  Use properties from ViewModel's state
                 items(uiState.properties) { property ->
                     PropertyCard(
                         property = property,
@@ -221,7 +221,7 @@ fun HomeScreen(
                     )
                 }
 
-                // ✅ Show empty state if no properties
+                // Show empty state if no properties
                 if (uiState.properties.isEmpty() && !uiState.isLoading) {
                     item {
                         Box(
