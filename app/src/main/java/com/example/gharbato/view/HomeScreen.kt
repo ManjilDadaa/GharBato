@@ -50,10 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
-import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 
@@ -61,10 +59,7 @@ import com.example.gharbato.viewmodel.PropertyViewModelFactory
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
+        factory = PropertyViewModelFactory(LocalContext.current)
     )
 ) {
     var search by remember { mutableStateOf("") }

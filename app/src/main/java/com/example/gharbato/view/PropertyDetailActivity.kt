@@ -1,4 +1,4 @@
-package com.example.gharbato.ui.view
+package com.example.gharbato.view
 
 import android.app.Activity
 import android.os.Bundle
@@ -28,7 +28,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AcUnit
@@ -45,7 +44,6 @@ import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.School
@@ -81,8 +79,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.view.MessageDetailsActivity
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -95,23 +91,21 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import android.content.Context
 import android.content.Intent
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.text.style.TextAlign
+import com.example.gharbato.ui.view.FullMapActivity
 
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
-        PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),  //Using singleton
-            RepositoryProvider.getSavedPropertiesRepository()  //  Using singleton
-        )
+        PropertyViewModelFactory(this@PropertyDetailActivity)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get property ID from intent
         val propertyId = intent.getIntExtra("propertyId", -1)
 
         if (propertyId != -1) {
@@ -145,6 +139,7 @@ class PropertyDetailActivity : ComponentActivity() {
         }
     }
 }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PropertyDetailScreen(
@@ -305,7 +300,7 @@ fun PropertyImageSection(
                     .background(Color.White.copy(alpha = 0.9f), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.Default.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     tint = Color.Black
                 )
@@ -805,7 +800,7 @@ fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
             fontSize = 14.sp,
             color = Color(0xFF2196F3),
             fontWeight = FontWeight.Medium,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
     }
 }
@@ -1145,7 +1140,6 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
 
             Button(
                 onClick = {
-                    // ✅ Navigate to chat with property owner
                     val intent = MessageDetailsActivity.newIntent(
                         activity = context as Activity,
                         otherUserId = property.ownerId,

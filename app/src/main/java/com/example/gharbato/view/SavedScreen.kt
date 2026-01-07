@@ -28,8 +28,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.RepositoryProvider
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.SavedPropertiesViewModel
 import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
 
@@ -38,15 +36,11 @@ import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
 fun SavedScreen(
     onNavigateToSearch: () -> Unit = {},
     viewModel: SavedPropertiesViewModel = viewModel(
-        factory = SavedPropertiesViewModelFactory(
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
+        factory = SavedPropertiesViewModelFactory()
     )
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
-
 
     Scaffold(
         topBar = {
@@ -112,8 +106,7 @@ fun SavedScreen(
                                 SavedPropertyCard(
                                     property = property,
                                     onCardClick = {
-                                        val intent =
-                                            Intent(context, PropertyDetailActivity::class.java)
+                                        val intent = Intent(context, PropertyDetailActivity::class.java)
                                         intent.putExtra("propertyId", property.id)
                                         context.startActivity(intent)
                                     },
@@ -140,7 +133,6 @@ fun SavedScreen(
         }
     }
 }
-
 
 @Composable
 fun EmptySavedState(
