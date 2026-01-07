@@ -106,7 +106,6 @@ class PropertyDetailActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Get property ID from intent
         val propertyId = intent.getIntExtra("propertyId", -1)
 
         if (propertyId != -1) {
@@ -1141,7 +1140,6 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
 
             Button(
                 onClick = {
-                    // ✅ Navigate to chat with property owner
                     val intent = MessageDetailsActivity.newIntent(
                         activity = context as Activity,
                         otherUserId = property.ownerId,
