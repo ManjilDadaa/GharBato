@@ -4,10 +4,11 @@ package com.example.gharbato.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.repository.PendingPropertiesRepo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.launch
 
 class PendingPropertiesViewModel(
@@ -20,26 +21,36 @@ class PendingPropertiesViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    fun fetchPendingProperties() {
+    init {
+        fetchPendingProperties()
+    }
+
+     fun fetchPendingProperties() {
         viewModelScope.launch {
-            _isLoading.value = true
-            val list = repository.getPendingProperties()
-            _pendingProperties.value = list
-            _isLoading.value = false
+            repository.getPendingProperties()
+                .onStart { _isLoading.value = true }
+                .catch { e ->
+                    // Handle error
+                    _isLoading.value = false
+                }
+                .collect { properties ->
+                    _pendingProperties.value = properties
+                    _isLoading.value = false
+                }
         }
     }
 
     fun approveProperty(propertyId: Int) {
         viewModelScope.launch {
             repository.approveProperty(propertyId)
-            fetchPendingProperties() // Refresh list
+            // No need to call fetchPendingProperties(), flow will update automatically
         }
     }
 
     fun rejectProperty(propertyId: Int) {
         viewModelScope.launch {
             repository.rejectProperty(propertyId)
-            fetchPendingProperties() // Refresh list
+            // No need to call fetchPendingProperties(), flow will update automatically
         }
     }
 }

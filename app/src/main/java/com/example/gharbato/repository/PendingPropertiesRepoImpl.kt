@@ -7,67 +7,48 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class PendingPropertiesRepoImpl : PendingPropertiesRepo {
     private val TAG = "PendingPropertiesRepo"
 
-    private val database = FirebaseDatabase.getInstance()
-    val ref = FirebaseDatabase.getInstance().getReference("Property")
-    override suspend fun getPendingProperties(): List<PropertyModel> {
-        return suspendCancellableCoroutine { continuation ->
+    private val ref = FirebaseDatabase.getInstance().getReference("Property")
 
-            ref.orderByChild("status")
-                .equalTo(PropertyStatus.PENDING)
-                .addListenerForSingleValueEvent(object : ValueEventListener {
+    override fun getPendingProperties(): Flow<List<PropertyModel>> = callbackFlow {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val properties = snapshot.children.mapNotNull {
+                    it.getValue(PropertyModel::class.java)
+                }.filter { it.status == PropertyStatus.PENDING }
+                trySend(properties)
+            }
 
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val properties = mutableListOf<PropertyModel>()
-
-                        for (propertySnapshot in snapshot.children) {
-                            val property = propertySnapshot.getValue(PropertyModel::class.java)
-                            if (property != null) {
-                                properties.add(property)
-                            }
-                        }
-
-                        continuation.resume(properties)
-                    }
-
-                    override fun onCancelled(error: DatabaseError) {
-                        continuation.resumeWithException(
-                            Exception(error.message)
-                        )
-                    }
-                }
-                )
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(TAG, "Failed to read value.", error.toException())
+                close(error.toException())
+            }
         }
+
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) }
     }
 
     override suspend fun approveProperty(propertyId: Int): Result<Boolean> {
         return try {
-            // Update the status to APPROVED
-            val updates = hashMapOf<String, Any>(
-                "status" to PropertyStatus.APPROVED
-            )
+            val propertyQuery = ref.orderByChild("id").equalTo(propertyId.toDouble())
+            val snapshot = propertyQuery.get().await()
 
-            ref
-                .orderByChild("id")
-                .equalTo(propertyId.toDouble())
-                .get()
-                .await()
-                .children
-                .firstOrNull()
-                ?.ref
-                ?.updateChildren(updates)
-                ?.await()
-
-            Log.d(TAG, "Property $propertyId approved successfully")
-            Result.success(true)
-
+            if (snapshot.exists()) {
+                snapshot.children.forEach { dataSnapshot ->
+                    dataSnapshot.ref.child("status").setValue(PropertyStatus.APPROVED).await()
+                }
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Property not found"))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error approving property $propertyId: ${e.message}")
             Result.failure(e)
@@ -76,28 +57,20 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
 
     override suspend fun rejectProperty(propertyId: Int): Result<Boolean> {
         return try {
-            // Update the status to REJECTED
-            val updates = hashMapOf<String, Any>(
-                "status" to PropertyStatus.REJECTED
-            )
-            ref
-                .orderByChild("id")
-                .equalTo(propertyId.toDouble())
-                .get()
-                .await()
-                .children
-                .firstOrNull()
-                ?.ref
-                ?.updateChildren(updates)
-                ?.await()
+            val propertyQuery = ref.orderByChild("id").equalTo(propertyId.toDouble())
+            val snapshot = propertyQuery.get().await()
 
-            Log.d(TAG, "Property $propertyId rejected successfully")
-            Result.success(true)
-
+            if (snapshot.exists()) {
+                snapshot.children.forEach { dataSnapshot ->
+                    dataSnapshot.ref.child("status").setValue(PropertyStatus.REJECTED).await()
+                }
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Property not found"))
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error rejecting property $propertyId: ${e.message}")
             Result.failure(e)
         }
     }
-
 }
