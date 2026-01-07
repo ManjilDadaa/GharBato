@@ -1,13 +1,15 @@
 package com.example.gharbato.view
 
+import android.content.Intent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -17,113 +19,168 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.ui.theme.Green
 import com.example.gharbato.view.ui.theme.LightBlue
 import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.view.ui.theme.ReportedRed
 
 @Composable
-fun AdminHomeScreen(){
-    Scaffold (
+fun AdminHomeScreen() {
+    val context = LocalContext.current
+
+    Scaffold(
         containerColor = Color.White
-    ){ padding ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .padding(top = padding.calculateTopPadding())
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
+            // Pending Listings Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(15.dp),
+                    .padding(15.dp)
+                    .clickable {
+                        // Navigate to Pending Listings Activity
+                        val intent = Intent(context, PendingListingsActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = LightGreen,
                     contentColor = Color.White
-                )
-            ){
-                Column (
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    Text("Pending Listings",
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        "Pending Listings",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        ))
-                    Text("17",
+                            fontSize = 18.sp
+                        )
+                    )
+                    Text(
+                        "17",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp
+                            fontSize = 45.sp
+                        )
+                    )
+                    Text(
+                        "Tap to review",
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.8f)
                         )
                     )
                 }
             }
+
+            // Reported Listings Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(15.dp),
+                    .padding(15.dp)
+                    .clickable {
+                        // Navigate to Reported Properties Activity
+                        val intent = Intent(context, ReportedPropertiesActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = LightBlue,
                     contentColor = Color.White
-                )
-            ){
-                Column (
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    Text("Reported Listings",
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        "Reported Listings",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        ))
-                    Text("17",
+                            fontSize = 18.sp
+                        )
+                    )
+                    Text(
+                        "17",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp
-                        ))
+                            fontSize = 45.sp
+                        )
+                    )
+                    Text(
+                        "Tap to review",
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    )
                 }
             }
+
+            // Reported Users Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
-                    .padding(15.dp),
+                    .padding(15.dp)
+                    .clickable {
+                        // Navigate to Reported Users Activity
+                        val intent = Intent(context, ReportedUsersActivity::class.java)
+                        context.startActivity(intent)
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = ReportedRed,
                     contentColor = Color.White
-                )
-            ){
-                Column (
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            ) {
+                Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                ){
-                    Text("Reported Users",
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Text(
+                        "Reported Users",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        ))
-                    Text("17",
+                            fontSize = 18.sp
+                        )
+                    )
+                    Text(
+                        "17",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 25.sp
-                        ))
+                            fontSize = 45.sp
+                        )
+                    )
+                    Text(
+                        "Tap to review",
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    )
                 }
             }
-
         }
     }
 }
-

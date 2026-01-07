@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +33,7 @@ import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.ui.theme.LightGreen
 
 class PendingListingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -106,17 +110,23 @@ fun PendingListingsScreen() {
     }
 
     var expandedCard by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val activity = context as Activity
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Pending Listings", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Navigate back */ }) {
+                    IconButton(onClick = {
+                        val intent = Intent(context, AdminActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    }) {
                         Icon(Icons.Default.ArrowBack, null, tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Blue)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightGreen)
             )
         }
     ) { padding ->

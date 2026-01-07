@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,12 +19,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.ui.theme.LightBlue
 
 class ReportedPropertiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,16 +71,23 @@ fun ReportedPropertiesScreen() {
         )
     }
 
+    val context = LocalContext.current
+    val activity = context as Activity
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Reported Properties", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Navigate back */ }) {
+                    IconButton(onClick = {
+                        val intent = Intent(context, AdminActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    }) {
                         Icon(Icons.Default.ArrowBack, null, tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFFF9800))
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = LightBlue)
             )
         }
     ) { padding ->
@@ -90,57 +101,140 @@ fun ReportedPropertiesScreen() {
         ) {
             item {
                 Card(
-                    Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(Color(0xFFFFF3E0)),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFF3E0)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Report, null, Color(0xFFFF9800), Modifier.size(32.dp))
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Report,
+                            contentDescription = null,
+                            tint = Color(0xFFFF9800),
+                            modifier = Modifier.size(32.dp)
+                        )
+
                         Spacer(Modifier.width(12.dp))
+
                         Column {
-                            Text("Reported Properties", 18.sp, fontWeight = FontWeight.Bold)
-                            Text("${properties.size} properties flagged", 13.sp, Gray)
+                            Text(
+                                text = "Reported Properties",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${properties.size} properties flagged",
+                                fontSize = 13.sp,
+                                color = Gray
+                            )
                         }
                     }
                 }
             }
 
             items(properties) { property ->
-                Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(Color.White)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
+                ) {
                     Column {
+
                         AsyncImage(
-                            property.propertyImage,
-                            null,
-                            Modifier.fillMaxWidth().height(180.dp),
+                            model = property.propertyImage,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
                             contentScale = ContentScale.Crop
                         )
-                        Column(Modifier.padding(16.dp)) {
-                            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                                Column(Modifier.weight(1f)) {
-                                    Text(property.propertyTitle, 16.sp, fontWeight = FontWeight.Bold)
-                                    Text("By ${property.ownerName}", 13.sp, Gray)
-                                    Text("Reason: ${property.reportReason}", 12.sp, Color.Red)
-                                }
-                                Surface(Color(0xFFFF9800).copy(0.1f), RoundedCornerShape(8.dp)) {
+
+                        Column(modifier = Modifier.padding(16.dp)) {
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        "${property.reportCount} Reports",
-                                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                        Color(0xFFFF9800),
-                                        12.sp,
+                                        text = property.propertyTitle,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "By ${property.ownerName}",
+                                        fontSize = 13.sp,
+                                        color = Gray
+                                    )
+                                    Text(
+                                        text = "Reason: ${property.reportReason}",
+                                        fontSize = 12.sp,
+                                        color = Color.Red
+                                    )
+                                }
+
+                                Surface(
+                                    color = Color(0xFFFF9800).copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "${property.reportCount} Reports",
+                                        modifier = Modifier.padding(
+                                            horizontal = 12.dp,
+                                            vertical = 6.dp
+                                        ),
+                                        color = Color(0xFFFF9800),
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
+
                             Spacer(Modifier.height(12.dp))
-                            Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton({}, Modifier.weight(1f)) { Text("View Details") }
-                                Button({}, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(Color(0xFFFF9800))) { Text("Review") }
-                                Button({}, Modifier.weight(1f), colors = ButtonDefaults.buttonColors(Color.Red)) { Text("Remove") }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = { /* View details */ },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("View Details")
+                                }
+
+                                Button(
+                                    onClick = { /* Review */ },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFFFF9800)
+                                    )
+                                ) {
+                                    Text("Review")
+                                }
+
+                                Button(
+                                    onClick = { /* Remove */ },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Red
+                                    )
+                                ) {
+                                    Text("Remove")
+                                }
                             }
                         }
                     }
                 }
             }
+
         }
     }
 }

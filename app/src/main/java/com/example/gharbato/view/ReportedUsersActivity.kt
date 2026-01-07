@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,11 +20,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.ui.theme.ReportedRed
 
 class ReportedUsersActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,21 +52,41 @@ data class ReportedUser(
 fun ReportedUsersScreen() {
     val users = remember {
         listOf(
-            ReportedUser("u1", "Spam User", "spam@example.com", 5, "Posting spam content", "Active"),
-            ReportedUser("u2", "Fake Account", "fake@example.com", 3, "Fraudulent activity", "Active")
+            ReportedUser(
+                "u1",
+                "Spam User",
+                "spam@example.com",
+                5,
+                "Posting spam content",
+                "Active"
+            ),
+            ReportedUser(
+                "u2",
+                "Fake Account",
+                "fake@example.com",
+                3,
+                "Fraudulent activity",
+                "Active"
+            )
         )
     }
+    val context = LocalContext.current
+    val activity = context as Activity
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Reported Users", color = Color.White) },
                 navigationIcon = {
-                    IconButton(onClick = { /* Navigate back */ }) {
+                    IconButton(onClick = {
+                        val intent = Intent(context, AdminActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    }) {
                         Icon(Icons.Default.ArrowBack, null, tint = Color.White)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Red)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = ReportedRed)
             )
         }
     ) { padding ->
@@ -76,54 +100,162 @@ fun ReportedUsersScreen() {
         ) {
             item {
                 Card(
-                    Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(Color(0xFFFFEBEE)),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFFFFEBEE)
+                    ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Row(Modifier.padding(16.dp), Alignment.CenterVertically) {
-                        Icon(Icons.Default.Warning, null, Color.Red, Modifier.size(32.dp))
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color.Red,
+                            modifier = Modifier.size(32.dp)
+                        )
+
                         Spacer(Modifier.width(12.dp))
+
                         Column {
-                            Text("Reported Users", 18.sp, fontWeight = FontWeight.Bold)
-                            Text("${users.size} users flagged", 13.sp, Gray)
+                            Text(
+                                text = "Reported Users",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "${users.size} users flagged",
+                                fontSize = 13.sp,
+                                color = Gray
+                            )
                         }
                     }
                 }
             }
 
             items(users) { user ->
+
                 var showDetails by remember { mutableStateOf(false) }
 
-                Card(Modifier.fillMaxWidth(), RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(Color.White)) {
-                    Column(Modifier.padding(16.dp)) {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(Modifier.size(48.dp), CircleShape, Color.Red.copy(0.1f)) {
-                                Box(Alignment.Center) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Surface(
+                                modifier = Modifier.size(48.dp),
+                                shape = CircleShape,
+                                color = Color.Red.copy(alpha = 0.1f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
                                     Text(
-                                        user.userName.first().toString(),
-                                        Color.Red,
+                                        text = user.userName.first().uppercase(),
+                                        color = Color.Red,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 20.sp
                                     )
                                 }
                             }
+
                             Spacer(Modifier.width(12.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(user.userName, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                                Text(user.userEmail, 13.sp, Gray)
-                            }
-                            Surface(Color.Red.copy(0.1f), RoundedCornerShape(8.dp)) {
+
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "${user.reportCount} Reports",
-                                    Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    Color.Red,
-                                    12.sp,
+                                    text = user.userName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                                Text(
+                                    text = user.userEmail,
+                                    fontSize = 13.sp,
+                                    color = Gray
+                                )
+                            }
+
+                            Surface(
+                                color = Color.Red.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "${user.reportCount} Reports",
+                                    modifier = Modifier.padding(
+                                        horizontal = 12.dp,
+                                        vertical = 6.dp
+                                    ),
+                                    color = Color.Red,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
                         }
 
-                        AnimatedVisibility(showDetails) {
+                        AnimatedVisibility(visible = showDetails) {
                             Column {
-                                HorizontalDivider(Modifier.padding(vertical = 12.dp))
-                                Text("Report Reason:", 12.sp, Gray)
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 12.dp)
+                                )
+
+                                Text(
+                                    text = "Report Reason:",
+                                    fontSize = 12.sp,
+                                    color = Gray
+                                )
+
+                                Spacer(Modifier.height(4.dp))
+
+                                Text(
+                                    text = user.reportReason,
+                                    fontSize = 14.sp
+                                )
+
+                                Spacer(Modifier.height(12.dp))
+
+                                Text(
+//                                    text = "Reported on: ${user.reportedDate}",
+                                    text = "Reported on: xxxx-xx-xx}",
+                                    fontSize = 12.sp,
+                                    color = Gray
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = { showDetails = !showDetails },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(if (showDetails) "Hide Details" else "View Details")
+                            }
+
+                            Button(
+                                onClick = { /* Suspend user */ },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Red
+                                )
+                            ) {
+                                Text("Suspend")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
