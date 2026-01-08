@@ -38,8 +38,13 @@ data class PropertyModel(
     var availableFrom: String? = "",
     var amenities: List<String> = emptyList(),
 
-    val status: String = PropertyStatus.PENDING
-) {
+    val status: String = PropertyStatus.PENDING,
+    val ownerImageUrl: String = "",
+    val ownerEmail: String = "",
+
+    val createdAt: Long = System.currentTimeMillis(),
+
+    ) {
     //Computed property for LatLng (not stored in Firebase)
     @get:Exclude
     val latLng: LatLng
