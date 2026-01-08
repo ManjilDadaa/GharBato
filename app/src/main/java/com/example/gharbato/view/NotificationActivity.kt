@@ -58,6 +58,7 @@ fun NotificationScreen() {
 
     var showMenu by remember { mutableStateOf(false) }
     var showMarkAllDialog by remember { mutableStateOf(false) }
+    var savedUnreadCount by remember { mutableStateOf(0) }
 
     // Load notifications when screen opens
     LaunchedEffect(Unit) {
@@ -65,30 +66,51 @@ fun NotificationScreen() {
         userViewModel.loadUnreadCount()
     }
 
+    // Save the unread count before marking as read
+    LaunchedEffect(unreadCount) {
+        if (unreadCount > 0) {
+            savedUnreadCount = unreadCount
+        }
+    }
+
     // Mark All as Read Confirmation Dialog
     if (showMarkAllDialog) {
         AlertDialog(
             onDismissRequest = { showMarkAllDialog = false },
-            title = { Text("Mark All as Read") },
+            title = {
+                Text(
+                    "Mark All as Read",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = {
-                Text("Are you sure you want to mark all $unreadCount notification${if (unreadCount > 1) "s" else ""} as read?")
+                Text(
+                    "Are you sure you want to mark all $savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} as read?",
+                    fontSize = 14.sp
+                )
             },
             confirmButton = {
-                TextButton(onClick = {
-                    userViewModel.markAllAsRead()
-                    showMarkAllDialog = false
-                    Toast.makeText(
-                        context,
-                        "$unreadCount notification${if (unreadCount > 1) "s" else ""} marked as read",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }) {
-                    Text("Mark All", color = Blue)
+                Button(
+                    onClick = {
+                        val countToMark = savedUnreadCount
+                        userViewModel.markAllAsRead()
+                        showMarkAllDialog = false
+
+                        // Show toast with the count that was marked
+                        Toast.makeText(
+                            context,
+                            "$countToMark notification${if (countToMark != 1) "s" else ""} marked as read",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                ) {
+                    Text("Mark All")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showMarkAllDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
             }
         )
@@ -141,7 +163,11 @@ fun NotificationScreen() {
                                     showMarkAllDialog = true
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.DoneAll, contentDescription = null)
+                                    Icon(
+                                        Icons.Default.DoneAll,
+                                        contentDescription = null,
+                                        tint = Blue
+                                    )
                                 }
                             )
                         }
@@ -178,6 +204,7 @@ fun NotificationScreen() {
                         fontWeight = FontWeight.Medium,
                         color = Color.Gray
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "We'll notify you when something new arrives",
                         fontSize = 14.sp,
@@ -227,19 +254,27 @@ fun NotificationItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Notification") },
+            title = {
+                Text(
+                    "Delete Notification",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = { Text("Are you sure you want to delete this notification?") },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete()
-                    showDeleteDialog = false
-                }) {
-                    Text("Delete", color = Color.Red)
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
+                ) {
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
             }
         )
@@ -331,7 +366,7 @@ fun NotificationItem(
             Spacer(modifier = Modifier.width(4.dp))
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
                     .background(Blue)
             )
@@ -339,7 +374,7 @@ fun NotificationItem(
     }
 }
 
-// Helper function to get notification icon based on type
+
 fun getNotificationIcon(type: String): Int {
     return when (type) {
         "property" -> R.drawable.baseline_home_24
@@ -350,7 +385,7 @@ fun getNotificationIcon(type: String): Int {
     }
 }
 
-// Helper function to get notification color based on type
+
 fun getNotificationColor(type: String): Color {
     return when (type) {
         "property" -> Color(0xFF4CAF50)
@@ -361,7 +396,7 @@ fun getNotificationColor(type: String): Color {
     }
 }
 
-// Helper function to format timestamp
+
 fun getTimeAgo(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
