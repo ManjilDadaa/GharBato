@@ -99,8 +99,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
-import com.example.gharbato.data.model.ReportStatus
-import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.model.ReportStatus
+import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.viewmodel.ReportViewModel
@@ -166,7 +166,7 @@ fun PropertyDetailScreen(
             onDismiss = { showReportDialog = false },
             onSubmit = { reason, details ->
                 val report = ReportedProperty(
-                    reportId = "", // Will be generated in repository
+                    reportId = "",
                     propertyId = property.id,
                     reportedBy = getCurrentUserId(),
                     reason = reason,

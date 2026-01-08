@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.LightBlue
 import com.example.gharbato.viewmodel.ReportViewModel

@@ -17,7 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.data.model.ReportReasons
+import com.example.gharbato.model.ReportReasons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

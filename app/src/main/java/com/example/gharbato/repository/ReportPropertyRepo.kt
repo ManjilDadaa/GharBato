@@ -1,6 +1,6 @@
 package com.example.gharbato.repository
 
-import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.model.ReportedProperty
 import kotlinx.coroutines.flow.Flow
 
 interface ReportPropertyRepo {
