@@ -91,10 +91,19 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.style.TextAlign
+import com.example.gharbato.data.model.ReportStatus
+import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
+import com.example.gharbato.viewmodel.ReportViewModel
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -148,6 +157,44 @@ fun PropertyDetailScreen(
     onFavoriteToggle: (PropertyModel) -> Unit
 ) {
     val context = LocalContext.current
+    var showReportDialog by remember { mutableStateOf(false) }
+    val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
+    val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
+
+    if (showReportDialog) {
+        ReportListingDialog(
+            onDismiss = { showReportDialog = false },
+            onSubmit = { reason, details ->
+                val report = ReportedProperty(
+                    reportId = "", // Will be generated in repository
+                    propertyId = property.id,
+                    reportedBy = getCurrentUserId(),
+                    reason = reason,
+                    details = details,
+                    reportedAt = System.currentTimeMillis(),
+                    status = ReportStatus.PENDING
+                )
+                reportViewModel.submitReport(report)
+                showReportDialog = false
+            }
+        )
+    }
+    LaunchedEffect(reportUiState.successMessage) {
+        reportUiState.successMessage?.let { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            reportViewModel.clearMessages()
+        }
+    }
+
+    LaunchedEffect(reportUiState.error) {
+        reportUiState.error?.let { error ->
+            Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+            reportViewModel.clearMessages()
+        }
+    }
+
+
+
 
     Scaffold { paddingValues ->
         Box(
@@ -230,7 +277,10 @@ fun PropertyDetailScreen(
 
                 // Report Section
                 item {
-                    ReportSection()
+                    ReportSection(
+                        onReportClick = { showReportDialog = true }
+                    )
+
                 }
 
                 // Bottom spacing
@@ -945,12 +995,14 @@ fun AmenityItem(name: String, icon: ImageVector) {
 }
 
 @Composable
-fun ReportSection() {
+fun ReportSection(
+    onReportClick: () -> Unit
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable { /* Report */ },
+            .clickable(onClick = onReportClick),
         color = Color(0xFFFCE4EC),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -971,9 +1023,17 @@ fun ReportSection() {
                 color = Color(0xFFD32F2F),
                 fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Help us maintain quality listings",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
+
+
 
 //fun AgentHelperSection() {
 //    Card(
