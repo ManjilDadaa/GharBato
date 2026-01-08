@@ -2,8 +2,8 @@ package com.example.gharbato.repository
 
 import android.util.Log
 import com.example.gharbato.data.model.PropertyStatus
-import com.example.gharbato.data.model.ReportStatus
-import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.model.ReportStatus
+import com.example.gharbato.model.ReportedProperty
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase

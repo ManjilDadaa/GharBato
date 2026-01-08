@@ -3,7 +3,7 @@ package com.example.gharbato.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.ReportedProperty
+import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.ReportPropertyRepo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

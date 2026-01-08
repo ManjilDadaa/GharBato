@@ -1,4 +1,4 @@
-package com.example.gharbato.data.model
+package com.example.gharbato.model
 
 import com.google.firebase.database.IgnoreExtraProperties
 
@@ -10,13 +10,14 @@ data class ReportedProperty(
     val propertyImage: String = "",
     val ownerId: String = "",
     val ownerName: String = "",
-    val reportedBy: String = "",
     val reportedByName: String = "",
+    val reportedBy = getCurrentUserId(),
     val reportReason: String = "",
     val reportDetails: String = "",
     val reportedAt: Long = System.currentTimeMillis(),
     val status: String = ReportStatus.PENDING
 )
+
 
 object ReportStatus {
     const val PENDING = "PENDING"
