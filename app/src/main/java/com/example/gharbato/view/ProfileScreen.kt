@@ -93,36 +93,41 @@ fun ProfileScreen() {
             actions = {
                 // Notification icon with badge
                 Box(
-                    modifier = Modifier.padding(end = 12.dp)
+                    modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    IconButton(onClick = {
-                        // Navigate to NotificationActivity
-                        context.startActivity(Intent(context, NotificationActivity::class.java))
-                    }) {
+                    IconButton(
+                        onClick = {
+                            context.startActivity(Intent(context, NotificationActivity::class.java))
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.outline_notifications_24),
                             contentDescription = "Notifications",
                             tint = Blue,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
-                    // Red Badge with unread count
+
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
-                                .size(20.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
                                 .align(Alignment.TopEnd)
-                                .offset(x = 4.dp, y = 8.dp),
+                                .offset(x = (-2).dp, y = 6.dp)
+                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFF3B30))
+                                .border(2.dp, Color.White, CircleShape)
+                                .padding(horizontal = 5.dp, vertical = 2.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                                 color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
                     }
