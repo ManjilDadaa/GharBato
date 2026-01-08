@@ -52,14 +52,14 @@ fun ProfileScreen() {
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load user profile when screen opens
+    // Load user profile and unread count when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
         userViewModel.loadUnreadCount()
         isLoading = false
     }
 
-    // Reload profile when returning from EditProfileActivity
+    // Reload profile and unread count when returning from other activities
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -78,7 +78,7 @@ fun ProfileScreen() {
             .fillMaxSize()
             .background(Color(0xFFF8F9FB))
     ) {
-        // Custom Top Bar (without Scaffold to avoid conflict with Dashboard)
+        // Custom Top Bar with Notification Badge
         TopAppBar(
             title = {
                 Text(
@@ -93,7 +93,7 @@ fun ProfileScreen() {
             actions = {
                 // Notification icon with badge
                 Box(
-                    modifier = Modifier.padding(end = 8.dp)
+                    modifier = Modifier.padding(end = 12.dp)
                 ) {
                     IconButton(onClick = {
                         // Navigate to NotificationActivity
@@ -102,19 +102,20 @@ fun ProfileScreen() {
                         Icon(
                             painter = painterResource(R.drawable.outline_notifications_24),
                             contentDescription = "Notifications",
-                            tint = Blue
+                            tint = Blue,
+                            modifier = Modifier.size(26.dp)
                         )
                     }
 
-                    // Badge with count
+                    // Red Badge with unread count
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
-                                .size(18.dp)
+                                .size(20.dp)
                                 .clip(CircleShape)
                                 .background(Color.Red)
                                 .align(Alignment.TopEnd)
-                                .offset(x = (-4).dp, y = 8.dp),
+                                .offset(x = 4.dp, y = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
