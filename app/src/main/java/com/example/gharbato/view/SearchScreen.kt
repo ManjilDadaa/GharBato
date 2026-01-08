@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
@@ -52,7 +53,6 @@ import com.google.maps.android.compose.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen() {
-    // Initialize context and viewModel inside composable body
     val context = LocalContext.current
     val viewModel: PropertyViewModel = viewModel(
         factory = PropertyViewModelFactory(context)
@@ -711,12 +711,27 @@ fun PropertyCard(
                         modifier = Modifier
                             .size(48.dp)
                             .clickable {
-                                val intent = MessageDetailsActivity.newIntent(
-                                    activity = context as Activity,
-                                    otherUserId = property.ownerId,
-                                    otherUserName = property.ownerName.ifBlank { property.developer }
-                                )
-                                context.startActivity(intent)
+                                if (property.ownerId.isNotEmpty()) {
+                                    Log.d("PropertyCard", "Opening chat with owner: ${property.ownerId}")
+                                    Log.d("PropertyCard", "Owner name: ${property.ownerName}")
+
+                                    val intent = MessageDetailsActivity.newIntent(
+                                        activity = context as Activity,
+                                        otherUserId = property.ownerId,
+                                        otherUserName = property.ownerName.ifBlank { property.developer },
+                                        otherUserImage = property.ownerImageUrl ?: ""
+                                    )
+                                    context.startActivity(intent)
+                                } else {
+                                    Log.e("PropertyCard", "Owner ID is empty for property: ${property.id}")
+                                    // Optionally show a toast
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Owner information not available",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+
                             }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
