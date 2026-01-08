@@ -37,7 +37,6 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.isNotEmpty
 
 class NotificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,11 +57,41 @@ fun NotificationScreen() {
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showMenu by remember { mutableStateOf(false) }
+    var showMarkAllDialog by remember { mutableStateOf(false) }
 
     // Load notifications when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
+    }
+
+    // Mark All as Read Confirmation Dialog
+    if (showMarkAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showMarkAllDialog = false },
+            title = { Text("Mark All as Read") },
+            text = {
+                Text("Are you sure you want to mark all $unreadCount notification${if (unreadCount > 1) "s" else ""} as read?")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    userViewModel.markAllAsRead()
+                    showMarkAllDialog = false
+                    Toast.makeText(
+                        context,
+                        "$unreadCount notification${if (unreadCount > 1) "s" else ""} marked as read",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }) {
+                    Text("Mark All", color = Blue)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkAllDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -92,7 +121,7 @@ fun NotificationScreen() {
                     }
                 },
                 actions = {
-                    if (notifications.isNotEmpty()) {
+                    if (notifications.isNotEmpty() && unreadCount > 0) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_more_24),
@@ -108,9 +137,8 @@ fun NotificationScreen() {
                             DropdownMenuItem(
                                 text = { Text("Mark all as read") },
                                 onClick = {
-                                    userViewModel.markAllAsRead()
                                     showMenu = false
-                                    Toast.makeText(context, "All marked as read", Toast.LENGTH_SHORT).show()
+                                    showMarkAllDialog = true
                                 },
                                 leadingIcon = {
                                     Icon(Icons.Default.DoneAll, contentDescription = null)
@@ -300,6 +328,7 @@ fun NotificationItem(
 
         // Unread indicator
         if (!notification.isRead) {
+            Spacer(modifier = Modifier.width(4.dp))
             Box(
                 modifier = Modifier
                     .size(8.dp)
