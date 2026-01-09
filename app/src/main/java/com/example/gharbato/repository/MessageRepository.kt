@@ -3,7 +3,6 @@ package com.example.gharbato.repository
 import android.app.Activity
 import android.content.Context
 import com.example.gharbato.model.MessageUser
-import com.example.gharbato.model.CallRequest
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.view.ZegoCallActivity
 import com.example.gharbato.view.MessageDetailsActivity
@@ -63,7 +62,7 @@ class MessageRepositoryImpl : MessageRepository {
     
     override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
         // Delegate to existing UserRepoImpl
-        val userRepo = com.example.gharbato.repository.UserRepoImpl()
+        val userRepo = UserRepoImpl()
         userRepo.getAllUsers(callback)
     }
     
@@ -99,7 +98,7 @@ class MessageRepositoryImpl : MessageRepository {
                 }
                 
                 // Get user details for each chat partner
-                val userRepo = com.example.gharbato.repository.UserRepoImpl()
+                val userRepo = UserRepoImpl()
                 val allUsers = mutableListOf<UserModel>()
                 var completedQueries = 0
                 
@@ -109,10 +108,10 @@ class MessageRepositoryImpl : MessageRepository {
                 }
                 
                 chatPartnerIds.forEach { partnerId ->
-                    userRepo.getUserById(partnerId) { success, user, _ ->
+                    userRepo.getUser(partnerId) { user ->
                         completedQueries++
-                        if (success && user != null) {
-                            allUsers.add(user)
+                        if (user != null) {
+                            allUsers.add(user.copy(userId = partnerId))
                         }
                         
                         // When all user queries are complete, return the result
@@ -131,7 +130,7 @@ class MessageRepositoryImpl : MessageRepository {
     
     override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
         // Delegate to existing UserRepoImpl
-        val userRepo = com.example.gharbato.repository.UserRepoImpl()
+        val userRepo = UserRepoImpl()
         userRepo.searchUsers(query, callback)
     }
     
