@@ -64,20 +64,19 @@ fun NotificationScreen() {
     var savedUnreadCount by remember { mutableStateOf(0) }
     var isProcessing by remember { mutableStateOf(false) }
 
-    // Load notifications when screen opens
+
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
     }
 
-    // Save the unread count when it changes (only if it's greater than 0)
+
     LaunchedEffect(unreadCount) {
         if (unreadCount > 0) {
             savedUnreadCount = unreadCount
         }
     }
 
-    // Mark All as Read Confirmation Dialog
     if (showMarkAllDialog) {
         AlertDialog(
             onDismissRequest = {
@@ -116,7 +115,7 @@ fun NotificationScreen() {
                                     userViewModel.loadNotifications()
                                     userViewModel.loadUnreadCount()
 
-                                    // Wait another moment for UI to update
+
                                     kotlinx.coroutines.delay(200)
 
                                     showMarkAllDialog = false
@@ -341,7 +340,7 @@ fun NotificationItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon/Image based on notification type
+
         Box(
             modifier = Modifier
                 .size(48.dp)

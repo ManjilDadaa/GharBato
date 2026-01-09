@@ -420,7 +420,7 @@ class UserRepoImpl : UserRepo{
             .child(userId)
             .child(notificationId)
 
-        notificationRef.updateChildren(mapOf("isRead" to true))
+        notificationRef.child("isRead").setValue(true)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     callback(true, "Notification marked as read")
@@ -436,32 +436,38 @@ class UserRepoImpl : UserRepo{
     ) {
         val notificationsRef = database.getReference("Notifications").child(userId)
 
-        notificationsRef.addListenerForSingleValueEvent(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val updates = mutableMapOf<String, Any>()
+        notificationsRef.get().addOnSuccessListener { snapshot ->
+            if (!snapshot.exists()) {
+                callback(true, "No notifications to update")
+                return@addOnSuccessListener
+            }
 
-                for (notificationSnapshot in snapshot.children) {
+            val updates = mutableMapOf<String, Any>()
+            var updateCount = 0
+
+            for (notificationSnapshot in snapshot.children) {
+                val notification = notificationSnapshot.getValue(com.example.gharbato.model.NotificationModel::class.java)
+                if (notification != null && !notification.isRead) {
                     updates["${notificationSnapshot.key}/isRead"] = true
+                    updateCount++
                 }
+            }
 
-                if (updates.isNotEmpty()) {
-                    notificationsRef.updateChildren(updates)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                callback(true, "All notifications marked as read")
-                            } else {
-                                callback(false, "Failed to update notifications")
-                            }
+            if (updates.isEmpty()) {
+                callback(true, "All notifications already read")
+            } else {
+                notificationsRef.updateChildren(updates)
+                    .addOnCompleteListener { task ->
+                        if (task.isSuccessful) {
+                            callback(true, "$updateCount notifications marked as read")
+                        } else {
+                            callback(false, "Failed to update notifications: ${task.exception?.message}")
                         }
-                } else {
-                    callback(true, "No notifications to update")
-                }
+                    }
             }
-
-            override fun onCancelled(error: DatabaseError) {
-                callback(false, "Error: ${error.message}")
-            }
-        })
+        }.addOnFailureListener { exception ->
+            callback(false, "Error: ${exception.message}")
+        }
     }
 
     override fun deleteNotification(
