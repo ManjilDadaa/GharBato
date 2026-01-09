@@ -6,46 +6,35 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.KeyboardOptions
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.LoginActivity
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,139 +53,227 @@ fun ForgotBody() {
     var emailError by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val context = LocalContext.current
-    Scaffold (topBar ={
-        TopAppBar(
-            title = {},
-            navigationIcon = {
-                IconButton(onClick = {
-                    val intent =Intent(context, LoginActivity::class.java)
-                    context.startActivity(intent)
-                }) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
-                        "Back"
 
-                    )
-                }
-            }
-        )
-    }
-
-    ){ innerPadding ->
+    Scaffold(
+        containerColor = Color.White,
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = {
+                        val intent = Intent(context, LoginActivity::class.java)
+                        context.startActivity(intent)
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
+                            contentDescription = "Back",
+                            tint = Color.DarkGray
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
+            )
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Logo
+            Image(
+                painter = painterResource(R.drawable.gharbato_logo),
+                contentDescription = "Ghar Bato Logo",
+                modifier = Modifier
+                    .size(200.dp)
+                    .offset(y = 32.dp)
+            )
+
+            Spacer(modifier = Modifier.height(-16.dp))
+
+            // Title
             Text(
-                "Forgot Password?", style = TextStyle(
-                    fontWeight = FontWeight.W500,
-                    fontSize = 24.sp
+                "Forgot Password?",
+                style = TextStyle(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = Color.DarkGray
                 )
             )
-            Spacer(modifier = Modifier.height(15.dp))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Description
             Text(
                 "Enter your email address and we'll send you a link to reset your password",
-                color = Color.Gray,
+                color = Color(0xFF999999),
                 style = TextStyle(
-                    fontSize = 15.sp
-                )
+                    fontSize = 15.sp,
+                    textAlign = TextAlign.Center
+                ),
+                modifier = Modifier.padding(horizontal = 16.dp)
             )
+
             Spacer(modifier = Modifier.height(40.dp))
-            Text(
-                "Email",
-                color = Color.Gray,
-                style = TextStyle(
-                    fontSize = 15.sp
-                )
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+
+            // Email Input
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                  unfocusedIndicatorColor = if (emailError) Color.Red else Color.Gray,
-                    focusedIndicatorColor = if (emailError) Color.Red else Blue,
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFEFF6FF),
+                    focusedIndicatorColor = Blue,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    errorContainerColor = Color(0xFFFEF2F2),
+                    errorIndicatorColor = Color.Red,
+                    focusedLeadingIconColor = Blue,
+                    unfocusedLeadingIconColor = Color(0xFFAAAAAA)
                 ),
                 isError = emailError,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(14.dp),
                 value = email,
-                onValueChange = { email = it
-                    emailError = !it.endsWith("@gmail.com") },
-                placeholder = { Text("Email Address") }
-            )
-            if (emailError) {
-            Text(
-                text = "Invalid email, try again.",
-                color = Color.Red,
-                style = TextStyle(fontSize = 12.sp),
-                modifier = Modifier.padding(top = 4.dp)
-            )
-        }
-            Row (
-                modifier = Modifier.fillMaxWidth().padding(top = 30.dp, bottom = 30.dp)
-            ) {
-                Button(
-                    onClick = {
-                        if (email.isEmpty() || !email.endsWith("@gmail.com")) {
-                            emailError = true
-                        } else {
-                            emailError = false
-                            val userRepo = UserRepoImpl()
-                            userRepo.forgotPassword(email) { success, message ->
-                                (context as? ComponentActivity)?.runOnUiThread {
-                                    Toast.makeText(context, "Password reset link sent successfully", Toast.LENGTH_LONG).show()
-                                    if (success) {
-                                        // Navigate back to login screen
-                                        context.startActivity(Intent(context, LoginActivity::class.java))
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue
+                onValueChange = {
+                    email = it
+                    if (emailError && it.endsWith("@gmail.com")) {
+                        emailError = false
+                    }
+                },
+                placeholder = {
+                    Text(
+                        "Email address",
+                        color = Color(0xFFAAAAAA)
                     )
+                },
+                leadingIcon = {
+                    Icon(
+                        painter = painterResource(com.example.gharbato.R.drawable.baseline_email_24),
+                        contentDescription = null
+                    )
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Email
+                ),
+                singleLine = true
+            )
 
-                ) {
-                    Text("Send Reset Link")
-                }
-            }
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 25.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                val annotatedString = buildAnnotatedString {
-                    append("Back to ")
-                    pushStringAnnotation(tag = "SignIn", annotation = "SignIn")
-                    withStyle(
-                        style = SpanStyle(
-                            color = Blue,
-                        )
-                    ) {
-                        append("Sign In")
-                    }
-                    pop()
-                }
-
-                ClickableText(
-                    text = annotatedString,
-                    style = TextStyle(fontSize = 15.sp, color = Color.Gray),
-                    onClick = { offset ->
-                        annotatedString.getStringAnnotations(tag = "SignIn", start = offset, end = offset)
-                            .firstOrNull()?.let {
-                                val intent = Intent(context, LoginActivity::class.java)
-                                context.startActivity(intent)
-                            }
-                    }
+            if (emailError) {
+                Text(
+                    text = "Invalid email, try again.",
+                    color = Color.Red,
+                    style = TextStyle(fontSize = 13.sp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp, start = 4.dp)
                 )
             }
 
+            Spacer(modifier = Modifier.height(32.dp))
 
+            // Send Reset Link Button
+            Button(
+                onClick = {
+                    if (email.isEmpty() || !email.endsWith("@gmail.com")) {
+                        emailError = true
+                    } else {
+                        emailError = false
+                        val userRepo = UserRepoImpl()
+                        userRepo.forgotPassword(email) { success, message ->
+                            (context as? ComponentActivity)?.runOnUiThread {
+                                Toast.makeText(
+                                    context,
+                                    "Password reset link sent successfully",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                if (success) {
+                                    context.startActivity(
+                                        Intent(
+                                            context,
+                                            LoginActivity::class.java
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .shadow(
+                        elevation = 6.dp,
+                        shape = RoundedCornerShape(14.dp),
+                        spotColor = Blue.copy(alpha = 0.3f)
+                    ),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Blue
+                )
+            ) {
+                Text(
+                    "Send Reset Link",
+                    style = TextStyle(
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                )
+            }
 
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Back to Sign In Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF8F9FA)
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 1.dp
+                )
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 18.dp)
+                ) {
+                    Text(
+                        "Remember your password?",
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            color = Color(0xFF666666)
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        "Back to Sign In",
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            color = Blue,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .clickable(
+                                indication = null,
+                                interactionSource = remember { MutableInteractionSource() }
+                            ) {
+                                val intent = Intent(context, LoginActivity::class.java)
+                                context.startActivity(intent)
+                            }
+                            .padding(8.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

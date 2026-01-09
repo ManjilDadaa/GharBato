@@ -11,4 +11,8 @@
     <string name="sdk_location">/Users/bishowdip/Library/Android/sdk</string>
     <string name="title_activity_full_search_map">FullSearchMapActivity</string>
     <string name="title_activity_location_picker">LocationPickerActivity</string>
+    <string name="title_activity_admin">AdminActivity</string>
+    <string name="title_activity_pending_listing">PendingListingActivity</string>
+    <string name="title_activity_reported_properties">ReportedPropertiesActivity</string>
+    <string name="title_activity_reported_users">ReportedUsersActivity</string>
 </resources>

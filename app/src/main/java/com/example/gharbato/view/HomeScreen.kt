@@ -50,10 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
-import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 
@@ -61,15 +59,12 @@ import com.example.gharbato.viewmodel.PropertyViewModelFactory
 @Composable
 fun HomeScreen(
     viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
+        factory = PropertyViewModelFactory(LocalContext.current)
     )
 ) {
     var search by remember { mutableStateOf("") }
 
-    // ✅ Get UI state from ViewModel
+    //  Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // variables required for multi selection FilterChips
@@ -114,7 +109,7 @@ fun HomeScreen(
             )
         },
     ) { padding ->
-        // ✅ Show loading state
+        //  Show loading state
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
@@ -140,7 +135,7 @@ fun HomeScreen(
                         value = search,
                         onValueChange = { data ->
                             search = data
-                            // ✅ Optional: trigger search
+                            // Optional: trigger search
                             // viewModel.updateSearchQuery(data)
                         },
                         keyboardOptions = KeyboardOptions(
@@ -206,7 +201,7 @@ fun HomeScreen(
                     }
                 }
 
-                // ✅ Use properties from ViewModel's state
+                //  Use properties from ViewModel's state
                 items(uiState.properties) { property ->
                     PropertyCard(
                         property = property,
@@ -221,7 +216,7 @@ fun HomeScreen(
                     )
                 }
 
-                // ✅ Show empty state if no properties
+                // Show empty state if no properties
                 if (uiState.properties.isEmpty() && !uiState.isLoading) {
                     item {
                         Box(

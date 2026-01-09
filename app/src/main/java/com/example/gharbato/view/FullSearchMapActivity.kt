@@ -55,8 +55,9 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.repository.RepositoryProvider
 import com.example.gharbato.view.CustomMarkerHelper
+import com.example.gharbato.view.PropertyDetailActivity
+import com.example.gharbato.viewmodel.MapViewModelFactory
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -82,15 +83,13 @@ class FullSearchMapActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullSearchMapScreen(
-    onBack: () -> Unit,
-    viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
-    )
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(context)
+    )
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val startLocation = uiState.properties.firstOrNull()?.latLng
@@ -129,7 +128,6 @@ fun FullSearchMapScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Google Map with all properties
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
@@ -153,7 +151,6 @@ fun FullSearchMapScreen(
                 }
             }
 
-            // Property overlay when marker clicked
             uiState.selectedProperty?.let { property ->
                 Card(
                     modifier = Modifier
@@ -247,7 +244,6 @@ fun FullSearchMapScreen(
                 }
             }
 
-            // Zoom Controls
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)

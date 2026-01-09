@@ -36,7 +36,9 @@ data class PropertyModel(
     var securityDeposit: String? = "",
     var minimumLease: String? = "",
     var availableFrom: String? = "",
-    var amenities: List<String> = emptyList()
+    var amenities: List<String> = emptyList(),
+
+    val status: String = PropertyStatus.PENDING
 ) {
     //Computed property for LatLng (not stored in Firebase)
     @get:Exclude
@@ -49,4 +51,10 @@ data class PropertyModel(
         get() = images["cover"]?.firstOrNull()
             ?: images.values.flatten().firstOrNull()
             ?: ""
+}
+
+object PropertyStatus {
+    const val PENDING = "PENDING"
+    const val APPROVED = "APPROVED"
+    const val REJECTED = "REJECTED"
 }

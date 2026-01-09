@@ -12,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -21,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,9 +40,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.repository.RepositoryProvider
+import com.example.gharbato.model.SortOption
 import com.example.gharbato.ui.view.FullSearchMapActivity
-import com.example.gharbato.ui.view.PropertyDetailActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -52,16 +51,17 @@ import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(
-    viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(
-            RepositoryProvider.getPropertyRepository(),
-            RepositoryProvider.getSavedPropertiesRepository()
-        )
-    )
-) {
+fun SearchScreen() {
+    // Initialize context and viewModel inside composable body
     val context = LocalContext.current
+    val viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(context)
+    )
+
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var showSortSheet by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
@@ -72,7 +72,6 @@ fun SearchScreen(
         label = "mapHeight"
     )
 
-    // Location picker launcher
     val locationPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -83,7 +82,6 @@ fun SearchScreen(
             val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
             val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
 
-            // Update ViewModel with location search
             viewModel.searchByLocation(latitude, longitude, address, radius)
         }
     }
@@ -94,6 +92,9 @@ fun SearchScreen(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = { query ->
                     viewModel.updateSearchQuery(query)
+                },
+                onFilterClick = {
+                    showFilterSheet = true
                 },
                 onLocationClick = {
                     val intent = Intent(context, LocationPickerActivity::class.java)
@@ -113,7 +114,6 @@ fun SearchScreen(
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Map Section
                 if (mapHeight > 0.dp) {
                     Box(
                         modifier = Modifier
@@ -151,27 +151,16 @@ fun SearchScreen(
                     }
                 }
 
-                // Filter Chips
-                FilterChipsSection(
-                    selectedMarketType = uiState.selectedMarketType,
-                    onMarketTypeChange = { viewModel.updateMarketType(it) },
-                    selectedPropertyType = uiState.selectedPropertyType,
-                    onPropertyTypeChange = { viewModel.updatePropertyType(it) },
-                    minPrice = uiState.minPrice,
-                    onMinPriceChange = { viewModel.updateMinPrice(it) }
+                SortBar(
+                    propertiesCount = uiState.properties.size,
+                    currentSort = uiState.currentSort,
+                    onSortClick = {
+                        showSortSheet = true
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Properties Count
-                Text(
-                    text = "${uiState.properties.size} Listings",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-
-                // Loading State
                 if (uiState.isLoading) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
@@ -189,8 +178,7 @@ fun SearchScreen(
                             )
                         }
                     }
-                } else if (uiState.error?.isNotEmpty() == true ) {
-                    // Error State
+                } else if (uiState.error?.isNotEmpty() == true) {
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -221,7 +209,6 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                    // Property List
                     PropertyList(
                         properties = uiState.properties,
                         listState = listState,
@@ -238,12 +225,37 @@ fun SearchScreen(
             }
         }
     }
-}
 
+    if (showFilterSheet) {
+        FilterBottomSheet(
+            currentFilters = uiState.currentFilters,
+            onFiltersApply = { filters ->
+                viewModel.applyFilters(filters)
+                showFilterSheet = false
+            },
+            onDismiss = {
+                showFilterSheet = false
+            }
+        )
+    }
+
+    if (showSortSheet) {
+        SortBottomSheet(
+            currentSort = uiState.currentSort,
+            onSortSelected = { sortOption ->
+                viewModel.updateSort(sortOption)
+            },
+            onDismiss = {
+                showSortSheet = false
+            }
+        )
+    }
+}
 @Composable
 fun SearchTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit,
     onLocationClick: () -> Unit,
     onSearchClick: () -> Unit
 ) {
@@ -277,19 +289,39 @@ fun SearchTopBar(
                     )
                 },
                 trailingIcon = {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(Color(0xFF2196F3), CircleShape)
-                            .clickable { onLocationClick() },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Select Location",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onFilterClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filters",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(Color(0xFF2196F3), CircleShape)
+                                .clickable { onLocationClick() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = "Select Location",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                     }
                 },
                 shape = RoundedCornerShape(28.dp),
@@ -310,6 +342,66 @@ fun SearchTopBar(
                     }
                 )
             )
+        }
+    }
+}
+
+@Composable
+fun SortBar(
+    propertiesCount: Int,
+    currentSort: SortOption,
+    onSortClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$propertiesCount Listings",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                color = Color.Black
+            )
+
+            Surface(
+                onClick = onSortClick,
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF5F5F5),
+                modifier = Modifier.height(40.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort",
+                        tint = Color(0xFF2196F3),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = currentSort.getShortName(),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ArrowDropDown,
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
     }
 }
@@ -338,7 +430,6 @@ fun MapSection(
                 mapToolbarEnabled = false
             ),
             onMapClick = {
-                //Clicking map background opens FullMapActivity
                 onMapClick()
             }
         ) {
@@ -349,15 +440,13 @@ fun MapSection(
                     snippet = property.location,
                     icon = CustomMarkerHelper.createPriceMarker(context, property.price),
                     onClick = {
-                        // Clicking marker shows overlay
                         onMarkerClick(property)
-                        true // Consume the click event
+                        true
                     }
                 )
             }
         }
 
-        // Zoom Controls
         Column(
             modifier = Modifier
                 .align(Alignment.CenterStart)
@@ -399,7 +488,6 @@ fun MapSection(
             }
         }
 
-        // Fullscreen button
         FloatingActionButton(
             onClick = onMapClick,
             modifier = Modifier
@@ -414,115 +502,6 @@ fun MapSection(
                 contentDescription = "Full Screen",
                 tint = Color.Black
             )
-        }
-    }
-}
-
-@Composable
-fun FilterChipsSection(
-    selectedMarketType: String,
-    onMarketTypeChange: (String) -> Unit,
-    selectedPropertyType: String,
-    onPropertyTypeChange: (String) -> Unit,
-    minPrice: Int,
-    onMinPriceChange: (Int) -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 1.dp
-    ) {
-        LazyRow(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                FilterChip(
-                    selected = selectedMarketType == "Buy",
-                    onClick = {
-                        onMarketTypeChange(if (selectedMarketType == "Buy") "Rent" else "Buy")
-                    },
-                    label = { Text(selectedMarketType) },
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFFE3F2FD),
-                        selectedLabelColor = Color(0xFF2196F3)
-                    )
-                )
-            }
-
-            item {
-                FilterChip(
-                    selected = true,
-                    onClick = { /* Handle property type */ },
-                    label = { Text(selectedPropertyType) },
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFFE3F2FD),
-                        selectedLabelColor = Color(0xFF2196F3)
-                    )
-                )
-            }
-
-            item {
-                FilterChip(
-                    selected = true,
-                    onClick = { /* Handle bedrooms */ },
-                    label = {
-                        Text("9+", color = Color.White, fontWeight = FontWeight.Bold)
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Color(0xFF4CAF50),
-                        selectedLabelColor = Color.White
-                    )
-                )
-            }
-
-            item {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFFF5F5F5),
-                    modifier = Modifier.clickable { /* Handle price */ }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "from $minPrice thousand",
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
-                    }
-                }
-            }
-
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { /* Handle sort */ },
-                    label = { Text("Sort by") },
-                    trailingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                )
-            }
         }
     }
 }
@@ -607,7 +586,7 @@ fun PropertyCard(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
-                        onClick = { /* Handle more options */ },
+                        onClick = { },
                         modifier = Modifier
                             .size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
@@ -738,7 +717,6 @@ fun PropertyCard(
                                     otherUserName = property.ownerName.ifBlank { property.developer }
                                 )
                                 context.startActivity(intent)
-
                             }
                     ) {
                         Box(contentAlignment = Alignment.Center) {

@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.data.model.PropertyStatus
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
@@ -25,7 +26,7 @@ class ListingViewModel(
     private val _uploadSuccess = MutableStateFlow<Boolean?>(null)
     val uploadSuccess: StateFlow<Boolean?> = _uploadSuccess
 
-    // ✅ STEP 1 VALIDATION - Purpose & Property Type
+    // STEP 1 VALIDATION - Purpose & Property Type
     fun validateStep1(state: PropertyListingState): ListingValidationResult {
         return when {
             state.selectedPurpose.isBlank() -> {
@@ -38,7 +39,7 @@ class ListingViewModel(
         }
     }
 
-    // ✅ STEP 2 VALIDATION - Property Details
+    // STEP 2 VALIDATION - Property Details
     fun validateStep2(state: PropertyListingState): ListingValidationResult {
         return when {
             state.title.isBlank() -> {
@@ -99,7 +100,7 @@ class ListingViewModel(
         }
     }
 
-    // ✅ STEP 3 VALIDATION - Photos
+    // STEP 3 VALIDATION - Photos
     fun validateStep3(state: PropertyListingState): ListingValidationResult {
         val coverPhotos = state.imageCategories.find { it.id == "cover" }?.images ?: emptyList()
         val bedroomPhotos = state.imageCategories.find { it.id == "bedrooms" }?.images ?: emptyList()
@@ -119,7 +120,7 @@ class ListingViewModel(
         }
     }
 
-    // ✅ STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
+    // STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
     fun validateStep4(state: PropertyListingState): ListingValidationResult {
         // Skip validation if selling
         if (state.selectedPurpose == "Sell") {
@@ -149,7 +150,7 @@ class ListingViewModel(
         }
     }
 
-    // ✅ STEP 5 VALIDATION - Amenities
+    // STEP 5 VALIDATION - Amenities
     fun validateStep5(state: PropertyListingState): ListingValidationResult {
         return when {
             state.amenities.isEmpty() -> {
@@ -159,7 +160,7 @@ class ListingViewModel(
         }
     }
 
-    // ✅ Master validation function
+    // Master validation function
     fun validateStep(step: Int, state: PropertyListingState): ListingValidationResult {
         return when (step) {
             1 -> validateStep1(state)
@@ -226,7 +227,7 @@ class ListingViewModel(
         }
     }
 
-    private suspend fun createAndSubmitProperty(
+    private fun createAndSubmitProperty(
         state: PropertyListingState,
         uploadedUrls: List<String>,
         onSuccess: () -> Unit,
@@ -274,7 +275,7 @@ class ListingViewModel(
                 petsAllowed = state.petsAllowed,
                 description = state.description,
 
-                // ✅ Rental Terms (only applicable for Rent/Book)
+                // Rental Terms (only applicable for Rent/Book)
                 utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
                 commission = if (state.selectedPurpose != "Sell") state.commission else null,
                 advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
@@ -282,13 +283,13 @@ class ListingViewModel(
                 minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
                 availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
 
-                // ✅ Amenities
+                // Amenities
                 amenities = state.amenities,
-
+                status = PropertyStatus.PENDING,
                 isFavorite = false
             )
 
-            _uploadProgress.value = "Saving to database..."
+            _uploadProgress.value = "Saving..."
 
             repository.addProperty(property) { success, error ->
                 _isUploading.value = false

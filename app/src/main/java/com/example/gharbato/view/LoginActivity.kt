@@ -66,6 +66,9 @@ fun LoginBody() {
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
 
+    val adminEmail = "admin@gmail.com"
+    val adminPassword = "Admin@123"
+
     Scaffold(
         containerColor = Color.White
     ) { padding ->
@@ -275,49 +278,56 @@ fun LoginBody() {
                 // Login Button - With better shadow
                 Button(
                     onClick = {
-                        if (email.isEmpty() || password.isEmpty()) {
-                            isErrorEmail = email.isEmpty()
-                            isErrorPassword = password.isEmpty()
-                            Toast.makeText(
-                                context,
-                                "Please enter all fields",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        } else {
-                            isLoading = true
-                            userViewModel.login(email, password) { success, message ->
-                                if (success) {
-                                    // Check if email is verified
-                                    userViewModel.checkEmailVerified { isVerified ->
-                                        isLoading = false
-                                        if (isVerified) {
-                                            // Email verified - proceed to dashboard
-                                            Toast.makeText(
-                                                context,
-                                                "Welcome back!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                            val intent = Intent(context, DashboardActivity::class.java)
-                                            context.startActivity(intent)
-                                            activity.finish()
-                                        } else {
-                                            // Email not verified - redirect to verification screen
-                                            Toast.makeText(
-                                                context,
-                                                "Please verify your email to continue",
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                            val intent = Intent(context, EmailVerificationActivity::class.java)
-                                            intent.putExtra("USER_EMAIL", email)
-                                            context.startActivity(intent)
-                                            activity.finish()
+                        if(email == adminEmail && password == adminPassword) {
+                            val intent = Intent(context, AdminActivity::class.java)
+                            context.startActivity(intent)
+                            activity.finish()
+                        }
+                        else {
+                            if (email.isEmpty() || password.isEmpty()) {
+                                isErrorEmail = email.isEmpty()
+                                isErrorPassword = password.isEmpty()
+                                Toast.makeText(
+                                    context,
+                                    "Please enter all fields",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                isLoading = true
+                                userViewModel.login(email, password) { success, message ->
+                                    if (success) {
+                                        // Check if email is verified
+                                        userViewModel.checkEmailVerified { isVerified ->
+                                            isLoading = false
+                                            if (isVerified) {
+                                                // Email verified - proceed to dashboard
+                                                Toast.makeText(
+                                                    context,
+                                                    "Welcome back!",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                                val intent = Intent(context, DashboardActivity::class.java)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                            } else {
+                                                // Email not verified - redirect to verification screen
+                                                Toast.makeText(
+                                                    context,
+                                                    "Please verify your email to continue",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                                val intent = Intent(context, EmailVerificationActivity::class.java)
+                                                intent.putExtra("USER_EMAIL", email)
+                                                context.startActivity(intent)
+                                                activity.finish()
+                                            }
                                         }
+                                    } else {
+                                        isLoading = false
+                                        Toast.makeText(
+                                            context, message, Toast.LENGTH_LONG
+                                        ).show()
                                     }
-                                } else {
-                                    isLoading = false
-                                    Toast.makeText(
-                                        context, message, Toast.LENGTH_LONG
-                                    ).show()
                                 }
                             }
                         }

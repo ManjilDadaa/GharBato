@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -28,7 +29,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.UserViewModel
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,10 +45,11 @@ class TrustAndVerificationActivity : ComponentActivity() {
 @Composable
 fun TrustAndVerificationScreen() {
     val context = LocalContext.current
+    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
-    var trustScore by remember { mutableStateOf(30) } // initial 30%
+    var trustScore by remember { mutableStateOf(30) }
 
     var frontImageUri by remember { mutableStateOf<Uri?>(null) }
     var backImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -91,8 +95,36 @@ fun TrustAndVerificationScreen() {
                     selectedDoc = selectedDoc,
                     onDocChange = { selectedDoc = it },
                     onSubmit = {
+                        // Update UI state
                         kycStatus = "Pending"
-                        trustScore = 70 // increase to 70% after submit
+                        trustScore = 70
+
+                        // Get current user ID
+                        val userId = userViewModel.getCurrentUserId()
+
+                        if (userId != null) {
+                            // Create notification for the user
+                            userViewModel.createNotification(
+                                userId = userId,
+                                title = "KYC Verification Pending",
+                                message = "Your KYC verification is pending. You will be notified about your verification soon.",
+                                type = "system",
+                                imageUrl = "",
+                                actionData = ""
+                            )
+
+                            Toast.makeText(
+                                context,
+                                "KYC submitted! You'll be notified within 48 hours.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                context,
+                                "Error: User not logged in",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     },
                     frontImageUri = frontImageUri,
                     backImageUri = backImageUri,
@@ -220,7 +252,8 @@ fun KycUploadCard(
                 onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                enabled = selectedDoc != null && frontImageUri != null && backImageUri != null
             ) {
                 Text("Submit KYC", color = Color.White)
             }
@@ -251,7 +284,9 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit) {
             AsyncImage(
                 model = imageUri,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp)),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -285,7 +320,7 @@ fun TrustMeterCard(score: Int) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TrustItem("KYC Verified", if(score >= 70) 40 else 0)
+            TrustItem("KYC Verified", if (score >= 70) 40 else 0)
             TrustItem("No Reports", 20)
             TrustItem("Email Verified", 10)
             TrustItem("Profile Photo", 15)
