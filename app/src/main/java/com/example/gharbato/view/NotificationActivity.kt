@@ -58,19 +58,11 @@ fun NotificationScreen() {
 
     var showMenu by remember { mutableStateOf(false) }
     var showMarkAllDialog by remember { mutableStateOf(false) }
-    var savedUnreadCount by remember { mutableStateOf(0) }
 
     // Load notifications when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
-    }
-
-    // Save the unread count before marking as read
-    LaunchedEffect(unreadCount) {
-        if (unreadCount > 0) {
-            savedUnreadCount = unreadCount
-        }
     }
 
     // Mark All as Read Confirmation Dialog
@@ -85,14 +77,14 @@ fun NotificationScreen() {
             },
             text = {
                 Text(
-                    "Are you sure you want to mark all $savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} as read?",
+                    "Are you sure you want to mark all $unreadCount notification${if (unreadCount != 1) "s" else ""} as read?",
                     fontSize = 14.sp
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val countToMark = savedUnreadCount
+                        val countToMark = unreadCount
                         userViewModel.markAllAsRead()
                         showMarkAllDialog = false
 
@@ -128,6 +120,12 @@ fun NotificationScreen() {
                                 fontSize = 12.sp,
                                 color = Color.Gray
                             )
+                        } else {
+                            Text(
+                                "All caught up!",
+                                fontSize = 12.sp,
+                                color = Color(0xFF4CAF50)
+                            )
                         }
                     }
                 },
@@ -146,7 +144,7 @@ fun NotificationScreen() {
                     if (notifications.isNotEmpty() && unreadCount > 0) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
-                                painter = painterResource(R.drawable.baseline_more_24),
+                                painter = painterResource(R.drawable.baseline_more_horiz_24),
                                 contentDescription = "More Options",
                                 tint = Blue
                             )
@@ -374,7 +372,6 @@ fun NotificationItem(
     }
 }
 
-
 fun getNotificationIcon(type: String): Int {
     return when (type) {
         "property" -> R.drawable.baseline_home_24
@@ -385,7 +382,6 @@ fun getNotificationIcon(type: String): Int {
     }
 }
 
-
 fun getNotificationColor(type: String): Color {
     return when (type) {
         "property" -> Color(0xFF4CAF50)
@@ -395,7 +391,6 @@ fun getNotificationColor(type: String): Color {
         else -> Color(0xFF607D8B)
     }
 }
-
 
 fun getTimeAgo(timestamp: Long): String {
     val now = System.currentTimeMillis()
