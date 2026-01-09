@@ -9,14 +9,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.gharbato.model.ReportReasons
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,145 +33,273 @@ fun ReportListingDialog(
     var additionalDetails by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismiss,
-        modifier = Modifier.fillMaxWidth(0.95f)
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true,
+            usePlatformDefaultWidth = false
+        )
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = Color.White
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f),
+            shape = RoundedCornerShape(20.dp),
+            color = Color.White,
+            tonalElevation = 8.dp
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp)
+                modifier = Modifier.fillMaxSize()
             ) {
-                // Header
-                Row(
+                // Header with gradient-like background
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    color = Color(0xFFFFEBEE),
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Report,
-                            contentDescription = "Report",
-                            tint = Color(0xFFD32F2F),
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Text(
-                            text = "Report Listing",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier.size(24.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = Color.Gray
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFD32F2F).copy(alpha = 0.15f),
+                                modifier = Modifier.size(48.dp)
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Report,
+                                        contentDescription = "Report",
+                                        tint = Color(0xFFD32F2F),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Column {
+                                Text(
+                                    text = "Report Listing",
+                                    fontSize = 22.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1A1A1A)
+                                )
+                                Text(
+                                    text = "Help us maintain quality",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF666666)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color(0xFF666666),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Why are you reporting this listing?",
-                    fontSize = 14.sp,
-                    color = Color.Gray
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Reasons List
-                LazyColumn(
+                // Content
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                        .weight(1f)
+                        .padding(horizontal = 20.dp, vertical = 16.dp)
                 ) {
-                    items(ReportReasons.getAllReasons()) { reason ->
-                        ReasonOption(
-                            reason = reason,
-                            isSelected = selectedReason == reason,
-                            onSelect = {
-                                selectedReason = reason
-                                showError = false
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Additional Details
-                OutlinedTextField(
-                    value = additionalDetails,
-                    onValueChange = { additionalDetails = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Additional details (optional)") },
-                    placeholder = { Text("Provide more information...") },
-                    minLines = 3,
-                    maxLines = 4,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFFD32F2F),
-                        unfocusedBorderColor = Color.LightGray
-                    )
-                )
-
-                if (showError) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Please select a reason",
-                        color = Color(0xFFD32F2F),
-                        fontSize = 12.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Action Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
+                    // Info Banner
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color.LightGray)
+                        color = Color(0xFFFFF3E0),
+                        border = BorderStroke(1.dp, Color(0xFFFFB74D).copy(alpha = 0.3f))
                     ) {
-                        Text("Cancel", color = Color.Gray)
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFFF6F00),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Select the reason that best describes the issue",
+                                fontSize = 13.sp,
+                                color = Color(0xFF5D4037),
+                                lineHeight = 18.sp
+                            )
+                        }
                     }
 
-                    Button(
-                        onClick = {
-                            if (selectedReason.isEmpty()) {
-                                showError = true
-                            } else {
-                                onSubmit(selectedReason, additionalDetails)
-                            }
-                        },
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Report Reason *",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1A1A1A)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Reasons List with better styling
+                    LazyColumn(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFD32F2F)
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text("Submit Report", color = Color.White)
+                        items(ReportReasons.getAllReasons()) { reason ->
+                            ReasonOption(
+                                reason = reason,
+                                isSelected = selectedReason == reason,
+                                onSelect = {
+                                    selectedReason = reason
+                                    showError = false
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Additional Details Section
+                    Text(
+                        text = "Additional Information",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1A1A1A)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = additionalDetails,
+                        onValueChange = { additionalDetails = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp),
+                        label = { Text("Optional details", fontSize = 13.sp) },
+                        placeholder = {
+                            Text(
+                                "Describe the issue in more detail...",
+                                fontSize = 13.sp,
+                                color = Color.Gray.copy(alpha = 0.6f)
+                            )
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFD32F2F),
+                            unfocusedBorderColor = Color(0xFFE0E0E0),
+                            focusedLabelColor = Color(0xFFD32F2F),
+                            cursorColor = Color(0xFFD32F2F)
+                        ),
+                        maxLines = 4
+                    )
+
+                    if (showError) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Please select a reason to continue",
+                                color = Color(0xFFD32F2F),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                }
+
+                // Bottom Action Bar
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFFAFAFA),
+                    shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.5.dp, Color(0xFFE0E0E0)),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF666666)
+                            )
+                        ) {
+                            Text(
+                                text = "Cancel",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (selectedReason.isEmpty()) {
+                                    showError = true
+                                } else {
+                                    onSubmit(selectedReason, additionalDetails)
+                                }
+                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFD32F2F),
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(
+                                defaultElevation = 2.dp,
+                                pressedElevation = 4.dp
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Report,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Submit Report",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
@@ -189,29 +321,33 @@ fun ReasonOption(
                 onClick = onSelect
             ),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFFFFEBEE) else Color(0xFFF5F5F5),
+        color = if (isSelected) Color(0xFFFFEBEE) else Color.White,
         border = BorderStroke(
             width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) Color(0xFFD32F2F) else Color.LightGray
-        )
+            color = if (isSelected) Color(0xFFD32F2F) else Color(0xFFE0E0E0)
+        ),
+        shadowElevation = if (isSelected) 2.dp else 0.dp
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             RadioButton(
                 selected = isSelected,
                 onClick = onSelect,
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = Color(0xFFD32F2F)
-                )
+                    selectedColor = Color(0xFFD32F2F),
+                    unselectedColor = Color(0xFFBDBDBD)
+                ),
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = reason,
                 fontSize = 15.sp,
-                color = if (isSelected) Color.Black else Color.DarkGray,
-                fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal
+                color = if (isSelected) Color(0xFF1A1A1A) else Color(0xFF424242),
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                lineHeight = 20.sp
             )
         }
     }
