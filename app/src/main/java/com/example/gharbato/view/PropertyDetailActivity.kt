@@ -104,12 +104,20 @@ import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.viewmodel.ReportViewModel
+import com.google.firebase.auth.FirebaseAuth
+
+
+private fun getCurrentUserId(): String {
+    return FirebaseAuth.getInstance().currentUser?.uid ?: ""
+}
+
 
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
         PropertyViewModelFactory(this@PropertyDetailActivity)
     }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -168,9 +176,14 @@ fun PropertyDetailScreen(
                 val report = ReportedProperty(
                     reportId = "",
                     propertyId = property.id,
+                    propertyTitle = property.developer,
+                    propertyImage = property.images.values.flatten().firstOrNull() ?: "",
+                    ownerId = property.ownerId,
+                    ownerName = property.ownerName.ifBlank { property.developer },
+                    reportedByName = "", // You can get this from current user's profile if available
                     reportedBy = getCurrentUserId(),
-                    reason = reason,
-                    details = details,
+                    reportReason = reason,
+                    reportDetails = details,
                     reportedAt = System.currentTimeMillis(),
                     status = ReportStatus.PENDING
                 )
