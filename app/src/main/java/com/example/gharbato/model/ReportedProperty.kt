@@ -11,13 +11,12 @@ data class ReportedProperty(
     val ownerId: String = "",
     val ownerName: String = "",
     val reportedByName: String = "",
-    val reportedBy = getCurrentUserId(),
+    val reportedBy: String = "", // Changed from function call to String
     val reportReason: String = "",
     val reportDetails: String = "",
-    val reportedAt: Long = System.currentTimeMillis(),
+    val reportedAt: Long = 0L, // Changed from function call to 0L
     val status: String = ReportStatus.PENDING
 )
-
 
 object ReportStatus {
     const val PENDING = "PENDING"
