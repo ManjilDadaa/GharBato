@@ -35,6 +35,8 @@ import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -52,12 +54,15 @@ class NotificationActivity : ComponentActivity() {
 fun NotificationScreen() {
     val context = LocalContext.current
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
+    val coroutineScope = rememberCoroutineScope()
 
     val notifications by userViewModel.notifications.observeAsState(emptyList())
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showMenu by remember { mutableStateOf(false) }
     var showMarkAllDialog by remember { mutableStateOf(false) }
+    var savedUnreadCount by remember { mutableStateOf(0) }
+    var isProcessing by remember { mutableStateOf(false) }
 
     // Load notifications when screen opens
     LaunchedEffect(Unit) {
@@ -65,10 +70,21 @@ fun NotificationScreen() {
         userViewModel.loadUnreadCount()
     }
 
+    // Save the unread count when it changes (only if it's greater than 0)
+    LaunchedEffect(unreadCount) {
+        if (unreadCount > 0) {
+            savedUnreadCount = unreadCount
+        }
+    }
+
     // Mark All as Read Confirmation Dialog
     if (showMarkAllDialog) {
         AlertDialog(
-            onDismissRequest = { showMarkAllDialog = false },
+            onDismissRequest = {
+                if (!isProcessing) {
+                    showMarkAllDialog = false
+                }
+            },
             title = {
                 Text(
                     "Mark All as Read",
@@ -77,31 +93,68 @@ fun NotificationScreen() {
             },
             text = {
                 Text(
-                    "Are you sure you want to mark all $unreadCount notification${if (unreadCount != 1) "s" else ""} as read?",
+                    "Are you sure you want to mark all $savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} as read?",
                     fontSize = 14.sp
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        val countToMark = unreadCount
-                        userViewModel.markAllAsRead()
-                        showMarkAllDialog = false
+                        if (!isProcessing) {
+                            isProcessing = true
+                            val countToMark = savedUnreadCount
 
-                        // Show toast with the count that was marked
-                        Toast.makeText(
-                            context,
-                            "$countToMark notification${if (countToMark != 1) "s" else ""} marked as read",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                            // Mark all as read
+                            userViewModel.markAllAsRead()
+
+                            // Wait a moment for Firebase to process
+                            kotlinx.coroutines.GlobalScope.launch {
+                                kotlinx.coroutines.delay(500)
+
+                                // Reload data on main thread
+                                kotlinx.coroutines.MainScope().launch {
+                                    userViewModel.loadNotifications()
+                                    userViewModel.loadUnreadCount()
+
+                                    // Wait another moment for UI to update
+                                    kotlinx.coroutines.delay(200)
+
+                                    showMarkAllDialog = false
+                                    isProcessing = false
+
+                                    // Show toast
+                                    Toast.makeText(
+                                        context,
+                                        "$countToMark notification${if (countToMark != 1) "s" else ""} marked as read",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        }
                     },
+                    enabled = !isProcessing,
                     colors = ButtonDefaults.buttonColors(containerColor = Blue)
                 ) {
-                    Text("Mark All")
+                    if (isProcessing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(if (isProcessing) "Processing..." else "Mark All")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showMarkAllDialog = false }) {
+                TextButton(
+                    onClick = {
+                        if (!isProcessing) {
+                            showMarkAllDialog = false
+                        }
+                    },
+                    enabled = !isProcessing
+                ) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -120,7 +173,7 @@ fun NotificationScreen() {
                                 fontSize = 12.sp,
                                 color = Color.Gray
                             )
-                        } else {
+                        } else if (notifications.isNotEmpty()) {
                             Text(
                                 "All caught up!",
                                 fontSize = 12.sp,
@@ -144,7 +197,7 @@ fun NotificationScreen() {
                     if (notifications.isNotEmpty() && unreadCount > 0) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
-                                painter = painterResource(R.drawable.baseline_more_horiz_24),
+                                painter = painterResource(R.drawable.baseline_more_24),
                                 contentDescription = "More Options",
                                 tint = Blue
                             )
@@ -217,7 +270,7 @@ fun NotificationScreen() {
                     .padding(padding)
                     .background(Color(0xFFF8F9FB))
             ) {
-                items(notifications) { notification ->
+                items(notifications, key = { it.notificationId }) { notification ->
                     NotificationItem(
                         notification = notification,
                         onClick = {
