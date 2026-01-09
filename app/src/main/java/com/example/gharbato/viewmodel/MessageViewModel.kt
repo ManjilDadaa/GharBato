@@ -1,12 +1,22 @@
 package com.example.gharbato.viewmodel
 
+import android.content.Context
+import android.net.Uri
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
 import androidx.lifecycle.ViewModel
+import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.MessageUser
 import com.example.gharbato.model.UserModel
+import com.example.gharbato.repository.ChatSession
 import com.example.gharbato.repository.MessageRepository
 import com.example.gharbato.repository.MessageRepositoryImpl
+
+data class ChatNavigation(
+    val targetUserId: String,
+    val targetUserName: String,
+    val targetUserImage: String
+)
 
 class MessageViewModel(
     private val repository: MessageRepository = MessageRepositoryImpl()
@@ -30,6 +40,9 @@ class MessageViewModel(
 
     private val _currentUser = mutableStateOf<MessageUser?>(null)
     val currentUser: State<MessageUser?> = _currentUser
+
+    private val _chatNavigation = mutableStateOf<ChatNavigation?>(null)
+    val chatNavigation: State<ChatNavigation?> = _chatNavigation
 
     init {
         loadCurrentUser()
@@ -118,7 +131,79 @@ class MessageViewModel(
         repository.navigateToChat(activity, targetUserId, targetUserName, targetUserImage)
     }
 
+    fun requestChatNavigation(targetUserId: String, targetUserName: String, targetUserImage: String) {
+        _chatNavigation.value = ChatNavigation(targetUserId, targetUserName, targetUserImage)
+    }
+
+    fun onChatNavigationHandled() {
+        _chatNavigation.value = null
+    }
+
     fun getLocalUserId(context: android.content.Context): String {
         return repository.getOrCreateLocalUserId(context)
+    }
+}
+
+class MessageDetailsViewModel(
+    private val repository: MessageRepository = MessageRepositoryImpl()
+) : ViewModel() {
+
+    private val _chatSession = mutableStateOf<ChatSession?>(null)
+    val chatSession: State<ChatSession?> = _chatSession
+
+    private val _messages = mutableStateOf<List<ChatMessage>>(emptyList())
+    val messages: State<List<ChatMessage>> = _messages
+
+    private val _messageText = mutableStateOf("")
+    val messageText: State<String> = _messageText
+
+    private var stopListening: (() -> Unit)? = null
+
+    fun startChat(context: Context, otherUserId: String) {
+        val existing = _chatSession.value
+        if (existing != null && existing.otherUserId == otherUserId && stopListening != null) return
+
+        stopListening?.invoke()
+        val session = repository.createChatSession(context, otherUserId)
+        _chatSession.value = session
+        stopListening = repository.listenToChatMessages(
+            chatId = session.chatId,
+            onMessages = { _messages.value = it }
+        )
+    }
+
+    fun onMessageTextChanged(text: String) {
+        _messageText.value = text
+    }
+
+    fun sendTextMessage() {
+        val session = _chatSession.value ?: return
+        val text = _messageText.value
+        if (text.isBlank()) return
+
+        repository.sendTextMessage(
+            chatId = session.chatId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            text = text
+        )
+        _messageText.value = ""
+    }
+
+    fun sendImageMessage(context: Context, uri: Uri) {
+        val session = _chatSession.value ?: return
+        repository.sendImageMessage(
+            context = context,
+            chatId = session.chatId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            imageUri = uri
+        )
+    }
+
+    override fun onCleared() {
+        stopListening?.invoke()
+        stopListening = null
+        super.onCleared()
     }
 }

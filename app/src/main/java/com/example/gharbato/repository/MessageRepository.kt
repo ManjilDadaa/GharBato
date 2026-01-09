@@ -1,16 +1,27 @@
 package com.example.gharbato.repository
 
-import android.app.Activity
 import android.content.Context
+import android.net.Uri
+import com.example.gharbato.data.repository.PropertyRepoImpl
+import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.MessageUser
 import com.example.gharbato.model.UserModel
-import com.example.gharbato.view.ZegoCallActivity
 import com.example.gharbato.view.MessageDetailsActivity
+import com.example.gharbato.view.ZegoCallActivity
+import android.app.Activity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.Query
 import com.google.firebase.database.ValueEventListener
+
+data class ChatSession(
+    val myUserId: String,
+    val otherUserId: String,
+    val chatId: String,
+    val myUserName: String
+)
 
 interface MessageRepository {
     fun getOrCreateLocalUserId(context: Context): String
@@ -18,6 +29,16 @@ interface MessageRepository {
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit)
     fun getChatPartners(callback: (Boolean, List<UserModel>?, String) -> Unit)
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
+    fun createChatSession(context: Context, otherUserId: String): ChatSession
+    fun listenToChatMessages(
+        chatId: String,
+        onMessages: (List<ChatMessage>) -> Unit,
+        onError: (String) -> Unit = {}
+    ): () -> Unit
+
+    fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
+    fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
+
     fun initiateCall(activity: Activity, targetUserId: String, targetUserName: String, isVideoCall: Boolean)
     fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String = "")
 }
@@ -134,12 +155,107 @@ class MessageRepositoryImpl : MessageRepository {
         userRepo.searchUsers(query, callback)
     }
     
+    override fun createChatSession(context: Context, otherUserId: String): ChatSession {
+        val myUserIdRaw = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val myUserId = sanitizeZegoId(myUserIdRaw)
+        val otherId = sanitizeZegoId(otherUserId.ifBlank { "other" })
+        val chatId = buildChatId(myUserId, otherId)
+        val myUserName = auth.currentUser?.email ?: myUserId
+        return ChatSession(
+            myUserId = myUserId,
+            otherUserId = otherId,
+            chatId = chatId,
+            myUserName = myUserName
+        )
+    }
+    
+    override fun listenToChatMessages(
+        chatId: String,
+        onMessages: (List<ChatMessage>) -> Unit,
+        onError: (String) -> Unit
+    ): () -> Unit {
+        val db = FirebaseDatabase.getInstance()
+        val query: Query = db.getReference("chats")
+            .child(chatId)
+            .child("messages")
+            .orderByChild("timestamp")
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val newMessages = mutableListOf<ChatMessage>()
+                snapshot.children.forEach { child ->
+                    val msg = child.getValue(ChatMessage::class.java) ?: return@forEach
+                    val id = child.key ?: msg.id
+                    newMessages.add(msg.copy(id = id))
+                }
+                onMessages(newMessages)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                onError(error.message)
+            }
+        }
+
+        query.addValueEventListener(listener)
+        return { query.removeEventListener(listener) }
+    }
+
+    override fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String) {
+        if (text.isBlank()) return
+
+        val db = FirebaseDatabase.getInstance()
+        val ref = db.getReference("chats")
+            .child(chatId)
+            .child("messages")
+            .push()
+
+        val message = ChatMessage(
+            id = ref.key ?: "",
+            senderId = senderId,
+            senderName = senderName,
+            text = text,
+            timestamp = System.currentTimeMillis(),
+        )
+
+        ref.setValue(message)
+    }
+
+    override fun sendImageMessage(
+        context: Context,
+        chatId: String,
+        senderId: String,
+        senderName: String,
+        imageUri: Uri
+    ) {
+        val repo = PropertyRepoImpl()
+        repo.uploadImage(context, imageUri) { imageUrl ->
+            if (imageUrl.isNullOrEmpty()) return@uploadImage
+
+            val db = FirebaseDatabase.getInstance()
+            val ref = db.getReference("chats")
+                .child(chatId)
+                .child("messages")
+                .push()
+
+            val message = ChatMessage(
+                id = ref.key ?: "",
+                senderId = senderId,
+                senderName = senderName,
+                text = "",
+                imageUrl = imageUrl,
+                timestamp = System.currentTimeMillis(),
+            )
+
+            ref.setValue(message)
+        }
+    }
+
     override fun initiateCall(activity: Activity, targetUserId: String, targetUserName: String, isVideoCall: Boolean) {
         val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(activity)
         val currentUserName = auth.currentUser?.email ?: "Me"
-        
+
         val callId = buildChatId(currentUserId, targetUserId)
-        
+
         val intent = ZegoCallActivity.newIntent(
             activity = activity,
             callId = callId,
@@ -151,7 +267,7 @@ class MessageRepositoryImpl : MessageRepository {
         )
         activity.startActivity(intent)
     }
-    
+
     override fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String) {
         val intent = MessageDetailsActivity.newIntent(
             activity = activity,

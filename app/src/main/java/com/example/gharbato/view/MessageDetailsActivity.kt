@@ -63,10 +63,8 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -94,15 +92,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.gharbato.R
-import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
-
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.example.gharbato.viewmodel.MessageDetailsViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -142,57 +135,6 @@ class MessageDetailsActivity : ComponentActivity() {
     }
 }
 
-private fun getOrCreateLocalUserId(context: Context): String {
-    val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
-    val existing = prefs.getString("local_user_id", null)
-    if (!existing.isNullOrBlank()) return existing
-
-    val newId = "guest_${System.currentTimeMillis()}"
-    prefs.edit().putString("local_user_id", newId).apply()
-    return newId
-}
-
-private fun sanitizeZegoId(value: String): String {
-    if (value.isBlank()) return "user"
-    return value.replace(Regex("[^A-Za-z0-9_]"), "_")
-}
-
-private fun buildChatId(userA: String, userB: String): String {
-    val a = sanitizeZegoId(userA)
-    val b = sanitizeZegoId(userB)
-    return if (a <= b) "${a}_$b" else "${b}_$a"
-}
-
-private fun sendImageMessage(
-    imageUri: Uri,
-    db: FirebaseDatabase,
-    chatId: String,
-    myUserId: String,
-    auth: FirebaseAuth,
-    context: Context
-) {
-    val repo = PropertyRepoImpl()
-    repo.uploadImage(context, imageUri) { imageUrl ->
-        if (!imageUrl.isNullOrEmpty()) {
-            val ref = db.getReference("chats")
-                .child(chatId)
-                .child("messages")
-                .push()
-
-            val message = ChatMessage(
-                id = ref.key ?: "",
-                senderId = myUserId,
-                senderName = auth.currentUser?.email ?: myUserId,
-                text = "",
-                imageUrl = imageUrl,
-                timestamp = System.currentTimeMillis(),
-            )
-
-            ref.setValue(message)
-        }
-    }
-}
-
 private fun createImageFileUri(context: Context): Uri {
     val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
     val imageFileName = "JPEG_${timeStamp}_"
@@ -215,28 +157,30 @@ private fun MessageDetailsScreen(
     otherUserId: String,
     otherUserName: String,
     otherUserImage: String,
+    messageDetailsViewModel: MessageDetailsViewModel = viewModel()
 ) {
     val context = LocalContext.current
     val activity = context as Activity
 
-    val auth = remember { FirebaseAuth.getInstance() }
-    val db = remember { FirebaseDatabase.getInstance() }
-
-    val myUserIdRaw = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
-    val myUserId = remember(myUserIdRaw) { sanitizeZegoId(myUserIdRaw) }
-    val otherId = remember(otherUserId) { sanitizeZegoId(otherUserId.ifBlank { "other" }) }
-
-    val chatId = remember(myUserId, otherId) { buildChatId(myUserId, otherId) }
-
-    val messages = remember { mutableStateListOf<ChatMessage>() }
-    var messageText by remember { mutableStateOf("") }
+    val chatSession by messageDetailsViewModel.chatSession
+    val messages by messageDetailsViewModel.messages
+    val messageText by messageDetailsViewModel.messageText
     var showImageOptions by remember { mutableStateOf(false) }
+
+    LaunchedEffect(otherUserId) {
+        messageDetailsViewModel.startChat(context, otherUserId)
+    }
+
+    val myUserId = chatSession?.myUserId.orEmpty()
+    val otherId = chatSession?.otherUserId.orEmpty()
+    val chatId = chatSession?.chatId.orEmpty()
+    val myUserName = chatSession?.myUserName.orEmpty()
 
     // Gallery picker
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { sendImageMessage(it, db, chatId, myUserId, auth, context) }
+        uri?.let { messageDetailsViewModel.sendImageMessage(context, it) }
     }
 
     // Camera launcher with file URI
@@ -245,38 +189,12 @@ private fun MessageDetailsScreen(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
         if (success && cameraImageUri != null) {
-            sendImageMessage(cameraImageUri!!, db, chatId, myUserId, auth, context)
+            messageDetailsViewModel.sendImageMessage(context, cameraImageUri!!)
             cameraImageUri = null
         }
     }
 
     val listState = rememberLazyListState()
-
-    DisposableEffect(chatId) {
-        val query = db.getReference("chats")
-            .child(chatId)
-            .child("messages")
-            .orderByChild("timestamp")
-
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val newMessages = mutableListOf<ChatMessage>()
-                snapshot.children.forEach { child ->
-                    val msg = child.getValue(ChatMessage::class.java) ?: return@forEach
-                    val id = child.key ?: msg.id
-                    newMessages.add(msg.copy(id = id))
-                }
-                messages.clear()
-                messages.addAll(newMessages)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-            }
-        }
-
-        query.addValueEventListener(listener)
-        onDispose { query.removeEventListener(listener) }
-    }
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -372,16 +290,18 @@ private fun MessageDetailsScreen(
                     // Actions
                     IconButton(
                         onClick = {
-                            activity.startActivity(
-                                ZegoCallActivity.newIntent(
-                                    activity = activity,
-                                    callId = chatId,
-                                    userId = myUserId,
-                                    userName = auth.currentUser?.email ?: myUserId,
-                                    isVideoCall = true,
-                                    targetUserId = otherId
+                            if (chatSession != null) {
+                                activity.startActivity(
+                                    ZegoCallActivity.newIntent(
+                                        activity = activity,
+                                        callId = chatId,
+                                        userId = myUserId,
+                                        userName = myUserName,
+                                        isVideoCall = true,
+                                        targetUserId = otherId
+                                    )
                                 )
-                            )
+                            }
                         }
                     ) {
                         Icon(
@@ -393,16 +313,18 @@ private fun MessageDetailsScreen(
 
                     IconButton(
                         onClick = {
-                            activity.startActivity(
-                                ZegoCallActivity.newIntent(
-                                    activity = activity,
-                                    callId = chatId,
-                                    userId = myUserId,
-                                    userName = auth.currentUser?.email ?: myUserId,
-                                    isVideoCall = false,
-                                    targetUserId = otherId
+                            if (chatSession != null) {
+                                activity.startActivity(
+                                    ZegoCallActivity.newIntent(
+                                        activity = activity,
+                                        callId = chatId,
+                                        userId = myUserId,
+                                        userName = myUserName,
+                                        isVideoCall = false,
+                                        targetUserId = otherId
+                                    )
                                 )
-                            )
+                            }
                         }
                     ) {
                         Icon(
@@ -570,7 +492,7 @@ private fun MessageDetailsScreen(
                     ) {
                         OutlinedTextField(
                             value = messageText,
-                            onValueChange = { messageText = it },
+                            onValueChange = { messageDetailsViewModel.onMessageTextChanged(it) },
                             placeholder = { Text("Message", color = Color.Gray) },
                             modifier = Modifier
                                 .weight(1f)
@@ -650,23 +572,7 @@ private fun MessageDetailsScreen(
                         .clip(CircleShape)
                         .background(Color(0xFF00A884))
                         .clickable {
-                            if (messageText.isNotBlank()) {
-                                val ref = db.getReference("chats")
-                                    .child(chatId)
-                                    .child("messages")
-                                    .push()
-
-                                val message = ChatMessage(
-                                    id = ref.key ?: "",
-                                    senderId = myUserId,
-                                    senderName = auth.currentUser?.email ?: myUserId,
-                                    text = messageText,
-                                    timestamp = System.currentTimeMillis(),
-                                )
-
-                                ref.setValue(message)
-                                messageText = ""
-                            }
+                            messageDetailsViewModel.sendTextMessage()
                         },
                     contentAlignment = Alignment.Center
                 ) {

@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
 import android.app.Activity
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,7 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -79,6 +77,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val isLoading by messageViewModel.isLoading
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
+    val chatNavigation by messageViewModel.chatNavigation
     val context = LocalContext.current
     val activity = context as Activity
 
@@ -90,6 +89,19 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
         if (!isLoading) {
             messageViewModel.searchUsers()
         }
+    }
+
+    LaunchedEffect(chatNavigation) {
+        val nav = chatNavigation ?: return@LaunchedEffect
+        activity.startActivity(
+            MessageDetailsActivity.newIntent(
+                activity = activity,
+                otherUserId = nav.targetUserId,
+                otherUserName = nav.targetUserName,
+                otherUserImage = nav.targetUserImage
+            )
+        )
+        messageViewModel.onChatNavigationHandled()
     }
 
     Scaffold(
@@ -178,7 +190,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                             time = "Now", // Placeholder
                             imageUrl = user.profileImageUrl,
                             onClick = {
-                                messageViewModel.navigateToChat(user.userId, displayName, user.profileImageUrl, activity)
+                                messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
                             }
                         )
                     }
