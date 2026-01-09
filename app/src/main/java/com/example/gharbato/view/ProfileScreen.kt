@@ -52,14 +52,14 @@ fun ProfileScreen() {
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load user profile when screen opens
+    // Load user profile and unread count when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
         userViewModel.loadUnreadCount()
         isLoading = false
     }
 
-    // Reload profile when returning from EditProfileActivity
+    // Reload profile and unread count when returning from other activities
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -78,7 +78,7 @@ fun ProfileScreen() {
             .fillMaxSize()
             .background(Color(0xFFF8F9FB))
     ) {
-        // Custom Top Bar (without Scaffold to avoid conflict with Dashboard)
+        // Custom Top Bar with Notification Badge
         TopAppBar(
             title = {
                 Text(
@@ -95,33 +95,39 @@ fun ProfileScreen() {
                 Box(
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    IconButton(onClick = {
-                        // Navigate to NotificationActivity
-                        context.startActivity(Intent(context, NotificationActivity::class.java))
-                    }) {
+                    IconButton(
+                        onClick = {
+                            context.startActivity(Intent(context, NotificationActivity::class.java))
+                        },
+                        modifier = Modifier.size(48.dp)
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.outline_notifications_24),
                             contentDescription = "Notifications",
-                            tint = Blue
+                            tint = Blue,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
-                    // Badge with count
+
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
-                                .size(18.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
                                 .align(Alignment.TopEnd)
-                                .offset(x = (-4).dp, y = 8.dp),
+                                .offset(x = (-2).dp, y = 6.dp)
+                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFFF3B30))
+                                .border(2.dp, Color.White, CircleShape)
+                                .padding(horizontal = 5.dp, vertical = 2.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                                 color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.labelSmall
                             )
                         }
                     }

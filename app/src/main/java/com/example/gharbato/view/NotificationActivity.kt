@@ -37,7 +37,6 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.isNotEmpty
 
 class NotificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,11 +57,63 @@ fun NotificationScreen() {
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showMenu by remember { mutableStateOf(false) }
+    var showMarkAllDialog by remember { mutableStateOf(false) }
+    var savedUnreadCount by remember { mutableStateOf(0) }
 
     // Load notifications when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
+    }
+
+    // Save the unread count before marking as read
+    LaunchedEffect(unreadCount) {
+        if (unreadCount > 0) {
+            savedUnreadCount = unreadCount
+        }
+    }
+
+    // Mark All as Read Confirmation Dialog
+    if (showMarkAllDialog) {
+        AlertDialog(
+            onDismissRequest = { showMarkAllDialog = false },
+            title = {
+                Text(
+                    "Mark All as Read",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to mark all $savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} as read?",
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val countToMark = savedUnreadCount
+                        userViewModel.markAllAsRead()
+                        showMarkAllDialog = false
+
+                        // Show toast with the count that was marked
+                        Toast.makeText(
+                            context,
+                            "$countToMark notification${if (countToMark != 1) "s" else ""} marked as read",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                ) {
+                    Text("Mark All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMarkAllDialog = false }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -92,7 +143,7 @@ fun NotificationScreen() {
                     }
                 },
                 actions = {
-                    if (notifications.isNotEmpty()) {
+                    if (notifications.isNotEmpty() && unreadCount > 0) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_more_24),
@@ -108,12 +159,15 @@ fun NotificationScreen() {
                             DropdownMenuItem(
                                 text = { Text("Mark all as read") },
                                 onClick = {
-                                    userViewModel.markAllAsRead()
                                     showMenu = false
-                                    Toast.makeText(context, "All marked as read", Toast.LENGTH_SHORT).show()
+                                    showMarkAllDialog = true
                                 },
                                 leadingIcon = {
-                                    Icon(Icons.Default.DoneAll, contentDescription = null)
+                                    Icon(
+                                        Icons.Default.DoneAll,
+                                        contentDescription = null,
+                                        tint = Blue
+                                    )
                                 }
                             )
                         }
@@ -150,6 +204,7 @@ fun NotificationScreen() {
                         fontWeight = FontWeight.Medium,
                         color = Color.Gray
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "We'll notify you when something new arrives",
                         fontSize = 14.sp,
@@ -199,19 +254,27 @@ fun NotificationItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Notification") },
+            title = {
+                Text(
+                    "Delete Notification",
+                    fontWeight = FontWeight.Bold
+                )
+            },
             text = { Text("Are you sure you want to delete this notification?") },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete()
-                    showDeleteDialog = false
-                }) {
-                    Text("Delete", color = Color.Red)
+                Button(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
+                ) {
+                    Text("Delete")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = Color.Gray)
                 }
             }
         )
@@ -300,9 +363,10 @@ fun NotificationItem(
 
         // Unread indicator
         if (!notification.isRead) {
+            Spacer(modifier = Modifier.width(4.dp))
             Box(
                 modifier = Modifier
-                    .size(8.dp)
+                    .size(10.dp)
                     .clip(CircleShape)
                     .background(Blue)
             )
@@ -310,7 +374,7 @@ fun NotificationItem(
     }
 }
 
-// Helper function to get notification icon based on type
+
 fun getNotificationIcon(type: String): Int {
     return when (type) {
         "property" -> R.drawable.baseline_home_24
@@ -321,7 +385,7 @@ fun getNotificationIcon(type: String): Int {
     }
 }
 
-// Helper function to get notification color based on type
+
 fun getNotificationColor(type: String): Color {
     return when (type) {
         "property" -> Color(0xFF4CAF50)
@@ -332,7 +396,7 @@ fun getNotificationColor(type: String): Color {
     }
 }
 
-// Helper function to format timestamp
+
 fun getTimeAgo(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
