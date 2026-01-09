@@ -9,7 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepo
 
-class UserViewModel (val repo: UserRepo) : ViewModel(){
+class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     private val _userData = MutableLiveData<UserModel?>()
     val userData: LiveData<UserModel?> get() = _userData
@@ -17,40 +17,35 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
     private val _profileUpdateStatus = MutableLiveData<Pair<Boolean, String>>()
     val profileUpdateStatus: LiveData<Pair<Boolean, String>> get() = _profileUpdateStatus
 
-    // NEW: LiveData for image upload status
     private val _imageUploadStatus = MutableLiveData<String?>()
     val imageUploadStatus: LiveData<String?> get() = _imageUploadStatus
 
-    fun login(
-        email: String, password: String,
-        callback: (Boolean, String) -> Unit
-    ){
+    fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
         repo.login(email, password, callback)
     }
 
     fun signUp(
-        email: String, password: String,
-        fullName : String,
+        email: String,
+        password: String,
+        fullName: String,
         phoneNo: String,
-        selectedCountry : String,
+        selectedCountry: String,
         callback: (Boolean, String, String) -> Unit
-    ){
-        repo.signUp(email,password,fullName,phoneNo, selectedCountry, callback)
+    ) {
+        repo.signUp(email, password, fullName, phoneNo, selectedCountry, callback)
     }
 
     fun addUserToDatabase(
         userId: String,
-        model: UserModel, callback: (Boolean, String) -> Unit
-    ){
+        model: UserModel,
+        callback: (Boolean, String) -> Unit
+    ) {
         repo.addUserToDatabase(userId, model, callback)
     }
 
-    fun forgotPassword(email: String,
-                       callback: (Boolean, String) -> Unit){
-        repo.forgotPassword(email,callback)
+    fun forgotPassword(email: String, callback: (Boolean, String) -> Unit) {
+        repo.forgotPassword(email, callback)
     }
-
-    // ------------------ PROFILE ------------------
 
     fun getCurrentUserId(): String? {
         return repo.getCurrentUserId()
@@ -58,7 +53,6 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
 
     fun loadUserProfile() {
         val userId = repo.getCurrentUserId() ?: return
-
         repo.getUser(userId) { user ->
             _userData.postValue(user)
         }
@@ -66,25 +60,17 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
 
     fun updateUserName(newName: String) {
         val userId = repo.getCurrentUserId() ?: return
-
         repo.updateUserName(userId, newName) { success, message ->
             _profileUpdateStatus.postValue(Pair(success, message))
-            if (success) {
-                loadUserProfile()
-            }
+            if (success) loadUserProfile()
         }
     }
 
-    // ---------- NEW: PROFILE WITH IMAGE ----------
-
     fun updateUserProfile(newName: String, profileImageUrl: String) {
         val userId = repo.getCurrentUserId() ?: return
-
         repo.updateUserProfile(userId, newName, profileImageUrl) { success, message ->
             _profileUpdateStatus.postValue(Pair(success, message))
-            if (success) {
-                loadUserProfile()
-            }
+            if (success) loadUserProfile()
         }
     }
 
@@ -94,57 +80,48 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         }
     }
 
-    // ------------------ OTP & VERIFICATION ------------------
-
-    fun sendOtp(phoneNumber: String,
-                activity: Activity, callback: (Boolean, String, String?) -> Unit
-    ){
-        repo.sendOtp(phoneNumber, activity){
-                success, message, verificationId ->
-            callback(success, message, verificationId)
-        }
+    fun sendOtp(
+        phoneNumber: String,
+        activity: Activity,
+        callback: (Boolean, String, String?) -> Unit
+    ) {
+        repo.sendOtp(phoneNumber, activity, callback)
     }
 
-    fun verifyOtp(verificationId: String,
-                  otpCode: String,
-                  callback: (Boolean, String) -> Unit
-    ){
-        repo.verifyOtp(verificationId, otpCode){
-                success, message ->
-            callback(success, message)
-        }
+    fun verifyOtp(
+        verificationId: String,
+        otpCode: String,
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.verifyOtp(verificationId, otpCode, callback)
     }
 
-    fun sendEmailVerification(callback: (Boolean, String) -> Unit){
+    fun sendEmailVerification(callback: (Boolean, String) -> Unit) {
         repo.sendEmailVerification(callback)
     }
 
-    fun checkEmailVerified(callback: (Boolean) -> Unit){
+    fun checkEmailVerified(callback: (Boolean) -> Unit) {
         repo.checkEmailVerified(callback)
     }
 
-    // ------------------ USER MANAGEMENT ------------------
-
-    fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit){
+    fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
         repo.getAllUsers(callback)
     }
 
-    fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit){
+    fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
         repo.searchUsers(query, callback)
     }
 
-    // ------------------ NOTIFICATIONS ------------------
-
-    private val _notifications = MutableLiveData<List<com.example.gharbato.model.NotificationModel>>()
+    private val _notifications =
+        MutableLiveData<List<com.example.gharbato.model.NotificationModel>>()
     val notifications: LiveData<List<com.example.gharbato.model.NotificationModel>> get() = _notifications
 
-    private val _unreadCount = MutableLiveData<Int>()
+    private val _unreadCount = MutableLiveData<Int>(0)
     val unreadCount: LiveData<Int> get() = _unreadCount
 
     fun loadNotifications() {
         val userId = repo.getCurrentUserId() ?: return
-
-        repo.getUserNotifications(userId) { success, notificationList, message ->
+        repo.getUserNotifications(userId) { success, notificationList, _ ->
             if (success && notificationList != null) {
                 _notifications.postValue(notificationList)
             }
@@ -153,7 +130,6 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
 
     fun loadUnreadCount() {
         val userId = repo.getCurrentUserId() ?: return
-
         repo.getUnreadNotificationCount(userId) { count ->
             _unreadCount.postValue(count)
         }
@@ -162,31 +138,36 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
     fun markNotificationAsRead(notificationId: String) {
         val userId = repo.getCurrentUserId() ?: return
 
-        repo.markNotificationAsRead(userId, notificationId) { _, _ ->
+        repo.markNotificationAsRead(userId, notificationId) { success, _ ->
+            if (success) {
+                val current = _unreadCount.value ?: 0
+                if (current > 0) _unreadCount.postValue(current - 1)
+            }
             loadNotifications()
-            loadUnreadCount()
         }
     }
 
     fun markAllAsRead() {
         val userId = repo.getCurrentUserId() ?: return
 
-        repo.markAllNotificationsAsRead(userId) { _, _ ->
+        repo.markAllNotificationsAsRead(userId) { success, _ ->
+            if (success) {
+                _unreadCount.postValue(0)
+            }
             loadNotifications()
-            loadUnreadCount()
         }
     }
 
     fun deleteNotification(notificationId: String) {
         val userId = repo.getCurrentUserId() ?: return
 
-        repo.deleteNotification(userId, notificationId) { _, _ ->
-            loadNotifications()
-            loadUnreadCount()
+        repo.deleteNotification(userId, notificationId) { success, _ ->
+            if (success) {
+                loadNotifications()
+                loadUnreadCount()
+            }
         }
     }
-
-    // ---------- NOTIFICATION CREATION ----------
 
     fun createNotification(
         userId: String,
@@ -196,9 +177,7 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         imageUrl: String = "",
         actionData: String = ""
     ) {
-        repo.createNotification(userId, title, message, type, imageUrl, actionData) { _, _ ->
-            // Notification created
-        }
+        repo.createNotification(userId, title, message, type, imageUrl, actionData) { _, _ -> }
     }
 
     fun notifyAllUsers(
@@ -208,8 +187,6 @@ class UserViewModel (val repo: UserRepo) : ViewModel(){
         imageUrl: String = "",
         actionData: String = ""
     ) {
-        repo.notifyAllUsers(title, message, type, imageUrl, actionData) { _, _ ->
-            // All users notified
-        }
+        repo.notifyAllUsers(title, message, type, imageUrl, actionData) { _, _ -> }
     }
 }

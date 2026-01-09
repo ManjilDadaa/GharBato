@@ -35,8 +35,6 @@ import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -54,7 +52,6 @@ class NotificationActivity : ComponentActivity() {
 fun NotificationScreen() {
     val context = LocalContext.current
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-    val coroutineScope = rememberCoroutineScope()
 
     val notifications by userViewModel.notifications.observeAsState(emptyList())
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
@@ -62,28 +59,24 @@ fun NotificationScreen() {
     var showMenu by remember { mutableStateOf(false) }
     var showMarkAllDialog by remember { mutableStateOf(false) }
     var savedUnreadCount by remember { mutableStateOf(0) }
-    var isProcessing by remember { mutableStateOf(false) }
 
-
+    // Load notifications when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
     }
 
-
+    // Save unread count for the dialog
     LaunchedEffect(unreadCount) {
         if (unreadCount > 0) {
             savedUnreadCount = unreadCount
         }
     }
 
+    // Mark All as Read Confirmation Dialog
     if (showMarkAllDialog) {
         AlertDialog(
-            onDismissRequest = {
-                if (!isProcessing) {
-                    showMarkAllDialog = false
-                }
-            },
+            onDismissRequest = { showMarkAllDialog = false },
             title = {
                 Text(
                     "Mark All as Read",
@@ -99,61 +92,23 @@ fun NotificationScreen() {
             confirmButton = {
                 Button(
                     onClick = {
-                        if (!isProcessing) {
-                            isProcessing = true
-                            val countToMark = savedUnreadCount
+                        showMarkAllDialog = false
+                        userViewModel.markAllAsRead()
 
-                            // Mark all as read
-                            userViewModel.markAllAsRead()
-
-                            // Wait a moment for Firebase to process
-                            kotlinx.coroutines.GlobalScope.launch {
-                                kotlinx.coroutines.delay(500)
-
-                                // Reload data on main thread
-                                kotlinx.coroutines.MainScope().launch {
-                                    userViewModel.loadNotifications()
-                                    userViewModel.loadUnreadCount()
-
-
-                                    kotlinx.coroutines.delay(200)
-
-                                    showMarkAllDialog = false
-                                    isProcessing = false
-
-                                    // Show toast
-                                    Toast.makeText(
-                                        context,
-                                        "$countToMark notification${if (countToMark != 1) "s" else ""} marked as read",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                }
-                            }
-                        }
+                        // Show toast immediately with saved count
+                        Toast.makeText(
+                            context,
+                            "$savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} marked as read",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     },
-                    enabled = !isProcessing,
                     colors = ButtonDefaults.buttonColors(containerColor = Blue)
                 ) {
-                    if (isProcessing) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    Text(if (isProcessing) "Processing..." else "Mark All")
+                    Text("Mark All")
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = {
-                        if (!isProcessing) {
-                            showMarkAllDialog = false
-                        }
-                    },
-                    enabled = !isProcessing
-                ) {
+                TextButton(onClick = { showMarkAllDialog = false }) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -196,7 +151,7 @@ fun NotificationScreen() {
                     if (notifications.isNotEmpty() && unreadCount > 0) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
-                                painter = painterResource(R.drawable.baseline_more_24),
+                                painter = painterResource(R.drawable.baseline_more_horiz_24),
                                 contentDescription = "More Options",
                                 tint = Blue
                             )
@@ -269,7 +224,10 @@ fun NotificationScreen() {
                     .padding(padding)
                     .background(Color(0xFFF8F9FB))
             ) {
-                items(notifications, key = { it.notificationId }) { notification ->
+                items(
+                    items = notifications,
+                    key = { it.notificationId }
+                ) { notification ->
                     NotificationItem(
                         notification = notification,
                         onClick = {
@@ -340,7 +298,7 @@ fun NotificationItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-
+        // Icon/Image based on notification type
         Box(
             modifier = Modifier
                 .size(48.dp)
