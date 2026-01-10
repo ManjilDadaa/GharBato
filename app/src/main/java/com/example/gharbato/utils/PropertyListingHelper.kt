@@ -1,7 +1,7 @@
 package com.example.gharbato.util
 
-import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.model.PropertyStatus
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyListingState
 import com.google.firebase.auth.FirebaseAuth
 

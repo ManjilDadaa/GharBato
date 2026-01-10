@@ -2,7 +2,7 @@ package com.example.gharbato.data.repository
 
 import android.content.Context
 import android.net.Uri
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyFilters
 
 interface PropertyRepo {

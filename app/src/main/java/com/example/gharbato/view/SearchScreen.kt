@@ -41,9 +41,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.SortOption
-import com.example.gharbato.ui.view.FullSearchMapActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.CameraUpdateFactory

@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SortOption

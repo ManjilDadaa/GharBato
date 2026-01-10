@@ -1,4 +1,4 @@
-package com.example.gharbato.data.model
+package com.example.gharbato.model
 
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.database.Exclude

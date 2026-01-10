@@ -78,7 +78,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory

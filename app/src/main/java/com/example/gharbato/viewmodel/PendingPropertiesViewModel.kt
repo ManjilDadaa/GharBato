@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PendingPropertiesRepo
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import kotlinx.coroutines.flow.MutableStateFlow

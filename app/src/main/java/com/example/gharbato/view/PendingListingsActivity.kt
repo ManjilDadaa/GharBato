@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.R
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray

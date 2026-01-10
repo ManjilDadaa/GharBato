@@ -5,8 +5,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.model.PropertyStatus
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult

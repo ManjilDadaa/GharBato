@@ -99,7 +99,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.view.FullSearchMapActivity"
+            android:name=".view.FullSearchMapActivity"
             android:exported="true"
             android:label="FullSearchMapActivity"
             android:theme="@style/Theme.GharBato">

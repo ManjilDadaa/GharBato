@@ -1,11 +1,9 @@
-package com.example.gharbato.data.model
-
-import com.google.android.gms.maps.model.LatLng
+package com.example.gharbato.model
 
 data class PropertyUiState(
     val properties: List<PropertyModel> = emptyList(),
     val isLoading: Boolean = false,
-    val errorMessage: String = "", 
+    val errorMessage: String = "",
     val searchQuery: String = "",
     val selectedMarketType: String = "Buy",
     val selectedPropertyType: String = "All Types",
