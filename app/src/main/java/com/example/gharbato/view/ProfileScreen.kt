@@ -45,26 +45,26 @@ fun ProfileScreen() {
     // Initialize ViewModel
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
-    // Observe user data from ViewModel
+    // Observe user data and unread notifications
     val userData by userViewModel.userData.observeAsState()
-    val unreadCount by userViewModel.unreadCount.observeAsState(0)
+    val unreadCount by userViewModel.unreadCount.observeAsState(0) // 🔥 Live updates
 
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load user profile and unread count when screen opens
+    // Load profile & unread count on screen launch
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
         userViewModel.loadUnreadCount()
         isLoading = false
     }
 
-    // Reload profile and unread count when returning from other activities
+    // Reload profile & unread count on resume
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 userViewModel.loadUserProfile()
-                userViewModel.loadUnreadCount()
+                userViewModel.loadUnreadCount() // 🔥 refresh badge
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -78,7 +78,7 @@ fun ProfileScreen() {
             .fillMaxSize()
             .background(Color(0xFFF8F9FB))
     ) {
-        // Custom Top Bar with Notification Badge
+        // Top Bar with Notification Badge
         TopAppBar(
             title = {
                 Text(
@@ -91,10 +91,7 @@ fun ProfileScreen() {
                 containerColor = Color.White
             ),
             actions = {
-                // Notification icon with badge
-                Box(
-                    modifier = Modifier.padding(end = 8.dp)
-                ) {
+                Box(modifier = Modifier.padding(end = 8.dp)) {
                     IconButton(
                         onClick = {
                             context.startActivity(Intent(context, NotificationActivity::class.java))
@@ -109,7 +106,7 @@ fun ProfileScreen() {
                         )
                     }
 
-
+                    // Badge
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
@@ -136,7 +133,6 @@ fun ProfileScreen() {
         )
 
         if (isLoading || userData == null) {
-            // Show loading indicator
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -149,14 +145,13 @@ fun ProfileScreen() {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Profile Header Section
+                // -------- Profile Header --------
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Profile Image with Edit Icon
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Image(
                             painter = if (userData?.profileImageUrl?.isNotEmpty() == true) {
@@ -172,7 +167,6 @@ fun ProfileScreen() {
                             contentScale = ContentScale.Crop
                         )
 
-                        // Edit Icon Button
                         Box(
                             modifier = Modifier
                                 .size(22.dp)
@@ -207,7 +201,6 @@ fun ProfileScreen() {
 
                         Spacer(modifier = Modifier.height(4.dp))
 
-                        // Show/Hide contact info
                         Text(
                             if (showContactInfo) "Hide contact info" else "Show contact info",
                             fontSize = 13.sp,
@@ -219,7 +212,6 @@ fun ProfileScreen() {
                     }
                 }
 
-                // Contact Info Section (Expandable)
                 if (showContactInfo) {
                     Column(
                         modifier = Modifier
@@ -256,7 +248,7 @@ fun ProfileScreen() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Profile Settings Section
+                // -------- Profile Settings --------
                 SectionHeader("Profile Settings")
 
                 CleanMenuItem(
@@ -288,7 +280,6 @@ fun ProfileScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Support Section
                 SectionHeader("Support")
 
                 CleanMenuItem(
@@ -320,7 +311,6 @@ fun ProfileScreen() {
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Logout Button
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -328,9 +318,7 @@ fun ProfileScreen() {
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
                         .clickable {
-                            // Sign out from Firebase
                             FirebaseAuth.getInstance().signOut()
-
                             val loginIntent = Intent(context, LoginActivity::class.java)
                             loginIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             context.startActivity(loginIntent)
@@ -355,13 +343,13 @@ fun ProfileScreen() {
                     }
                 }
 
-                // Extra space for bottom navigation bar
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
 }
 
+// ----- Reused Components -----
 @Composable
 fun ContactInfoRow(icon: Int, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -371,9 +359,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String) {
             tint = Color(0xFF4D8DFF),
             modifier = Modifier.size(20.dp)
         )
-
         Spacer(modifier = Modifier.width(12.dp))
-
         Column {
             Text(label, fontSize = 12.sp, color = Color(0xFF999999))
             Text(
@@ -393,12 +379,7 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         color = Color(0xFF2C2C2C),
-        modifier = modifier.padding(
-            start = 12.dp,
-            end = 20.dp,
-            top = 12.dp,
-            bottom = 12.dp
-        )
+        modifier = modifier.padding(start = 12.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
     )
 }
 
@@ -437,27 +418,14 @@ fun CleanMenuItem(
                     modifier = Modifier.size(22.dp)
                 )
             }
-
             Spacer(modifier = Modifier.width(16.dp))
-
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF2C2C2C)
-                )
-
+                Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2C2C2C))
                 if (subtitle != null) {
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        subtitle,
-                        fontSize = 12.sp,
-                        color = Color(0xFF999999)
-                    )
+                    Text(subtitle, fontSize = 12.sp, color = Color(0xFF999999))
                 }
             }
-
             Icon(
                 painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
                 contentDescription = null,

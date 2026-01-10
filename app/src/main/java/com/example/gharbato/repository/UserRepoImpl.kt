@@ -212,17 +212,17 @@ class UserRepoImpl : UserRepo {
         }
     }
 
+
     override fun getUserNotifications(
         userId: String,
         callback: (Boolean, List<com.example.gharbato.model.NotificationModel>?, String) -> Unit
     ) {
         database.getReference("Notifications").child(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
+            .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val list = mutableListOf<com.example.gharbato.model.NotificationModel>()
                     for (child in snapshot.children) {
-                        val n =
-                            child.getValue(com.example.gharbato.model.NotificationModel::class.java)
+                        val n = child.getValue(com.example.gharbato.model.NotificationModel::class.java)
                         if (n != null) list.add(n.copy(notificationId = child.key ?: ""))
                     }
                     list.sortByDescending { it.timestamp }
@@ -235,14 +235,14 @@ class UserRepoImpl : UserRepo {
             })
     }
 
+
     override fun getUnreadNotificationCount(userId: String, callback: (Int) -> Unit) {
         database.getReference("Notifications").child(userId)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
+            .addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     var count = 0
                     for (child in snapshot.children) {
-                        val n =
-                            child.getValue(com.example.gharbato.model.NotificationModel::class.java)
+                        val n = child.getValue(com.example.gharbato.model.NotificationModel::class.java)
                         if (n != null && !n.isRead) count++
                     }
                     callback(count)
@@ -335,17 +335,29 @@ class UserRepoImpl : UserRepo {
     ) {
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                var count = 0
+                val total = snapshot.childrenCount.toInt()
+
+                if (total == 0) {
+                    callback(false, "No users found")
+                    return
+                }
+
                 for (user in snapshot.children) {
                     createNotification(
-                        user.key ?: return,
+                        user.key ?: continue,
                         title,
                         message,
                         type,
                         imageUrl,
                         actionData
-                    ) { _, _ -> }
+                    ) { success, _ ->
+                        count++
+                        if (count == total) {
+                            callback(true, "Notified $total users")
+                        }
+                    }
                 }
-                callback(true, "Sent")
             }
 
             override fun onCancelled(error: DatabaseError) {
