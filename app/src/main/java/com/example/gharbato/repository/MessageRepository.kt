@@ -26,6 +26,7 @@ class MessageRepositoryImpl : MessageRepository {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
+    private val usersRef = database.getReference("Users")
 
     override fun getOrCreateLocalUserId(context: Context): String {
         val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
@@ -51,8 +52,25 @@ class MessageRepositoryImpl : MessageRepository {
     }
 
     override fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
-        val userRepo = UserRepoImpl()
-        userRepo.getAllUsers(callback)
+        usersRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userList = mutableListOf<UserModel>()
+
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+                    if (userModel != null) {
+                        val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
+                        userList.add(userWithId)
+                    }
+                }
+
+                callback(true, userList, "Users fetched successfully")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
     }
 
     override fun getChatPartners(callback: (Boolean, List<UserModel>?, String) -> Unit) {
@@ -108,7 +126,6 @@ class MessageRepositoryImpl : MessageRepository {
             return
         }
 
-        val usersRef = database.getReference("users")
         val allUsers = mutableListOf<UserModel>()
         var completedQueries = 0
 
@@ -117,7 +134,8 @@ class MessageRepositoryImpl : MessageRepository {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val user = snapshot.getValue(UserModel::class.java)
                     if (user != null) {
-                        allUsers.add(user)
+                        val userWithId = user.copy(userId = snapshot.key ?: "")
+                        allUsers.add(userWithId)
                     }
 
                     completedQueries++
@@ -137,8 +155,32 @@ class MessageRepositoryImpl : MessageRepository {
     }
 
     override fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit) {
-        val userRepo = UserRepoImpl()
-        userRepo.searchUsers(query, callback)
+        usersRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val userList = mutableListOf<UserModel>()
+
+                for (userSnapshot in snapshot.children) {
+                    val userModel = userSnapshot.getValue(UserModel::class.java)
+
+                    if (userModel != null) {
+                        val userWithId = userModel.copy(userId = userSnapshot.key ?: "")
+
+                        if (query.isBlank() ||
+                            userWithId.fullName.contains(query, ignoreCase = true) ||
+                            userWithId.email.contains(query, ignoreCase = true) ||
+                            userWithId.phoneNo.contains(query, ignoreCase = true)) {
+                            userList.add(userWithId)
+                        }
+                    }
+                }
+
+                callback(true, userList, "Search completed successfully")
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                callback(false, null, "Database error: ${error.message}")
+            }
+        })
     }
 
     override fun initiateCall(

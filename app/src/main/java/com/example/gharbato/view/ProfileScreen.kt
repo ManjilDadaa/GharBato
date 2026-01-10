@@ -25,9 +25,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
@@ -40,36 +37,28 @@ import com.google.firebase.auth.FirebaseAuth
 @Composable
 fun ProfileScreen() {
     val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Initialize ViewModel
+    // Initialize ViewModel ONCE
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
-    // Observe user data and unread notifications
+    // Observe LiveData - these update automatically in real-time
     val userData by userViewModel.userData.observeAsState()
-    val unreadCount by userViewModel.unreadCount.observeAsState(0) // 🔥 Live updates
+    val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Load profile & unread count on screen launch
+    // Start real-time observers ONCE on initial composition
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
-        userViewModel.loadUnreadCount()
+        userViewModel.startObservingNotifications() // This starts real-time updates
         isLoading = false
     }
 
-    // Reload profile & unread count on resume
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                userViewModel.loadUserProfile()
-                userViewModel.loadUnreadCount() // 🔥 refresh badge
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
+    // Clean up when screen is disposed
+    DisposableEffect(Unit) {
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+            userViewModel.stopObservingNotifications()
         }
     }
 
@@ -78,7 +67,7 @@ fun ProfileScreen() {
             .fillMaxSize()
             .background(Color(0xFFF8F9FB))
     ) {
-        // Top Bar with Notification Badge
+        // Top Bar with Badge
         TopAppBar(
             title = {
                 Text(
@@ -106,7 +95,7 @@ fun ProfileScreen() {
                         )
                     }
 
-                    // Badge
+                    // Badge - only show if count > 0
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
@@ -123,8 +112,7 @@ fun ProfileScreen() {
                                 text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                                 color = Color.White,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.labelSmall
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -145,7 +133,7 @@ fun ProfileScreen() {
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
-                // -------- Profile Header --------
+                // Profile Header
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -174,15 +162,13 @@ fun ProfileScreen() {
                                 .background(Blue)
                                 .border(2.dp, Color.White, CircleShape)
                                 .clickable {
-                                    context.startActivity(
-                                        Intent(context, EditProfileActivity::class.java)
-                                    )
+                                    context.startActivity(Intent(context, EditProfileActivity::class.java))
                                 },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit Profile",
+                                contentDescription = "Edit",
                                 tint = Color.White,
                                 modifier = Modifier.size(12.dp)
                             )
@@ -198,16 +184,12 @@ fun ProfileScreen() {
                             fontWeight = FontWeight.Bold,
                             color = Black
                         )
-
                         Spacer(modifier = Modifier.height(4.dp))
-
                         Text(
                             if (showContactInfo) "Hide contact info" else "Show contact info",
                             fontSize = 13.sp,
                             color = Color(0xFF4D8DFF),
-                            modifier = Modifier.clickable {
-                                showContactInfo = !showContactInfo
-                            }
+                            modifier = Modifier.clickable { showContactInfo = !showContactInfo }
                         )
                     }
                 }
@@ -216,96 +198,42 @@ fun ProfileScreen() {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .padding(bottom = 16.dp)
+                            .padding(horizontal = 20.dp, vertical = 16.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color.White)
                             .padding(16.dp)
                     ) {
-                        ContactInfoRow(
-                            icon = R.drawable.baseline_email_24,
-                            label = "Email",
-                            value = userData?.email ?: "N/A"
-                        )
-
+                        ContactInfoRow(R.drawable.baseline_email_24, "Email", userData?.email ?: "N/A")
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        ContactInfoRow(
-                            icon = R.drawable.baseline_email_24,
-                            label = "Phone",
-                            value = userData?.phoneNo ?: "N/A"
-                        )
-
+                        ContactInfoRow(R.drawable.baseline_email_24, "Phone", userData?.phoneNo ?: "N/A")
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        ContactInfoRow(
-                            icon = R.drawable.baseline_email_24,
-                            label = "Country",
-                            value = userData?.selectedCountry ?: "N/A"
-                        )
+                        ContactInfoRow(R.drawable.baseline_email_24, "Country", userData?.selectedCountry ?: "N/A")
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // -------- Profile Settings --------
                 SectionHeader("Profile Settings")
-
-                CleanMenuItem(
-                    icon = R.drawable.baseline_watch_24,
-                    title = "My Activities",
-                    subtitle = "View your account activities",
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.baseline_watch_24, "My Activities", "View your account activities", Blue) {
                     context.startActivity(Intent(context, MyActivitiesActivity::class.java))
                 }
-
-                CleanMenuItem(
-                    icon = R.drawable.baseline_create_24,
-                    title = "Trust and Verification",
-                    subtitle = "Manage your account security",
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.baseline_create_24, "Trust and Verification", "Manage your account security", Blue) {
                     context.startActivity(Intent(context, TrustAndVerificationActivity::class.java))
                 }
-
-                CleanMenuItem(
-                    icon = R.drawable.baseline_settings_24,
-                    title = "Application Settings",
-                    subtitle = "Configure your app settings",
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.baseline_settings_24, "Application Settings", "Configure your app settings", Blue) {
                     context.startActivity(Intent(context, ApplicationSettingsActivity::class.java))
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 SectionHeader("Support")
-
-                CleanMenuItem(
-                    icon = R.drawable.outline_adb_24,
-                    title = "Help Center",
-                    subtitle = null,
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.outline_adb_24, "Help Center", null, Blue) {
                     context.startActivity(Intent(context, HelpCenterActivity::class.java))
                 }
-
-                CleanMenuItem(
-                    icon = R.drawable.baseline_email_24,
-                    title = "Terms & Policies",
-                    subtitle = null,
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.baseline_email_24, "Terms & Policies", null, Blue) {
                     context.startActivity(Intent(context, TermsAndPoliciesActivity::class.java))
                 }
-
-                CleanMenuItem(
-                    icon = R.drawable.baseline_email_24,
-                    title = "Contact Us",
-                    subtitle = null,
-                    iconColor = Blue
-                ) {
+                CleanMenuItem(R.drawable.baseline_email_24, "Contact Us", null, Blue) {
                     context.startActivity(Intent(context, ContactUsActivity::class.java))
                 }
 
@@ -319,27 +247,17 @@ fun ProfileScreen() {
                         .background(Color.White)
                         .clickable {
                             FirebaseAuth.getInstance().signOut()
-                            val loginIntent = Intent(context, LoginActivity::class.java)
-                            loginIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            context.startActivity(loginIntent)
+                            val intent = Intent(context, LoginActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(intent)
                         }
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_logout_24),
-                            contentDescription = null,
-                            tint = Color(0xFFE53935),
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Icon(painterResource(R.drawable.baseline_logout_24), null, tint = Color(0xFFE53935), modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Logout",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE53935)
-                        )
+                        Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE53935))
                     }
                 }
 
@@ -349,48 +267,31 @@ fun ProfileScreen() {
     }
 }
 
-// ----- Reused Components -----
 @Composable
 fun ContactInfoRow(icon: Int, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = null,
-            tint = Color(0xFF4D8DFF),
-            modifier = Modifier.size(20.dp)
-        )
+        Icon(painterResource(icon), null, tint = Color(0xFF4D8DFF), modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(label, fontSize = 12.sp, color = Color(0xFF999999))
-            Text(
-                value,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF2C2C2C)
-            )
+            Text(value, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2C2C2C))
         }
     }
 }
 
 @Composable
-fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+fun ProfileSectionHeader(title: String) {
     Text(
-        text = title,
+        title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
         color = Color(0xFF2C2C2C),
-        modifier = modifier.padding(start = 12.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
     )
 }
 
 @Composable
-fun CleanMenuItem(
-    icon: Int,
-    title: String,
-    subtitle: String?,
-    iconColor: Color,
-    onClick: () -> Unit
-) {
+fun CleanMenuItem(icon: Int, title: String, subtitle: String?, iconColor: Color, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -400,10 +301,7 @@ fun CleanMenuItem(
             .clickable { onClick() }
             .padding(16.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
@@ -411,12 +309,7 @@ fun CleanMenuItem(
                     .background(iconColor),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    painter = painterResource(icon),
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(painterResource(icon), null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -426,12 +319,7 @@ fun CleanMenuItem(
                     Text(subtitle, fontSize = 12.sp, color = Color(0xFF999999))
                 }
             }
-            Icon(
-                painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
-                contentDescription = null,
-                tint = Color(0xFFCCCCCC),
-                modifier = Modifier.size(16.dp)
-            )
+            Icon(painterResource(R.drawable.outline_arrow_forward_ios_24), null, tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
         }
     }
 }

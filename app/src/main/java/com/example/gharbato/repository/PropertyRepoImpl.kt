@@ -10,6 +10,7 @@ import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.data.model.PropertyModel
 import com.example.gharbato.data.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
@@ -24,6 +25,9 @@ class PropertyRepoImpl : PropertyRepo {
 
     private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
     private val ref: DatabaseReference = database.getReference("Property")
+    private val usersRef: DatabaseReference = database.getReference("Users")
+    private val notificationsRef: DatabaseReference = database.getReference("Notifications")
+    private val auth = FirebaseAuth.getInstance()
 
     private val cloudinary = Cloudinary(
         mapOf(
@@ -50,7 +54,7 @@ class PropertyRepoImpl : PropertyRepo {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
                             if (property != null) {
                                 properties.add(property)
-                                Log.d(TAG, "✓ Loaded: ${property.title} - ${property.location} (${property.latitude}, ${property.longitude})")
+                                Log.d(TAG, "✓ Loaded: ${property.title} - ${property.location}")
                             } else {
                                 Log.w(TAG, "✗ Null property at key: ${propertySnapshot.key}")
                             }
@@ -75,145 +79,108 @@ class PropertyRepoImpl : PropertyRepo {
 
     override suspend fun getAllApprovedProperties(): List<PropertyModel> {
         return suspendCancellableCoroutine { continuation ->
-
             ref.orderByChild("status")
                 .equalTo(PropertyStatus.APPROVED)
                 .addListenerForSingleValueEvent(object : ValueEventListener {
-
                     override fun onDataChange(snapshot: DataSnapshot) {
                         val properties = mutableListOf<PropertyModel>()
-
                         for (propertySnapshot in snapshot.children) {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
                             if (property != null) {
                                 properties.add(property)
                             }
                         }
-
                         continuation.resume(properties)
                     }
 
                     override fun onCancelled(error: DatabaseError) {
-                        continuation.resumeWithException(
-                            Exception(error.message)
-                        )
+                        continuation.resumeWithException(Exception(error.message))
                     }
                 })
         }
     }
 
-
     override suspend fun getPropertyById(id: Int): PropertyModel? {
         return suspendCancellableCoroutine { continuation ->
             Log.d(TAG, "Fetching APPROVED property by ID: $id")
 
-            // First, query by ID
             ref.orderByChild("id")
                 .equalTo(id.toDouble())
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        // Filter only approved properties
-                        val property = snapshot.children
-                            .mapNotNull { it.getValue(PropertyModel::class.java) }
-                            .firstOrNull { it.status == PropertyStatus.APPROVED } // Only approved
+                        var property: PropertyModel? = null
+
+                        for (child in snapshot.children) {
+                            val prop = child.getValue(PropertyModel::class.java)
+                            if (prop?.status == PropertyStatus.APPROVED) {
+                                property = prop
+                                break
+                            }
+                        }
 
                         if (property != null) {
                             Log.d(TAG, "Found APPROVED property: ${property.title}")
                         } else {
                             Log.w(TAG, "No APPROVED property found with ID: $id")
                         }
-
                         continuation.resume(property)
                     }
 
                     override fun onCancelled(error: DatabaseError) {
                         Log.e(TAG, "Firebase error: ${error.message}")
-                        continuation.resumeWithException(
-                            Exception("Firebase error: ${error.message}")
-                        )
+                        continuation.resumeWithException(Exception("Firebase error: ${error.message}"))
                     }
                 })
         }
     }
 
-
     // ========== SEARCH & FILTER ==========
 
     override suspend fun searchProperties(query: String): List<PropertyModel> {
         Log.d(TAG, "Searching properties with query: '$query'")
-
         val allProperties = getAllApprovedProperties()
         Log.d(TAG, "Total properties to search: ${allProperties.size}")
 
         val result = if (query.isEmpty()) {
-            Log.d(TAG, "Empty query - returning all properties")
             allProperties
         } else {
             val searchQuery = query.lowercase().trim()
-            Log.d(TAG, "Normalized query: '$searchQuery'")
-
-            val filtered = allProperties.filter { property ->
-                val titleMatch = property.title.lowercase().contains(searchQuery)
-                val locationMatch = property.location.lowercase().contains(searchQuery)
-                val developerMatch = property.developer.lowercase().contains(searchQuery)
-                val propertyTypeMatch = property.propertyType.lowercase().contains(searchQuery)
-                val descriptionMatch = property.description?.lowercase()?.contains(searchQuery) ?: false
-                val marketTypeMatch = property.marketType.lowercase().contains(searchQuery)
-
-                val matches = titleMatch || locationMatch || developerMatch ||
-                        propertyTypeMatch || descriptionMatch || marketTypeMatch
-
-                if (matches) {
-                    Log.d(TAG, "✓ Match: ${property.title} (${property.location})")
-                }
-
-                matches
+            allProperties.filter { property ->
+                property.title.lowercase().contains(searchQuery) ||
+                        property.location.lowercase().contains(searchQuery) ||
+                        property.developer.lowercase().contains(searchQuery) ||
+                        property.propertyType.lowercase().contains(searchQuery) ||
+                        property.description?.lowercase()?.contains(searchQuery) == true ||
+                        property.marketType.lowercase().contains(searchQuery)
             }
-
-            Log.d(TAG, "Search found ${filtered.size} matching properties")
-            filtered
         }
 
+        Log.d(TAG, "Search found ${result.size} matching properties")
         return result
     }
 
     override suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel> {
         Log.d(TAG, "Filtering properties with: $filters")
-
         val allProperties = getAllApprovedProperties()
         var filtered = allProperties
 
-        Log.d(TAG, "Starting with ${filtered.size} properties")
+        filtered = filtered.filter { it.marketType.equals(filters.marketType, ignoreCase = true) }
 
-        // Market Type (Buy/Rent/Book)
-        filtered = filtered.filter { property ->
-            property.marketType.equals(filters.marketType, ignoreCase = true)
-        }
-        Log.d(TAG, "After market type filter: ${filtered.size} properties")
-
-        // Property Types
         if (filters.propertyTypes.isNotEmpty()) {
             filtered = filtered.filter { property ->
-                filters.propertyTypes.any { type ->
-                    property.propertyType.equals(type, ignoreCase = true)
-                }
+                filters.propertyTypes.any { it.equals(property.propertyType, ignoreCase = true) }
             }
-            Log.d(TAG, "After property type filter: ${filtered.size} properties")
         }
 
-        // Price Range
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
             filtered = filtered.filter { property ->
                 val priceValue = extractPriceValue(property.price)
                 val minPriceValue = filters.minPrice * 1000
                 val maxPriceValue = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
-
                 priceValue >= minPriceValue && priceValue <= maxPriceValue
             }
-            Log.d(TAG, "After price filter: ${filtered.size} properties")
         }
 
-        // Bedrooms
         if (filters.bedrooms.isNotEmpty()) {
             filtered = filtered.filter { property ->
                 when (filters.bedrooms) {
@@ -222,49 +189,30 @@ class PropertyRepoImpl : PropertyRepo {
                     else -> property.bedrooms == filters.bedrooms.toIntOrNull()
                 }
             }
-            Log.d(TAG, "After bedrooms filter: ${filtered.size} properties")
         }
 
-        // Furnishing
         if (filters.furnishing.isNotEmpty()) {
-            filtered = filtered.filter { property ->
-                property.furnishing.equals(filters.furnishing, ignoreCase = true)
-            }
-            Log.d(TAG, "After furnishing filter: ${filtered.size} properties")
+            filtered = filtered.filter { it.furnishing.equals(filters.furnishing, ignoreCase = true) }
         }
 
-        // Parking
         filters.parking?.let { parkingRequired ->
-            filtered = filtered.filter { property ->
-                property.parking == parkingRequired
-            }
-            Log.d(TAG, "After parking filter: ${filtered.size} properties")
+            filtered = filtered.filter { it.parking == parkingRequired }
         }
 
-        // Pets Allowed
         filters.petsAllowed?.let { petsRequired ->
-            filtered = filtered.filter { property ->
-                property.petsAllowed == petsRequired
-            }
-            Log.d(TAG, "After pets filter: ${filtered.size} properties")
+            filtered = filtered.filter { it.petsAllowed == petsRequired }
         }
 
-        // Amenities (property must have ALL selected amenities)
         if (filters.amenities.isNotEmpty()) {
             filtered = filtered.filter { property ->
                 filters.amenities.all { amenity ->
                     property.amenities.any { it.equals(amenity, ignoreCase = true) }
                 }
             }
-            Log.d(TAG, "After amenities filter: ${filtered.size} properties")
         }
 
-        // Floor
         if (filters.floor.isNotEmpty()) {
-            filtered = filtered.filter { property ->
-                property.floor.equals(filters.floor, ignoreCase = true)
-            }
-            Log.d(TAG, "After floor filter: ${filtered.size} properties")
+            filtered = filtered.filter { it.floor.equals(filters.floor, ignoreCase = true) }
         }
 
         Log.d(TAG, "Final filtered result: ${filtered.size} properties")
@@ -278,74 +226,34 @@ class PropertyRepoImpl : PropertyRepo {
         longitude: Double,
         radiusKm: Float
     ): List<PropertyModel> {
-        Log.d(TAG, "Searching by location - Lat: $latitude, Lng: $longitude, Radius: ${radiusKm}km")
-
         val allProperties = getAllApprovedProperties()
-        Log.d(TAG, "Total properties to check: ${allProperties.size}")
-
-        val filtered = allProperties.filter { property ->
+        return allProperties.filter { property ->
             try {
-                val distance = calculateDistance(
-                    lat1 = latitude,
-                    lon1 = longitude,
-                    lat2 = property.latitude,
-                    lon2 = property.longitude
-                )
-
-                val withinRadius = distance <= radiusKm
-
-                Log.d(TAG, "${if (withinRadius) "✓" else "✗"} ${property.title} - " +
-                        "${String.format("%.2f", distance)}km away " +
-                        "(${property.latitude}, ${property.longitude})")
-
-                withinRadius
+                val distance = calculateDistance(latitude, longitude, property.latitude, property.longitude)
+                distance <= radiusKm
             } catch (e: Exception) {
-                Log.e(TAG, "✗ Error calculating distance for ${property.title}: ${e.message}")
                 false
             }
         }
-
-        Log.d(TAG, "Location search found ${filtered.size} properties within ${radiusKm}km")
-        return filtered
     }
 
-    /**
-     * Calculate distance between two coordinates using Haversine formula
-     * @return Distance in kilometers
-     */
-    private fun calculateDistance(
-        lat1: Double,
-        lon1: Double,
-        lat2: Double,
-        lon2: Double
-    ): Float {
-        val earthRadius = 6371.0 // Earth's radius in kilometers
-
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val earthRadius = 6371.0
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
-
         val a = sin(dLat / 2) * sin(dLat / 2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
                 sin(dLon / 2) * sin(dLon / 2)
-
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
         return (earthRadius * c).toFloat()
     }
 
-    /**
-     * Extract numeric price value from price string
-     * Example: "NPR 25,000/month" -> 25000
-     * Example: "25000" -> 25000
-     */
     private fun extractPriceValue(priceString: String): Int {
         val numbers = priceString.filter { it.isDigit() }
-        val value = numbers.toIntOrNull() ?: 0
-        Log.d(TAG, "Extracted price: '$priceString' -> $value")
-        return value
+        return numbers.toIntOrNull() ?: 0
     }
 
-    // ========== PROPERTY MANAGEMENT ==========
+    // ========== PROPERTY MANAGEMENT WITH NOTIFICATIONS ==========
 
     override fun addProperty(
         property: PropertyModel,
@@ -358,25 +266,133 @@ class PropertyRepoImpl : PropertyRepo {
             return
         }
 
+        val propertyWithId = property.copy(id = propertyId.hashCode())
+
         ref.child(propertyId)
-            .setValue(property.copy(id = propertyId.hashCode()))
+            .setValue(propertyWithId)
             .addOnSuccessListener {
-                Log.d(TAG, "Property added successfully: ${property.title}")
+                Log.d(TAG, "✅ Property added successfully: ${property.title}")
                 callback(true, null)
+
+                // 🔔 NOTIFICATION: Notify all users about new property
+                if (property.status == PropertyStatus.APPROVED) {
+                    notifyAllUsersAboutNewProperty(propertyWithId)
+                }
             }
             .addOnFailureListener {
-                Log.e(TAG, "Failed to add property: ${it.message}")
+                Log.e(TAG, "❌ Failed to add property: ${it.message}")
                 callback(false, it.message)
+            }
+    }
+
+    // ========== NOTIFICATION FUNCTIONS ==========
+
+    private fun notifyAllUsersAboutNewProperty(property: PropertyModel) {
+        val currentUserId = auth.currentUser?.uid ?: property.ownerId
+
+        usersRef.get().addOnSuccessListener { snapshot ->
+            val allUserIds = snapshot.children.mapNotNull { it.key }
+            val userIdsToNotify = allUserIds.filter { it != currentUserId }
+
+            Log.d(TAG, "📢 Notifying ${userIdsToNotify.size} users about new property: ${property.title}")
+
+            val imageUrl = if (property.images.isNotEmpty()) property.images[0] else ""
+
+            val notificationData = hashMapOf<String, Any>(
+                "title" to "🏠 New Property Listed!",
+                "message" to "${property.title} is now available for ${property.marketType} in ${property.location}",
+                "type" to "property",
+                "timestamp" to System.currentTimeMillis(),
+                "isRead" to false,
+                "imageUrl" to imageUrl,
+                "actionData" to property.id.toString()
+            )
+
+            userIdsToNotify.forEach { userId ->
+                notificationsRef.child(userId).push().setValue(notificationData)
+                    .addOnSuccessListener {
+                        Log.d(TAG, "✅ Notification sent to user: $userId")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "❌ Failed to send notification to $userId: ${e.message}")
+                    }
+            }
+        }.addOnFailureListener { e ->
+            Log.e(TAG, "❌ Failed to fetch users for notification: ${e.message}")
+        }
+    }
+
+    fun notifyOwnerPropertyApproved(
+        ownerId: String,
+        propertyTitle: String,
+        propertyId: Int,
+        callback: ((Boolean, String) -> Unit)? = null
+    ) {
+        val notificationData = hashMapOf<String, Any>(
+            "title" to "✅ Property Approved!",
+            "message" to "Congratulations! Your property '$propertyTitle' has been approved and is now live!",
+            "type" to "system",
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            "actionData" to propertyId.toString()
+        )
+
+        notificationsRef.child(ownerId).push().setValue(notificationData)
+            .addOnSuccessListener {
+                Log.d(TAG, "✅ Approval notification sent to owner: $ownerId")
+                callback?.invoke(true, "Notification sent")
+
+                ref.orderByChild("id").equalTo(propertyId.toDouble())
+                    .addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (snapshot.exists()) {
+                                val property = snapshot.children.first()
+                                    .getValue(PropertyModel::class.java)
+                                property?.let { notifyAllUsersAboutNewProperty(it) }
+                            }
+                        }
+                        override fun onCancelled(error: DatabaseError) {
+                            Log.e(TAG, "Failed to fetch property for notification: ${error.message}")
+                        }
+                    })
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "❌ Failed to send approval notification: ${e.message}")
+                callback?.invoke(false, e.message ?: "Failed")
+            }
+    }
+
+    fun notifyOwnerPropertyRejected(
+        ownerId: String,
+        propertyTitle: String,
+        reason: String = "Does not meet listing standards",
+        callback: ((Boolean, String) -> Unit)? = null
+    ) {
+        val notificationData = hashMapOf<String, Any>(
+            "title" to "❌ Property Listing Rejected",
+            "message" to "Your property '$propertyTitle' was not approved. Reason: $reason. Please review and resubmit.",
+            "type" to "system",
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            "actionData" to ""
+        )
+
+        notificationsRef.child(ownerId).push().setValue(notificationData)
+            .addOnSuccessListener {
+                Log.d(TAG, "✅ Rejection notification sent to owner: $ownerId")
+                callback?.invoke(true, "Notification sent")
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "❌ Failed to send rejection notification: ${e.message}")
+                callback?.invoke(false, e.message ?: "Failed")
             }
     }
 
     // ========== IMAGE UPLOAD ==========
 
-    override fun uploadImage(
-        context: Context,
-        imageUri: Uri,
-        callback: (String?) -> Unit
-    ) {
+    override fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
@@ -406,11 +422,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    override fun uploadMultipleImages(
-        context: Context,
-        imageUris: List<Uri>,
-        callback: (List<String>) -> Unit
-    ) {
+    override fun uploadMultipleImages(context: Context, imageUris: List<Uri>, callback: (List<String>) -> Unit) {
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             val uploadedUrls = mutableListOf<String>()
@@ -451,25 +463,14 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
-    override fun getFileNameFromUri(
-        context: Context,
-        imageUri: Uri
-    ): String? {
-        val cursor = context.contentResolver.query(
-            imageUri,
-            null,
-            null,
-            null,
-            null
-        )
-
+    override fun getFileNameFromUri(context: Context, imageUri: Uri): String? {
+        val cursor = context.contentResolver.query(imageUri, null, null, null, null)
         cursor?.use {
             val nameIndex = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
             if (it.moveToFirst() && nameIndex != -1) {
                 return it.getString(nameIndex)
             }
         }
-
         return "image_${System.currentTimeMillis()}"
     }
 }

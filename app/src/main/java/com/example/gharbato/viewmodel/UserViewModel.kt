@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepo
 
@@ -19,6 +20,14 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     private val _imageUploadStatus = MutableLiveData<String?>()
     val imageUploadStatus: LiveData<String?> get() = _imageUploadStatus
+
+    private val _notifications = MutableLiveData<List<NotificationModel>>()
+    val notifications: LiveData<List<NotificationModel>> get() = _notifications
+
+    private val _unreadCount = MutableLiveData<Int>(0)
+    val unreadCount: LiveData<Int> get() = _unreadCount
+
+    // ==================== AUTHENTICATION ====================
 
     fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
         repo.login(email, password, callback)
@@ -51,6 +60,8 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         return repo.getCurrentUserId()
     }
 
+    // ==================== USER PROFILE ====================
+
     fun loadUserProfile() {
         val userId = repo.getCurrentUserId() ?: return
         repo.getUser(userId) { user ->
@@ -80,6 +91,8 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         }
     }
 
+    // ==================== PHONE & EMAIL VERIFICATION ====================
+
     fun sendOtp(
         phoneNumber: String,
         activity: Activity,
@@ -104,6 +117,8 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         repo.checkEmailVerified(callback)
     }
 
+    // ==================== USER SEARCH ====================
+
     fun getAllUsers(callback: (Boolean, List<UserModel>?, String) -> Unit) {
         repo.getAllUsers(callback)
     }
@@ -112,12 +127,25 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         repo.searchUsers(query, callback)
     }
 
-    private val _notifications =
-        MutableLiveData<List<com.example.gharbato.model.NotificationModel>>()
-    val notifications: LiveData<List<com.example.gharbato.model.NotificationModel>> get() = _notifications
+    // ==================== REAL-TIME NOTIFICATION OBSERVERS ====================
 
-    private val _unreadCount = MutableLiveData<Int>(0)
-    val unreadCount: LiveData<Int> get() = _unreadCount
+    fun startObservingNotifications() {
+        val userId = repo.getCurrentUserId() ?: return
+
+        repo.observeNotifications(userId) { notificationList ->
+            _notifications.postValue(notificationList)
+        }
+
+        repo.observeUnreadCount(userId) { count ->
+            _unreadCount.postValue(count)
+        }
+    }
+
+    fun stopObservingNotifications() {
+        repo.removeNotificationObservers()
+    }
+
+    // ==================== NOTIFICATION ACTIONS ====================
 
     fun loadNotifications() {
         val userId = repo.getCurrentUserId() ?: return
@@ -137,38 +165,57 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     fun markNotificationAsRead(notificationId: String) {
         val userId = repo.getCurrentUserId() ?: return
-
-        repo.markNotificationAsRead(userId, notificationId) { success, _ ->
-            if (success) {
-                val current = _unreadCount.value ?: 0
-                if (current > 0) _unreadCount.postValue(current - 1)
-            }
-            loadNotifications()
-        }
+        repo.markNotificationAsRead(userId, notificationId) { _, _ -> }
     }
 
     fun markAllAsRead() {
         val userId = repo.getCurrentUserId() ?: return
-
-        repo.markAllNotificationsAsRead(userId) { success, _ ->
-            if (success) {
-                _unreadCount.postValue(0)
-            }
-            loadNotifications()
-        }
+        repo.markAllNotificationsAsRead(userId) { _, _ -> }
     }
 
     fun deleteNotification(notificationId: String) {
         val userId = repo.getCurrentUserId() ?: return
-
-        repo.deleteNotification(userId, notificationId) { success, _ ->
-            if (success) {
-                loadNotifications()
-                loadUnreadCount()
-            }
-        }
+        repo.deleteNotification(userId, notificationId) { _, _ -> }
     }
 
+    // ==================== CREATE NOTIFICATIONS ====================
+
+    /**
+     * Create notification for current user WITH callback
+     */
+    fun createNotification(
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = "",
+        callback: (Boolean, String) -> Unit
+    ) {
+        val userId = repo.getCurrentUserId() ?: run {
+            callback(false, "User not logged in")
+            return
+        }
+        repo.createNotification(userId, title, message, type, imageUrl, actionData, callback)
+    }
+
+    /**
+     * Create notification for specific user WITH callback
+     */
+    fun createNotificationForUser(
+        userId: String,
+        title: String,
+        message: String,
+        type: String,
+        imageUrl: String = "",
+        actionData: String = "",
+        callback: (Boolean, String) -> Unit
+    ) {
+        repo.createNotification(userId, title, message, type, imageUrl, actionData, callback)
+    }
+
+    /**
+     * Create notification WITHOUT callback (fire and forget)
+     */
     fun createNotification(
         userId: String,
         title: String,
@@ -180,13 +227,24 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         repo.createNotification(userId, title, message, type, imageUrl, actionData) { _, _ -> }
     }
 
+    /**
+     * Notify all users
+     */
     fun notifyAllUsers(
         title: String,
         message: String,
         type: String,
         imageUrl: String = "",
-        actionData: String = ""
+        actionData: String = "",
+        callback: (Boolean, String) -> Unit
     ) {
-        repo.notifyAllUsers(title, message, type, imageUrl, actionData) { _, _ -> }
+        repo.notifyAllUsers(title, message, type, imageUrl, actionData, callback)
+    }
+
+    // ==================== LIFECYCLE ====================
+
+    override fun onCleared() {
+        super.onCleared()
+        stopObservingNotifications()
     }
 }

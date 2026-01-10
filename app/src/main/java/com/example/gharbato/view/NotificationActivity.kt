@@ -60,20 +60,17 @@ fun NotificationScreen() {
     var showMarkAllDialog by remember { mutableStateOf(false) }
     var savedUnreadCount by remember { mutableStateOf(0) }
 
-    // Load notifications when screen opens
     LaunchedEffect(Unit) {
         userViewModel.loadNotifications()
         userViewModel.loadUnreadCount()
     }
 
-    // Save unread count for the dialog
     LaunchedEffect(unreadCount) {
         if (unreadCount > 0) {
             savedUnreadCount = unreadCount
         }
     }
 
-    // Mark All as Read Confirmation Dialog
     if (showMarkAllDialog) {
         AlertDialog(
             onDismissRequest = { showMarkAllDialog = false },
@@ -95,7 +92,6 @@ fun NotificationScreen() {
                         showMarkAllDialog = false
                         userViewModel.markAllAsRead()
 
-                        // Show toast immediately with saved count
                         Toast.makeText(
                             context,
                             "$savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} marked as read",
@@ -185,7 +181,6 @@ fun NotificationScreen() {
         }
     ) { padding ->
         if (notifications.isEmpty()) {
-            // Empty State
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -226,7 +221,7 @@ fun NotificationScreen() {
             ) {
                 items(
                     items = notifications,
-                    key = { it.notificationId }
+                    key = { it.notificationId } // Added key to force recomposition
                 ) { notification ->
                     NotificationItem(
                         notification = notification,
@@ -242,7 +237,6 @@ fun NotificationScreen() {
                     )
                 }
 
-                // Extra space at bottom
                 item {
                     Spacer(modifier = Modifier.height(20.dp))
                 }
@@ -298,7 +292,6 @@ fun NotificationItem(
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Icon/Image based on notification type
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -326,7 +319,6 @@ fun NotificationItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // Notification content
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 notification.title,
@@ -356,7 +348,6 @@ fun NotificationItem(
             )
         }
 
-        // Delete button
         IconButton(
             onClick = { showDeleteDialog = true },
             modifier = Modifier.size(32.dp)
@@ -369,7 +360,6 @@ fun NotificationItem(
             )
         }
 
-        // Unread indicator
         if (!notification.isRead) {
             Spacer(modifier = Modifier.width(4.dp))
             Box(
