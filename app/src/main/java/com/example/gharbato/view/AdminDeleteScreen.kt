@@ -125,7 +125,7 @@ fun AdminDeleteScreen() {
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     text = {
-                        Text("Delete History (0)")
+                        Text("Delete History (${uiState.deletionHistory.size})")
                     }
                 )
             }
