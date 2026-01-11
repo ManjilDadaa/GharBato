@@ -183,7 +183,9 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(users) { user ->
-                        val displayName = user.fullName.ifBlank { user.email }
+                        val displayName = user.fullName.ifBlank { 
+                            if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
+                        }
                         ChatListItem(
                             name = displayName,
                             message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
