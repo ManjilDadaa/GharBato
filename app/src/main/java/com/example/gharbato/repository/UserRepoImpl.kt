@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.NotificationModel
@@ -199,18 +200,31 @@ class UserRepoImpl : UserRepo {
 
         notificationsListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                Log.d("NotificationRepo", "📱 Notifications changed! Total: ${snapshot.childrenCount}")
+
                 val list = snapshot.children.mapNotNull {
                     it.getValue(NotificationModel::class.java)?.copy(notificationId = it.key ?: "")
                 }.sortedByDescending { it.timestamp }
+
+                val unreadCount = list.count { !it.isRead }
+                Log.d("NotificationRepo", "✅ Loaded ${list.size} notifications, $unreadCount unread")
+
+                // Log each notification status
+                list.forEach {
+                    Log.d("NotificationRepo", "  - ${it.title}: isRead=${it.isRead}")
+                }
+
                 callback(list)
             }
 
             override fun onCancelled(error: DatabaseError) {
+                Log.e("NotificationRepo", "❌ Error observing notifications: ${error.message}")
                 callback(emptyList())
             }
         }
 
         notificationsRef?.addValueEventListener(notificationsListener!!)
+        Log.d("NotificationRepo", "🎧 Started listening to notifications for user: $userId")
     }
 
     override fun observeUnreadCount(userId: String, callback: (Int) -> Unit) {
@@ -221,26 +235,31 @@ class UserRepoImpl : UserRepo {
                 val count = snapshot.children.count {
                     it.getValue(NotificationModel::class.java)?.isRead == false
                 }
+                Log.d("NotificationRepo", "🔔 Unread count: $count")
                 callback(count)
             }
 
             override fun onCancelled(error: DatabaseError) {
+                Log.e("NotificationRepo", "❌ Error observing unread count: ${error.message}")
                 callback(0)
             }
         }
 
         unreadCountRef?.addValueEventListener(unreadCountListener!!)
+        Log.d("NotificationRepo", "🎧 Started listening to unread count for user: $userId")
     }
 
     override fun removeNotificationObservers() {
         notificationsListener?.let { listener ->
             notificationsRef?.removeEventListener(listener)
+            Log.d("NotificationRepo", "🛑 Removed notifications listener")
         }
         notificationsListener = null
         notificationsRef = null
 
         unreadCountListener?.let { listener ->
             unreadCountRef?.removeEventListener(listener)
+            Log.d("NotificationRepo", "🛑 Removed unread count listener")
         }
         unreadCountListener = null
         unreadCountRef = null
@@ -288,29 +307,81 @@ class UserRepoImpl : UserRepo {
         notificationId: String,
         callback: (Boolean, String) -> Unit
     ) {
+        Log.d("NotificationRepo", "📝 Marking notification as read: $notificationId")
+
         database.getReference("Notifications")
             .child(userId)
             .child(notificationId)
             .child("isRead")
             .setValue(true)
-            .addOnCompleteListener {
-                callback(it.isSuccessful, if (it.isSuccessful) "Marked as read" else "Failed")
+            .addOnSuccessListener {
+                Log.d("NotificationRepo", "✅ Notification marked as read successfully")
+                callback(true, "Marked as read")
+            }
+            .addOnFailureListener { e ->
+                Log.e("NotificationRepo", "❌ Failed to mark as read: ${e.message}")
+                callback(false, "Failed")
             }
     }
 
     override fun markAllNotificationsAsRead(userId: String, callback: (Boolean, String) -> Unit) {
+        Log.d("NotificationRepo", "📝 Starting Mark ALL notifications as read for user: $userId")
+
         val notifRef = database.getReference("Notifications").child(userId)
+
         notifRef.get().addOnSuccessListener { snapshot ->
-            val updates = snapshot.children.associate { "${it.key}/isRead" to true }
-            if (updates.isEmpty()) {
+            Log.d("NotificationRepo", "📊 Total notifications in Firebase: ${snapshot.childrenCount}")
+
+            if (!snapshot.exists() || snapshot.childrenCount == 0L) {
+                Log.d("NotificationRepo", "⚠️ No notifications found")
                 callback(true, "No notifications to mark")
-            } else {
-                notifRef.updateChildren(updates).addOnCompleteListener {
-                    callback(it.isSuccessful, if (it.isSuccessful) "All marked as read" else "Failed")
-                }
+                return@addOnSuccessListener
             }
-        }.addOnFailureListener {
-            callback(false, "Failed to mark all as read")
+
+            val unreadNotifications = snapshot.children.filter { child ->
+                val isRead = child.child("isRead").getValue(Boolean::class.java) ?: true
+                !isRead
+            }
+
+            Log.d("NotificationRepo", "📋 Found ${unreadNotifications.size} unread notifications")
+
+            if (unreadNotifications.isEmpty()) {
+                Log.d("NotificationRepo", "✅ All notifications already read")
+                callback(true, "All notifications already read")
+                return@addOnSuccessListener
+            }
+
+            // Update each notification individually to guarantee Firebase triggers listeners
+            var completed = 0
+            var failed = 0
+            val total = unreadNotifications.size
+
+            unreadNotifications.forEach { child ->
+                Log.d("NotificationRepo", "  📝 Marking ${child.key} as read...")
+
+                child.ref.child("isRead").setValue(true)
+                    .addOnSuccessListener {
+                        completed++
+                        Log.d("NotificationRepo", "  ✅ Marked ${child.key} as read ($completed/$total)")
+
+                        if (completed + failed == total) {
+                            Log.d("NotificationRepo", "🎉 All done! Success: $completed, Failed: $failed")
+                            callback(true, "Marked $completed as read")
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        failed++
+                        Log.e("NotificationRepo", "  ❌ Failed ${child.key}: ${e.message}")
+
+                        if (completed + failed == total) {
+                            callback(completed > 0, "Marked $completed, failed $failed")
+                        }
+                    }
+            }
+
+        }.addOnFailureListener { e ->
+            Log.e("NotificationRepo", "❌ Failed to fetch notifications: ${e.message}")
+            callback(false, "Failed to fetch notifications")
         }
     }
 
@@ -319,12 +390,35 @@ class UserRepoImpl : UserRepo {
         notificationId: String,
         callback: (Boolean, String) -> Unit
     ) {
+        Log.d("NotificationRepo", "🗑️ Deleting notification: $notificationId")
+
         database.getReference("Notifications")
             .child(userId)
             .child(notificationId)
             .removeValue()
-            .addOnCompleteListener {
-                callback(it.isSuccessful, if (it.isSuccessful) "Notification deleted" else "Failed")
+            .addOnSuccessListener {
+                Log.d("NotificationRepo", "✅ Notification deleted successfully")
+                callback(true, "Notification deleted")
+            }
+            .addOnFailureListener { e ->
+                Log.e("NotificationRepo", "❌ Failed to delete: ${e.message}")
+                callback(false, "Failed")
+            }
+    }
+
+    fun deleteAllNotifications(userId: String, callback: (Boolean, String) -> Unit) {
+        Log.d("NotificationRepo", "🗑️ Deleting ALL notifications for user: $userId")
+
+        val notifRef = database.getReference("Notifications").child(userId)
+
+        notifRef.removeValue()
+            .addOnSuccessListener {
+                Log.d("NotificationRepo", "✅ All notifications deleted successfully")
+                callback(true, "All notifications cleared")
+            }
+            .addOnFailureListener { e ->
+                Log.e("NotificationRepo", "❌ Failed to clear notifications: ${e.message}")
+                callback(false, "Failed to clear")
             }
     }
 
@@ -337,6 +431,8 @@ class UserRepoImpl : UserRepo {
         actionData: String,
         callback: (Boolean, String) -> Unit
     ) {
+        Log.d("NotificationRepo", "📤 Creating notification for user: $userId")
+
         database.getReference("Notifications").child(userId).push().setValue(
             hashMapOf<String, Any>(
                 "title" to title,
@@ -347,8 +443,12 @@ class UserRepoImpl : UserRepo {
                 "imageUrl" to imageUrl,
                 "actionData" to actionData
             )
-        ).addOnCompleteListener {
-            callback(it.isSuccessful, if (it.isSuccessful) "Notification created" else "Failed")
+        ).addOnSuccessListener {
+            Log.d("NotificationRepo", "✅ Notification created successfully")
+            callback(true, "Notification created")
+        }.addOnFailureListener { e ->
+            Log.e("NotificationRepo", "❌ Failed to create notification: ${e.message}")
+            callback(false, "Failed")
         }
     }
 

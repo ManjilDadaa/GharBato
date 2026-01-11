@@ -31,60 +31,37 @@ import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Black
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
+import com.example.gharbato.viewmodel.UserViewModelProvider
 import com.google.firebase.auth.FirebaseAuth
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen() {
     val context = LocalContext.current
-
-    // Initialize ViewModel ONCE
-    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-
-    // Observe LiveData - these update automatically in real-time
+    val userViewModel = remember { UserViewModelProvider.getInstance() }
     val userData by userViewModel.userData.observeAsState()
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
-
     var showContactInfo by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Start real-time observers ONCE on initial composition
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
-        userViewModel.startObservingNotifications() // This starts real-time updates
+        userViewModel.startObservingNotifications()
         isLoading = false
     }
 
-    // Clean up when screen is disposed
     DisposableEffect(Unit) {
-        onDispose {
-            userViewModel.stopObservingNotifications()
-        }
+        onDispose { userViewModel.stopObservingNotifications() }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FB))
-    ) {
-        // Top Bar with Badge
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F9FB))) {
         TopAppBar(
-            title = {
-                Text(
-                    "Profile",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.White
-            ),
+            title = { Text("Profile", fontSize = 20.sp, fontWeight = FontWeight.Bold) },
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White),
             actions = {
                 Box(modifier = Modifier.padding(end = 8.dp)) {
                     IconButton(
-                        onClick = {
-                            context.startActivity(Intent(context, NotificationActivity::class.java))
-                        },
+                        onClick = { context.startActivity(Intent(context, NotificationActivity::class.java)) },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
@@ -94,8 +71,6 @@ fun ProfileScreen() {
                             modifier = Modifier.size(24.dp)
                         )
                     }
-
-                    // Badge - only show if count > 0
                     if (unreadCount > 0) {
                         Box(
                             modifier = Modifier
@@ -121,23 +96,13 @@ fun ProfileScreen() {
         )
 
         if (isLoading || userData == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Blue)
             }
         } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Profile Header
+            Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
@@ -148,22 +113,16 @@ fun ProfileScreen() {
                                 painterResource(R.drawable.billu)
                             },
                             contentDescription = null,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(CircleShape)
-                                .background(Blue),
+                            modifier = Modifier.size(64.dp).clip(CircleShape).background(Blue),
                             contentScale = ContentScale.Crop
                         )
-
                         Box(
                             modifier = Modifier
                                 .size(22.dp)
                                 .clip(CircleShape)
                                 .background(Blue)
                                 .border(2.dp, Color.White, CircleShape)
-                                .clickable {
-                                    context.startActivity(Intent(context, EditProfileActivity::class.java))
-                                },
+                                .clickable { context.startActivity(Intent(context, EditProfileActivity::class.java)) },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -174,9 +133,7 @@ fun ProfileScreen() {
                             )
                         }
                     }
-
                     Spacer(modifier = Modifier.width(16.dp))
-
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             userData?.fullName ?: "User",
@@ -212,8 +169,7 @@ fun ProfileScreen() {
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-
-                SectionHeader("Profile Settings")
+                ProfileSectionHeader("Profile Settings")
                 CleanMenuItem(R.drawable.baseline_watch_24, "My Activities", "View your account activities", Blue) {
                     context.startActivity(Intent(context, MyActivitiesActivity::class.java))
                 }
@@ -225,8 +181,7 @@ fun ProfileScreen() {
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                SectionHeader("Support")
+                ProfileSectionHeader("Support")
                 CleanMenuItem(R.drawable.outline_adb_24, "Help Center", null, Blue) {
                     context.startActivity(Intent(context, HelpCenterActivity::class.java))
                 }
@@ -238,7 +193,6 @@ fun ProfileScreen() {
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -246,7 +200,9 @@ fun ProfileScreen() {
                         .clip(RoundedCornerShape(12.dp))
                         .background(Color.White)
                         .clickable {
+                            userViewModel.stopObservingNotifications()
                             FirebaseAuth.getInstance().signOut()
+                            UserViewModelProvider.clearInstance()
                             val intent = Intent(context, LoginActivity::class.java)
                             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                             context.startActivity(intent)
@@ -260,7 +216,6 @@ fun ProfileScreen() {
                         Text("Logout", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE53935))
                     }
                 }
-
                 Spacer(modifier = Modifier.height(100.dp))
             }
         }
@@ -303,10 +258,7 @@ fun CleanMenuItem(icon: Int, title: String, subtitle: String?, iconColor: Color,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconColor),
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(iconColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(painterResource(icon), null, tint = Color.White, modifier = Modifier.size(22.dp))

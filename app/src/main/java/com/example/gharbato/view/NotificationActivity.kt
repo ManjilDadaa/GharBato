@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,7 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -53,58 +55,69 @@ fun NotificationScreen() {
     val context = LocalContext.current
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
+    // Observe LiveData
     val notifications by userViewModel.notifications.observeAsState(emptyList())
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
     var showMenu by remember { mutableStateOf(false) }
-    var showMarkAllDialog by remember { mutableStateOf(false) }
-    var savedUnreadCount by remember { mutableStateOf(0) }
+    var showClearAllDialog by remember { mutableStateOf(false) }
 
+    // Start real-time observers
     LaunchedEffect(Unit) {
-        userViewModel.loadNotifications()
-        userViewModel.loadUnreadCount()
+        userViewModel.startObservingNotifications()
     }
 
-    LaunchedEffect(unreadCount) {
-        if (unreadCount > 0) {
-            savedUnreadCount = unreadCount
-        }
-    }
-
-    if (showMarkAllDialog) {
+    // Clear All Dialog
+    if (showClearAllDialog) {
         AlertDialog(
-            onDismissRequest = { showMarkAllDialog = false },
+            onDismissRequest = { showClearAllDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.DeleteSweep,
+                    contentDescription = null,
+                    tint = Color(0xFFFF3B30),
+                    modifier = Modifier.size(48.dp)
+                )
+            },
             title = {
                 Text(
-                    "Mark All as Read",
+                    "Clear All Notifications",
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    "Are you sure you want to mark all $savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} as read?",
+                    "Are you sure you want to delete all ${notifications.size} notification${if (notifications.size != 1) "s" else ""}? This action cannot be undone.",
                     fontSize = 14.sp
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        showMarkAllDialog = false
-                        userViewModel.markAllAsRead()
+                        showClearAllDialog = false
+
+                        // Delete all notifications
+                        val notificationIds = notifications.map { it.notificationId }
+                        var deleted = 0
+
+                        notificationIds.forEach { notifId ->
+                            userViewModel.deleteNotification(notifId)
+                            deleted++
+                        }
 
                         Toast.makeText(
                             context,
-                            "$savedUnreadCount notification${if (savedUnreadCount != 1) "s" else ""} marked as read",
+                            "Cleared $deleted notification${if (deleted != 1) "s" else ""}",
                             Toast.LENGTH_SHORT
                         ).show()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
                 ) {
-                    Text("Mark All")
+                    Text("Clear All")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showMarkAllDialog = false }) {
+                TextButton(onClick = { showClearAllDialog = false }) {
                     Text("Cancel", color = Color.Gray)
                 }
             }
@@ -117,17 +130,13 @@ fun NotificationScreen() {
                 title = {
                     Column {
                         Text("Notifications", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        if (unreadCount > 0) {
+
+                        // Show notification count
+                        if (notifications.isNotEmpty()) {
                             Text(
-                                "$unreadCount unread",
+                                "${notifications.size} notification${if (notifications.size != 1) "s" else ""}",
                                 fontSize = 12.sp,
-                                color = Color.Gray
-                            )
-                        } else if (notifications.isNotEmpty()) {
-                            Text(
-                                "All caught up!",
-                                fontSize = 12.sp,
-                                color = Color(0xFF4CAF50)
+                                color = if (unreadCount > 0) Color(0xFFFF9800) else Color.Gray
                             )
                         }
                     }
@@ -144,7 +153,8 @@ fun NotificationScreen() {
                     }
                 },
                 actions = {
-                    if (notifications.isNotEmpty() && unreadCount > 0) {
+                    // Show Clear All button only if there are notifications
+                    if (notifications.isNotEmpty()) {
                         IconButton(onClick = { showMenu = !showMenu }) {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_more_horiz_24),
@@ -158,16 +168,16 @@ fun NotificationScreen() {
                             onDismissRequest = { showMenu = false }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Mark all as read") },
+                                text = { Text("Clear all") },
                                 onClick = {
                                     showMenu = false
-                                    showMarkAllDialog = true
+                                    showClearAllDialog = true
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        Icons.Default.DoneAll,
+                                        Icons.Default.DeleteSweep,
                                         contentDescription = null,
-                                        tint = Blue
+                                        tint = Color(0xFFFF3B30)
                                     )
                                 }
                             )
@@ -181,6 +191,7 @@ fun NotificationScreen() {
         }
     ) { padding ->
         if (notifications.isEmpty()) {
+            // Empty State
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -213,6 +224,7 @@ fun NotificationScreen() {
                 }
             }
         } else {
+            // Notification List
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -221,7 +233,7 @@ fun NotificationScreen() {
             ) {
                 items(
                     items = notifications,
-                    key = { it.notificationId } // Added key to force recomposition
+                    key = { it.notificationId }
                 ) { notification ->
                     NotificationItem(
                         notification = notification,
@@ -232,7 +244,11 @@ fun NotificationScreen() {
                         },
                         onDelete = {
                             userViewModel.deleteNotification(notification.notificationId)
-                            Toast.makeText(context, "Notification deleted", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Notification deleted",
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     )
                 }
@@ -266,8 +282,8 @@ fun NotificationItem(
             confirmButton = {
                 Button(
                     onClick = {
-                        onDelete()
                         showDeleteDialog = false
+                        onDelete()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
                 ) {
@@ -282,16 +298,20 @@ fun NotificationItem(
         )
     }
 
+    // Background color based on read status
+    val backgroundColor = if (notification.isRead) Color.White else Color(0xFFE3F2FD)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (notification.isRead) Color.White else Color(0xFFE3F2FD))
+            .background(backgroundColor)
             .clickable { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Icon/Image
         Box(
             modifier = Modifier
                 .size(48.dp)
@@ -319,6 +339,7 @@ fun NotificationItem(
 
         Spacer(modifier = Modifier.width(12.dp))
 
+        // Content
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 notification.title,
@@ -348,6 +369,7 @@ fun NotificationItem(
             )
         }
 
+        // Delete Button
         IconButton(
             onClick = { showDeleteDialog = true },
             modifier = Modifier.size(32.dp)
@@ -360,6 +382,7 @@ fun NotificationItem(
             )
         }
 
+        // Unread Indicator (Blue Dot)
         if (!notification.isRead) {
             Spacer(modifier = Modifier.width(4.dp))
             Box(
@@ -378,6 +401,7 @@ fun getNotificationIcon(type: String): Int {
         "message" -> R.drawable.round_message_24
         "system" -> R.drawable.baseline_settings_24
         "update" -> R.drawable.baseline_info_24
+        "listing_approved" -> R.drawable.baseline_home_24
         else -> R.drawable.outline_notifications_24
     }
 }
@@ -388,6 +412,7 @@ fun getNotificationColor(type: String): Color {
         "message" -> Color(0xFF2196F3)
         "system" -> Color(0xFFFF9800)
         "update" -> Color(0xFF9C27B0)
+        "listing_approved" -> Color(0xFF4CAF50)
         else -> Color(0xFF607D8B)
     }
 }
