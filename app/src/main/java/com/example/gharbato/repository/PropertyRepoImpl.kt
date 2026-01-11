@@ -7,7 +7,8 @@ import android.os.Looper
 import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -72,21 +73,54 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
+    override suspend fun getAllApprovedProperties(): List<PropertyModel> {
+        return suspendCancellableCoroutine { continuation ->
+
+            ref.orderByChild("status")
+                .equalTo(PropertyStatus.APPROVED)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val properties = mutableListOf<PropertyModel>()
+
+                        for (propertySnapshot in snapshot.children) {
+                            val property = propertySnapshot.getValue(PropertyModel::class.java)
+                            if (property != null) {
+                                properties.add(property)
+                            }
+                        }
+
+                        continuation.resume(properties)
+                    }
+
+                    override fun onCancelled(error: DatabaseError) {
+                        continuation.resumeWithException(
+                            Exception(error.message)
+                        )
+                    }
+                })
+        }
+    }
+
+
     override suspend fun getPropertyById(id: Int): PropertyModel? {
         return suspendCancellableCoroutine { continuation ->
-            Log.d(TAG, "Fetching property by ID: $id")
+            Log.d(TAG, "Fetching APPROVED property by ID: $id")
 
+            // First, query by ID
             ref.orderByChild("id")
                 .equalTo(id.toDouble())
                 .addListenerForSingleValueEvent(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        val property = snapshot.children.firstOrNull()
-                            ?.getValue(PropertyModel::class.java)
+                        // Filter only approved properties
+                        val property = snapshot.children
+                            .mapNotNull { it.getValue(PropertyModel::class.java) }
+                            .firstOrNull { it.status == PropertyStatus.APPROVED } // Only approved
 
                         if (property != null) {
-                            Log.d(TAG, "Found property: ${property.title}")
+                            Log.d(TAG, "Found APPROVED property: ${property.title}")
                         } else {
-                            Log.w(TAG, "No property found with ID: $id")
+                            Log.w(TAG, "No APPROVED property found with ID: $id")
                         }
 
                         continuation.resume(property)
@@ -102,12 +136,13 @@ class PropertyRepoImpl : PropertyRepo {
         }
     }
 
+
     // ========== SEARCH & FILTER ==========
 
     override suspend fun searchProperties(query: String): List<PropertyModel> {
         Log.d(TAG, "Searching properties with query: '$query'")
 
-        val allProperties = getAllProperties()
+        val allProperties = getAllApprovedProperties()
         Log.d(TAG, "Total properties to search: ${allProperties.size}")
 
         val result = if (query.isEmpty()) {
@@ -145,7 +180,7 @@ class PropertyRepoImpl : PropertyRepo {
     override suspend fun filterProperties(filters: PropertyFilters): List<PropertyModel> {
         Log.d(TAG, "Filtering properties with: $filters")
 
-        val allProperties = getAllProperties()
+        val allProperties = getAllApprovedProperties()
         var filtered = allProperties
 
         Log.d(TAG, "Starting with ${filtered.size} properties")
@@ -245,7 +280,7 @@ class PropertyRepoImpl : PropertyRepo {
     ): List<PropertyModel> {
         Log.d(TAG, "Searching by location - Lat: $latitude, Lng: $longitude, Radius: ${radiusKm}km")
 
-        val allProperties = getAllProperties()
+        val allProperties = getAllApprovedProperties()
         Log.d(TAG, "Total properties to check: ${allProperties.size}")
 
         val filtered = allProperties.filter { property ->

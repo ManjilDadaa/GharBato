@@ -1,135 +1,63 @@
 package com.example.gharbato.view
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
-import androidx.core.content.FileProvider
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
-import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.draw.rotate
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.gharbato.R
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import androidx.core.content.FileProvider
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MessageDetailsActivity : ComponentActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
-        val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: "Chat"
-        val otherUserImage = intent.getStringExtra(EXTRA_OTHER_USER_IMAGE) ?: ""
-
-        setContent {
-            MessageDetailsScreen(
-                otherUserId = otherUserId,
-                otherUserName = otherUserName,
-                otherUserImage = otherUserImage,
-            )
-        }
-    }
-
     companion object {
-        const val EXTRA_OTHER_USER_ID = "extra_other_user_id"
-        const val EXTRA_OTHER_USER_NAME = "extra_other_user_name"
-        const val EXTRA_OTHER_USER_IMAGE = "extra_other_user_image"
+        private const val TAG = "MessageDetailsActivity"
+        private const val EXTRA_OTHER_USER_ID = "other_user_id"
+        private const val EXTRA_OTHER_USER_NAME = "other_user_name"
+        private const val EXTRA_OTHER_USER_IMAGE = "other_user_image"
 
         fun newIntent(
             activity: Activity,
             otherUserId: String,
             otherUserName: String,
-            otherUserImage: String = "",
+            otherUserImage: String = ""
         ): Intent {
             return Intent(activity, MessageDetailsActivity::class.java).apply {
                 putExtra(EXTRA_OTHER_USER_ID, otherUserId)
@@ -138,556 +66,504 @@ class MessageDetailsActivity : ComponentActivity() {
             }
         }
     }
-}
 
-private fun getOrCreateLocalUserId(context: Context): String {
-    val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
-    val existing = prefs.getString("local_user_id", null)
-    if (!existing.isNullOrBlank()) return existing
+    private val auth = FirebaseAuth.getInstance()
 
-    val newId = "guest_${System.currentTimeMillis()}"
-    prefs.edit().putString("local_user_id", newId).apply()
-    return newId
-}
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
-private fun sanitizeZegoId(value: String): String {
-    if (value.isBlank()) return "user"
-    return value.replace(Regex("[^A-Za-z0-9_]"), "_")
-}
+        val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
+        val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: ""
+        val otherUserImage = intent.getStringExtra(EXTRA_OTHER_USER_IMAGE) ?: ""
 
-private fun buildChatId(userA: String, userB: String): String {
-    val a = sanitizeZegoId(userA)
-    val b = sanitizeZegoId(userB)
-    return if (a <= b) "${a}_$b" else "${b}_$a"
-}
+        val currentUserId = auth.currentUser?.uid ?: ""
 
-private fun sendImageMessage(
-    imageUri: Uri,
-    db: FirebaseDatabase,
-    chatId: String,
-    myUserId: String,
-    auth: FirebaseAuth,
-    context: Context
-) {
-    // For now, we'll use the URI directly as imageUrl
-    // In a real app, you would upload to Firebase Storage first
-    val ref = db.getReference("chats")
-        .child(chatId)
-        .child("messages")
-        .push()
+        if (currentUserId.isEmpty() || otherUserId.isEmpty()) {
+            Log.e(TAG, "User IDs are empty! Current: $currentUserId, Other: $otherUserId")
+            finish()
+            return
+        }
 
-    val message = ChatMessage(
-        id = ref.key ?: "",
-        senderId = myUserId,
-        senderName = auth.currentUser?.email ?: myUserId,
-        text = "",
-        imageUrl = imageUri.toString(),
-        timestamp = System.currentTimeMillis(),
-    )
-
-    ref.setValue(message)
-}
-
-private fun createImageFileUri(context: Context): Uri {
-    val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-    val imageFileName = "JPEG_${timeStamp}_"
-    val storageDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "chat_images")
-    if (!storageDir.exists()) {
-        storageDir.mkdirs()
+        setContent {
+            MessageDetailsScreen(
+                currentUserId = currentUserId,
+                otherUserId = otherUserId,
+                otherUserName = otherUserName,
+                otherUserImage = otherUserImage,
+                onBackClick = { finish() }
+            )
+        }
     }
-    val imageFile = File.createTempFile(imageFileName, ".jpg", storageDir)
-    
-    return FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        imageFile
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MessageDetailsScreen(
+    currentUserId: String,
+    otherUserId: String,
+    otherUserName: String,
+    otherUserImage: String,
+    onBackClick: () -> Unit,
+    viewModel: MessageDetailsViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    val messages by viewModel.messages
+    val messageText by viewModel.messageText
+    val isBlockedByMe by viewModel.isBlockedByMe
+    val isBlockedByOther by viewModel.isBlockedByOther
+
+    val listState = rememberLazyListState()
+
+    var showReportDialog by remember { mutableStateOf(false) }
+    var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
+            viewModel.sendImageMessage(context, it)
+        }
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && currentPhotoUri != null) {
+            Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
+            viewModel.sendImageMessage(context, currentPhotoUri!!)
+        }
+    }
+
+    fun launchCamera() {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = context.getExternalFilesDir(null)
+        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        currentPhotoUri = uri
+        cameraLauncher.launch(uri)
+    }
+
+    LaunchedEffect(otherUserId) {
+        viewModel.startChat(context, otherUserId)
+    }
+
+    // Auto-scroll to bottom when new messages arrive
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) {
+            listState.animateScrollToItem(messages.size - 1)
+        }
+    }
+
+    if (showReportDialog) {
+        ReportUserDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportUser(reason) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+                showReportDialog = false
+            }
+        )
+    }
+
+    Scaffold(
+        topBar = {
+            ChatTopBar(
+                userName = otherUserName,
+                userImage = otherUserImage,
+                isBlockedByMe = isBlockedByMe,
+                onBackClick = onBackClick,
+                onBlockClick = { viewModel.toggleBlockUser() },
+                onDeleteClick = { viewModel.deleteChat() },
+                onReportClick = { showReportDialog = true },
+                onAudioCallClick = { viewModel.initiateCall(context as Activity, false, otherUserName) },
+                onVideoCallClick = { viewModel.initiateCall(context as Activity, true, otherUserName) }
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color(0xFFF5F5F5))
+        ) {
+            // Messages List
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(messages) { message ->
+                    MessageBubble(
+                        message = message,
+                        isCurrentUser = message.senderId == currentUserId
+                    )
+                }
+            }
+
+            // Message Input
+            if (isBlockedByMe || isBlockedByOther) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isBlockedByMe) "You blocked this user" else "You have been blocked",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            } else {
+                MessageInput(
+                    messageText = messageText,
+                    onMessageTextChange = { viewModel.onMessageTextChanged(it) },
+                    onSendClick = { viewModel.sendTextMessage() },
+                    onCameraClick = { launchCamera() },
+                    onAttachClick = { imagePickerLauncher.launch("image/*") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ReportUserDialog(
+    onDismiss: () -> Unit,
+    onReport: (String) -> Unit
+) {
+    var reason by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Report User") },
+        text = {
+            Column {
+                Text("Why are you reporting this user?")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("Reason") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onReport(reason) },
+                enabled = reason.isNotBlank()
+            ) {
+                Text("Report")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MessageDetailsScreen(
-    otherUserId: String,
-    otherUserName: String,
-    otherUserImage: String,
+fun ChatTopBar(
+    userName: String,
+    userImage: String,
+    isBlockedByMe: Boolean,
+    onBackClick: () -> Unit,
+    onBlockClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onReportClick: () -> Unit,
+    onAudioCallClick: () -> Unit,
+    onVideoCallClick: () -> Unit
 ) {
-    val context = LocalContext.current
-    val activity = context as Activity
+    var menuExpanded by remember { mutableStateOf(false) }
 
-    val auth = remember { FirebaseAuth.getInstance() }
-    val db = remember { FirebaseDatabase.getInstance() }
-
-    val myUserIdRaw = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
-    val myUserId = remember(myUserIdRaw) { sanitizeZegoId(myUserIdRaw) }
-    val otherId = remember(otherUserId) { sanitizeZegoId(otherUserId.ifBlank { "other" }) }
-
-    val chatId = remember(myUserId, otherId) { buildChatId(myUserId, otherId) }
-
-    val messages = remember { mutableStateListOf<ChatMessage>() }
-    var messageText by remember { mutableStateOf("") }
-    var showImageOptions by remember { mutableStateOf(false) }
-
-    // Gallery picker
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { sendImageMessage(it, db, chatId, myUserId, auth, context) }
-    }
-
-    // Camera launcher with file URI
-    var cameraImageUri by remember { mutableStateOf<Uri?>(null) }
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success && cameraImageUri != null) {
-            sendImageMessage(cameraImageUri!!, db, chatId, myUserId, auth, context)
-            cameraImageUri = null
-        }
-    }
-
-    val listState = rememberLazyListState()
-
-    DisposableEffect(chatId) {
-        val query = db.getReference("chats")
-            .child(chatId)
-            .child("messages")
-            .orderByChild("timestamp")
-
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val newMessages = mutableListOf<ChatMessage>()
-                snapshot.children.forEach { child ->
-                    val msg = child.getValue(ChatMessage::class.java) ?: return@forEach
-                    val id = child.key ?: msg.id
-                    newMessages.add(msg.copy(id = id))
-                }
-                messages.clear()
-                messages.addAll(newMessages)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-            }
-        }
-
-        query.addValueEventListener(listener)
-        onDispose { query.removeEventListener(listener) }
-    }
-
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex)
-        }
-    }
-
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFFEFE7DE) // WhatsApp default background color
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Surface(
-                color = Color.White,
-                shadowElevation = 1.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { activity.finish() },
-                        modifier = Modifier.padding(start = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.Black
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { /* Handle profile click */ }
-                            .padding(start = 0.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // User Avatar
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.Gray),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (otherUserImage.isNotEmpty()) {
-                                AsyncImage(
-                                    model = otherUserImage,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.Person,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Column {
-                            Text(
-                                text = otherUserName,
-                                color = Color.Black,
-                                fontSize = 16.sp,
-                                fontFamily = FontFamily.SansSerif,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "last seen today at 6:22 PM",
-                                color = Color.Gray,
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.SansSerif,
-                                fontWeight = FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    // Actions
-                    IconButton(
-                        onClick = {
-                            activity.startActivity(
-                                ZegoCallActivity.newIntent(
-                                    activity = activity,
-                                    callId = chatId,
-                                    userId = myUserId,
-                                    userName = auth.currentUser?.email ?: myUserId,
-                                    isVideoCall = true,
-                                    targetUserId = otherId
-                                )
-                            )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Videocam,
-                            contentDescription = "Video Call",
-                            tint = Color.Black
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            activity.startActivity(
-                                ZegoCallActivity.newIntent(
-                                    activity = activity,
-                                    callId = chatId,
-                                    userId = myUserId,
-                                    userName = auth.currentUser?.email ?: myUserId,
-                                    isVideoCall = false,
-                                    targetUserId = otherId
-                                )
-                            )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Call,
-                            contentDescription = "Voice Call",
-                            tint = Color.Black
-                        )
-                    }
-
-                    // Removed More options icon as requested
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 8.dp), // Reduced padding for WhatsApp style
-                    state = listState,
-                    verticalArrangement = Arrangement.spacedBy(2.dp), // Closer spacing like WhatsApp
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)
-                ) {
-                    items(messages, key = { it.id }) { msg ->
-                        val isMe = msg.senderId == myUserId
-                        
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = if (isMe) Arrangement.End else Arrangement.Start,
-                            verticalAlignment = Alignment.Bottom // Align profile pic with bottom of bubble
-                        ) {
-                            if (!isMe) {
-                                Box(
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(28.dp) // Smaller than header
-                                        .clip(CircleShape)
-                                        .background(Color.Gray),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (otherUserImage.isNotEmpty()) {
-                                        AsyncImage(
-                                            model = otherUserImage,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxSize()
-                                        )
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Default.Person,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            
-                            Card(
-                                modifier = Modifier
-                                    .widthIn(max = 300.dp) // Limit max width
-                                    .shadow(
-                                        elevation = 1.dp,
-                                        shape = RoundedCornerShape(
-                                            topStart = 12.dp,
-                                            topEnd = 12.dp,
-                                            bottomStart = if (isMe) 12.dp else 0.dp,
-                                            bottomEnd = if (isMe) 0.dp else 12.dp
-                                        )
-                                    ),
-                                shape = RoundedCornerShape(
-                                    topStart = 12.dp,
-                                    topEnd = 12.dp,
-                                    bottomStart = if (isMe) 12.dp else 0.dp,
-                                    bottomEnd = if (isMe) 0.dp else 12.dp
-                                ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isMe) 
-                                        Color(0xFFDCF8C6) // WhatsApp outgoing green
-                                    else 
-                                        Color.White // WhatsApp incoming white
-                                )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                ) {
-                                    // Image Content
-                                    if (msg.imageUrl.isNotEmpty()) {
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(LocalContext.current)
-                                                .data(msg.imageUrl)
-                                                .crossfade(true)
-                                                .build(),
-                                            contentDescription = "Image message",
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .heightIn(max = 200.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .padding(bottom = 4.dp),
-                                            contentScale =  ContentScale.Crop
-                                        )
-                                    }
-                                    
-                                    // Text Content and Metadata Row
-                                    Row(
-                                        verticalAlignment = Alignment.Bottom,
-                                        horizontalArrangement = Arrangement.End,
-                                        modifier = Modifier.wrapContentSize()
-                                    ) {
-                                        if (msg.text.isNotEmpty()) {
-                                            Text(
-                                                text = msg.text,
-                                                color = Color.Black,
-                                                fontSize = 16.sp,
-                                                fontFamily = FontFamily.SansSerif,
-                                                fontWeight = FontWeight.Normal,
-                                                modifier = Modifier
-                                                    .padding(end = 8.dp)
-                                                    .weight(1f, fill = false), // Allow text to take space but not force row expansion
-                                                lineHeight = 22.sp
-                                            )
-                                        }
-
-                                        // Timestamp and Status
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(bottom = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = formatTimestamp(msg.timestamp),
-                                                color = Color.Gray,
-                                                fontSize = 11.sp,
-                                                fontFamily = FontFamily.SansSerif
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Bottom Input Area
+    TopAppBar(
+        title = {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                verticalAlignment = Alignment.Bottom
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Input Card
-                Card(
-                    modifier = Modifier
-                        .weight(1f),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = messageText,
-                            onValueChange = { messageText = it },
-                            placeholder = { Text("Message", color = Color.Gray) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(min = 40.dp, max = 120.dp), // Auto-grow
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color.Transparent,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                cursorColor = Color.Black
-                            ),
-                            maxLines = 5,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-                            keyboardActions = KeyboardActions.Default
-                        )
-
-                        IconButton(onClick = { showImageOptions = true }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_attach_file),
-                                contentDescription = "Attach",
-                                tint = Color.Gray,
-                                modifier = Modifier.rotate(45f) // Paperclip rotated
-                            )
-                        }
-                        
-                        // Dropdown for attachment options
-                        DropdownMenu(
-                            expanded = showImageOptions,
-                            onDismissRequest = { showImageOptions = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Gallery") },
-                                onClick = { 
-                                    showImageOptions = false
-                                    galleryLauncher.launch("image/*") 
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.Image, contentDescription = null)
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Camera") },
-                                onClick = { 
-                                    showImageOptions = false
-                                    val uri = createImageFileUri(context)
-                                    cameraImageUri = uri
-                                    cameraLauncher.launch(uri)
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = null)
-                                }
-                            )
-                        }
-
-                        if (messageText.isEmpty()) {
-                            IconButton(onClick = { 
-                                val uri = createImageFileUri(context)
-                                cameraImageUri = uri
-                                cameraLauncher.launch(uri)
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Camera",
-                                    tint = Color.Gray
-                                )
-                            }
-                        }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Send Button (always show Send icon)
+                // User Avatar
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF00A884))
-                        .clickable {
-                            if (messageText.isNotBlank()) {
-                                val ref = db.getReference("chats")
-                                    .child(chatId)
-                                    .child("messages")
-                                    .push()
-
-                                val message = ChatMessage(
-                                    id = ref.key ?: "",
-                                    senderId = myUserId,
-                                    senderName = auth.currentUser?.email ?: myUserId,
-                                    text = messageText,
-                                    timestamp = System.currentTimeMillis(),
-                                )
-
-                                ref.setValue(message)
-                                messageText = ""
-                            }
-                        },
+                        .background(Color(0xFFE0E0E0)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Send,
-                        contentDescription = "Send",
-                        tint = Color.White
+                    if (userImage.isNotEmpty()) {
+                        AsyncImage(
+                            model = userImage,
+                            contentDescription = userName,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = userName.take(1).uppercase(),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = userName,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "Online",
+                        fontSize = 12.sp,
+                        color = Color.Gray
                     )
                 }
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.Black
+                )
+            }
+        },
+        actions = {
+            IconButton(onClick = onVideoCallClick) {
+                Icon(
+                    imageVector = Icons.Default.VideoCall,
+                    contentDescription = "Video Call",
+                    tint = Color.Black
+                )
+            }
+            IconButton(onClick = onAudioCallClick) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = "Audio Call",
+                    tint = Color.Black
+                )
+            }
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(Icons.Default.MoreVert, "Menu", tint = Color.Black)
+            }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Report User") },
+                    onClick = {
+                        menuExpanded = false
+                        onReportClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Report, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete Chat") },
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text(if (isBlockedByMe) "Unblock User" else "Block User") },
+                    onClick = {
+                        menuExpanded = false
+                        onBlockClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Block, null) }
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.White
+        )
+    )
+}
+
+@Composable
+fun MessageBubble(
+    message: ChatMessage,
+    isCurrentUser: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
+    ) {
+        Surface(
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+            ),
+            color = if (isCurrentUser) Blue else Color.White,
+            modifier = Modifier.widthIn(max = 280.dp),
+            shadowElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                if (message.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(message.imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Shared Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray),
+                        contentScale = ContentScale.Crop,
+                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
+                    )
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                if (message.text.isNotEmpty()) {
+                    Text(
+                        text = message.text,
+                        color = if (isCurrentUser) Color.White else Color.Black,
+                        fontSize = 15.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = formatTimestamp(message.timestamp),
+                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                    fontSize = 11.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MessageInput(
+    messageText: String,
+    onMessageTextChange: (String) -> Unit,
+    onSendClick: () -> Unit,
+    onCameraClick: () -> Unit,
+    onAttachClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            IconButton(
+                onClick = onCameraClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Camera",
+                    tint = Color.Gray
+                )
+            }
+
+            IconButton(
+                onClick = onAttachClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "Attach File",
+                    tint = Color.Gray
+                )
+            }
+
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = onMessageTextChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type a message...") },
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Blue,
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5)
+                ),
+                maxLines = 4
+            )
+
+            IconButton(
+                onClick = onSendClick,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Blue, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color.White
+                )
             }
         }
     }
 }
 
 private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    
+    if (timestamp == 0L) return ""
+
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = timestamp
+
+    val now = Calendar.getInstance()
+
     return when {
-        diff < 60000 -> "Just now"
-        diff < 3600000 -> "${diff / 60000}m ago"
-        diff < 86400000 -> "${diff / 3600000}h ago"
+        isSameDay(calendar, now) -> {
+            SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)
+        }
+        isYesterday(calendar, now) -> {
+            "Yesterday ${SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)}"
+        }
         else -> {
-            val date = java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault())
-                .format(java.util.Date(timestamp))
-            date
+            SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(calendar.time)
         }
     }
+}
+
+private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
+    return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
+}
+
+private fun isYesterday(cal1: Calendar, cal2: Calendar): Boolean {
+    val yesterday = cal2.clone() as Calendar
+    yesterday.add(Calendar.DAY_OF_YEAR, -1)
+    return isSameDay(cal1, yesterday)
 }

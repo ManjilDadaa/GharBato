@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gharbato.data.model.PlaceType
-import com.example.gharbato.data.repository.NearbyPlacesRepositoryImpl
+import com.example.gharbato.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.viewmodel.MapViewModel
 import com.example.gharbato.viewmodel.MapViewModelFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory

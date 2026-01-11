@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,10 +14,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,10 +28,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.UserViewModel
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,10 +49,12 @@ class TrustAndVerificationActivity : ComponentActivity() {
 @Composable
 fun TrustAndVerificationScreen() {
     val context = LocalContext.current
+    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
-    var trustScore by remember { mutableStateOf(30) } // initial 30%
+    var trustScore by remember { mutableStateOf(30) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
     var frontImageUri by remember { mutableStateOf<Uri?>(null) }
     var backImageUri by remember { mutableStateOf<Uri?>(null) }
@@ -59,15 +68,72 @@ fun TrustAndVerificationScreen() {
         onResult = { uri -> backImageUri = uri }
     )
 
+    // Success Dialog
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = { showSuccessDialog = false },
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4CAF50)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    "KYC Submitted Successfully!",
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        "Your KYC verification request has been submitted.",
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "We'll review your documents and notify you once verification is complete (typically within 24-48 hours).",
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Got it!")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Trust & Verification", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                title = { Text("Trust & Verification", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = {
                         (context as ComponentActivity).finish()
                     }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Blue)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -91,8 +157,33 @@ fun TrustAndVerificationScreen() {
                     selectedDoc = selectedDoc,
                     onDocChange = { selectedDoc = it },
                     onSubmit = {
+                        // Update UI state FIRST
                         kycStatus = "Pending"
-                        trustScore = 70 // increase to 70% after submit
+                        trustScore = 70
+
+                        // Create notification for the user
+                        userViewModel.createNotification(
+                            title = "✅ KYC Submitted Successfully",
+                            message = "Your KYC verification request has been submitted. We'll notify you once it's reviewed (typically within 24-48 hours).",
+                            type = "system",
+                            imageUrl = "",
+                            actionData = ""
+                        ) { success, message ->
+                            if (success) {
+                                showSuccessDialog = true
+                                Toast.makeText(
+                                    context,
+                                    "KYC submitted successfully!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "Notification error: $message",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
                     },
                     frontImageUri = frontImageUri,
                     backImageUri = backImageUri,
@@ -116,7 +207,7 @@ fun SectionHeader(title: String) {
     Text(
         title,
         fontSize = 16.sp,
-        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+        fontWeight = FontWeight.Bold,
         color = Color(0xFF2C2C2C),
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
     )
@@ -133,17 +224,26 @@ fun KycStatusCard(status: String) {
             .padding(16.dp)
     ) {
         Column {
-            Text("KYC Status", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Text("KYC Status", fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 status,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
                 color = when (status) {
                     "Verified" -> Color(0xFF2E7D32)
                     "Pending" -> Color(0xFFFFA000)
                     else -> Color(0xFFD32F2F)
                 }
             )
+            if (status == "Pending") {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Your KYC is under review",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
         }
     }
 }
@@ -170,10 +270,10 @@ fun KycUploadCard(
             .padding(16.dp)
     ) {
         Column {
-            Text("Select Document Type", fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Text("Select Document Type", fontWeight = FontWeight.Medium)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Dropdown logic
+            // Dropdown
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -181,7 +281,10 @@ fun KycUploadCard(
                     .clickable { showOptions = !showOptions }
                     .padding(12.dp)
             ) {
-                Text(selectedDoc ?: "Select Document Type")
+                Text(
+                    selectedDoc ?: "Select Document Type",
+                    color = if (selectedDoc == null) Color.Gray else Color.Black
+                )
             }
 
             if (showOptions) {
@@ -192,7 +295,7 @@ fun KycUploadCard(
                         .background(Color.White)
                         .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
                 ) {
-                    documents.forEach { doc ->
+                    documents.forEachIndexed { index, doc ->
                         Text(
                             doc,
                             modifier = Modifier
@@ -203,12 +306,16 @@ fun KycUploadCard(
                                 }
                                 .padding(12.dp)
                         )
-                        Divider(color = Color(0xFFDDDDDD), thickness = 1.dp)
+                        if (index < documents.size - 1) {
+                            Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Upload Document Images", fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(8.dp))
 
             UploadBox("Upload Front Image", frontImageUri, onFrontClick)
             Spacer(modifier = Modifier.height(8.dp))
@@ -220,14 +327,15 @@ fun KycUploadCard(
                 onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                enabled = selectedDoc != null && frontImageUri != null && backImageUri != null
             ) {
-                Text("Submit KYC", color = Color.White)
+                Text("Submit KYC", color = Color.White, fontSize = 16.sp)
             }
 
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Your KYC will be verified within 48 hours",
+                "📋 Your KYC will be verified within 24-48 hours",
                 fontSize = 12.sp,
                 color = Color.Gray
             )
@@ -240,9 +348,13 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(90.dp)
+            .height(100.dp)
             .clip(RoundedCornerShape(10.dp))
-            .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(10.dp))
+            .border(
+                width = 2.dp,
+                color = if (imageUri != null) Blue else Color(0xFFDDDDDD),
+                shape = RoundedCornerShape(10.dp)
+            )
             .clickable { onClick() }
             .padding(4.dp),
         contentAlignment = Alignment.Center
@@ -251,11 +363,21 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit) {
             AsyncImage(
                 model = imageUri,
                 contentDescription = null,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(10.dp)),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(8.dp)),
                 contentScale = ContentScale.Crop
             )
         } else {
-            Text(title, color = Color.Gray)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("📷", fontSize = 24.sp)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    title,
+                    color = Color.Gray,
+                    fontSize = 13.sp
+                )
+            }
         }
     }
 }
@@ -271,8 +393,25 @@ fun TrustMeterCard(score: Int) {
             .padding(16.dp)
     ) {
         Column {
-            Text("Trust Score: $score%", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Trust Score", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    "$score%",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = when {
+                        score >= 70 -> Color(0xFF4CAF50)
+                        score >= 50 -> Color(0xFFFFA000)
+                        else -> Color(0xFFD32F2F)
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             LinearProgressIndicator(
                 progress = score / 100f,
@@ -280,27 +419,61 @@ fun TrustMeterCard(score: Int) {
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(6.dp)),
-                color = Blue
+                color = when {
+                    score >= 70 -> Color(0xFF4CAF50)
+                    score >= 50 -> Color(0xFFFFA000)
+                    else -> Color(0xFFD32F2F)
+                },
+                trackColor = Color(0xFFEEEEEE)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                "Score Breakdown",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = Color.Gray
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TrustItem("KYC Verified", if(score >= 70) 40 else 0)
-            TrustItem("No Reports", 20)
-            TrustItem("Email Verified", 10)
-            TrustItem("Profile Photo", 15)
-            TrustItem("Phone Verified", 15)
+            TrustItem("KYC Verified", if (score >= 70) 40 else 0, score >= 70)
+            TrustItem("No Reports", 20, true)
+            TrustItem("Email Verified", 10, false)
+            TrustItem("Profile Photo", 15, false)
+            TrustItem("Phone Verified", 15, false)
         }
     }
 }
 
 @Composable
-fun TrustItem(label: String, value: Int) {
+fun TrustItem(label: String, value: Int, isCompleted: Boolean) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, fontSize = 13.sp)
-        Text("+$value%", fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (isCompleted) "✓" else "○",
+                fontSize = 16.sp,
+                color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                label,
+                fontSize = 13.sp,
+                color = if (isCompleted) Color.Black else Color.Gray
+            )
+        }
+        Text(
+            "+$value%",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+        )
     }
 }

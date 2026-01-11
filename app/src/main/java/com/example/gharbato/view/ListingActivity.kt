@@ -168,6 +168,7 @@ fun ListingBody() {
                                 onSuccess = {
                                     showConfirmDialog = false
                                     showSuccessDialog = true
+                                    Toast.makeText(context, "Listing Added succesfully, Admin Approval Required ", Toast.LENGTH_LONG).show()
                                 },
                                 onError = { error ->
                                     showConfirmDialog = false

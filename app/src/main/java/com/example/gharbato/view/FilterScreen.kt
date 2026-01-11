@@ -83,10 +83,12 @@ fun FilterBottomSheet(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(
                         onClick = {
-                            filters = PropertyFilters()
+                            val emptyFilters = PropertyFilters()
+                            filters = emptyFilters
+                            onFiltersApply(emptyFilters)
                         }
                     ) {
-                        Text("Reset", color = Blue, fontWeight = FontWeight.Medium)
+                        Text("Reset All", color = Blue, fontWeight = FontWeight.Medium)
                     }
 
                     IconButton(onClick = onDismiss) {
@@ -108,7 +110,6 @@ fun FilterBottomSheet(
                     .verticalScroll(rememberScrollState())
                     .padding(vertical = 16.dp)
             ) {
-                // Market Type (Buy/Rent/Book)
                 FilterSection(title = "Purpose") {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -117,7 +118,12 @@ fun FilterBottomSheet(
                         listOf("Buy", "Rent", "Book").forEach { type ->
                             FilterChip(
                                 selected = filters.marketType == type,
-                                onClick = { filters = filters.copy(marketType = type) },
+                                onClick = {
+                                    // ✅ Toggle: Click again to deselect
+                                    filters = filters.copy(
+                                        marketType = if (filters.marketType == type) "" else type
+                                    )
+                                },
                                 label = {
                                     Text(
                                         when (type) {
@@ -137,6 +143,15 @@ fun FilterBottomSheet(
                             )
                         }
                     }
+
+                    if (filters.marketType.isNotEmpty()) {
+                        Text(
+                            "Tap again to deselect",
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
                 }
 
                 // Rental Period (only for Rent)
@@ -149,7 +164,11 @@ fun FilterBottomSheet(
                             listOf("Long-term", "Short-term").forEach { period ->
                                 FilterChip(
                                     selected = filters.rentalPeriod == period,
-                                    onClick = { filters = filters.copy(rentalPeriod = period) },
+                                    onClick = {
+                                        filters = filters.copy(
+                                            rentalPeriod = if (filters.rentalPeriod == period) "" else period
+                                        )
+                                    },
                                     label = { Text(period, fontWeight = FontWeight.Medium) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = Blue.copy(0.15f),
@@ -197,12 +216,12 @@ fun FilterBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                "Min: रु ${filters.minPrice * 1000}",
+                                if (filters.minPrice > 0) "Min: रु ${filters.minPrice * 1000}" else "No minimum",
                                 fontSize = 14.sp,
                                 color = Gray
                             )
                             Text(
-                                if (filters.maxPrice > 0) "Max: रु ${filters.maxPrice * 1000}" else "No max",
+                                if (filters.maxPrice > 0) "Max: रु ${filters.maxPrice * 1000}" else "No maximum",
                                 fontSize = 14.sp,
                                 color = Gray
                             )
@@ -216,18 +235,26 @@ fun FilterBottomSheet(
                         ) {
                             OutlinedTextField(
                                 value = if (filters.minPrice > 0) filters.minPrice.toString() else "",
-                                onValueChange = { filters = filters.copy(minPrice = it.toIntOrNull() ?: 0) },
+                                onValueChange = {
+                                    filters = filters.copy(minPrice = it.toIntOrNull() ?: 0)
+                                },
                                 label = { Text("Min (thousands)") },
+                                placeholder = { Text("0") },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true
                             )
 
                             OutlinedTextField(
                                 value = if (filters.maxPrice > 0) filters.maxPrice.toString() else "",
-                                onValueChange = { filters = filters.copy(maxPrice = it.toIntOrNull() ?: 0) },
+                                onValueChange = {
+                                    filters = filters.copy(maxPrice = it.toIntOrNull() ?: 0)
+                                },
                                 label = { Text("Max (thousands)") },
+                                placeholder = { Text("Any") },
                                 modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true
                             )
                         }
                     }
@@ -413,6 +440,8 @@ fun FilterBottomSheet(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    val activeFilterCount = countActiveFilters(filters)
+
                     Button(
                         onClick = {
                             onFiltersApply(filters)
@@ -427,7 +456,10 @@ fun FilterBottomSheet(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            "Apply Filters",
+                            if (activeFilterCount > 0)
+                                "Apply $activeFilterCount Filter${if (activeFilterCount > 1) "s" else ""}"
+                            else
+                                "Apply Filters",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -436,6 +468,20 @@ fun FilterBottomSheet(
             }
         }
     }
+}
+
+private fun countActiveFilters(filters: PropertyFilters): Int {
+    var count = 0
+    if (filters.marketType.isNotEmpty()) count++
+    if (filters.propertyTypes.isNotEmpty()) count++
+    if (filters.minPrice > 0 || filters.maxPrice > 0) count++
+    if (filters.bedrooms.isNotEmpty()) count++
+    if (filters.furnishing.isNotEmpty()) count++
+    if (filters.parking != null) count++
+    if (filters.petsAllowed != null) count++
+    if (filters.amenities.isNotEmpty()) count++
+    if (filters.floor.isNotEmpty()) count++
+    return count
 }
 
 @Composable

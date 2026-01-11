@@ -24,6 +24,39 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
         <activity
+            android:name=".view.ReportedUsersActivity"
+            android:exported="true"
+            android:label="@string/title_activity_reported_users"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.ReportedPropertiesActivity"
+            android:exported="true"
+            android:label="@string/title_activity_reported_properties"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".view.PendingListingsActivity"
+            android:exported="true"
+            android:label="@string/title_activity_pending_listing"
+            android:theme="@style/Theme.GharBato">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name=".view.AdminActivity"
             android:exported="true"
             android:label="@string/title_activity_admin"
@@ -55,7 +88,7 @@
             android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
         <activity
-            android:name=".ui.view.PropertyDetailActivity"
+            android:name=".view.PropertyDetailActivity"
             android:exported="true"
             android:label="@string/title_activity_property_detail"
             android:theme="@style/Theme.GharBato">
@@ -66,7 +99,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.view.FullSearchMapActivity"
+            android:name=".view.FullSearchMapActivity"
             android:exported="true"
             android:label="FullSearchMapActivity"
             android:theme="@style/Theme.GharBato">
@@ -125,6 +158,11 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.MapLocationPickerActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".view.ForgotActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
@@ -134,6 +172,10 @@
             android:theme="@style/Theme.GharBato" />
         <activity
             android:name=".view.DashboardActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.NotificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
@@ -162,19 +204,21 @@
             android:exported="true"
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
-        <activity
-            android:name=".view.ProfileScreenActivity"
-            android:exported="true"
-            android:theme="@style/Theme.GharBato" />
+<!--        <activity-->
+<!--            android:name=".view.ProfileScreen"-->
+<!--            android:exported="true"-->
+<!--            android:theme="@style/Theme.GharBato" />-->
         <activity
             android:name=".view.TrustAndVerificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.EditProfileActivity"
             android:exported="true"
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.EmailVerificationActivity"
             android:exported="true"

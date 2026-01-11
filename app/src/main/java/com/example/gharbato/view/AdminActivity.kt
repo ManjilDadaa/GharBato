@@ -45,8 +45,8 @@ fun AdminBody() {
     var listNav = listOf(
         navItem("Home", R.drawable.baseline_home_24),
         navItem("Search", R.drawable.outline_search_24),
+        navItem("Verify",R.drawable.baseline_verified_user_24),
         navItem("Delete",R.drawable.baseline_delete_forever_24),
-
     )
     Scaffold (
         containerColor = Color.White,
@@ -90,7 +90,8 @@ fun AdminBody() {
             when(selectedIndex){
                 0 -> AdminHomeScreen()
                 1 -> AdminSearchScreen()
-                2 -> AdminDeleteScreen()
+                2 -> VerifyUserScreen()
+                3 -> AdminDeleteScreen()
             }
         }
     }

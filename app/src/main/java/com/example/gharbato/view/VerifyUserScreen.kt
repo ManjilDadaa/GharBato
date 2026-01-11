@@ -4,6 +4,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 
 @Composable
-fun AdminDeleteScreen(){
-    Text("Admin Delete Screen")
+fun VerifyUserScreen(){
+    Text("Verify User Screen")
 }

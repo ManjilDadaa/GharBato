@@ -2,14 +2,17 @@ package com.example.gharbato.data.repository
 
 import android.content.Context
 import android.net.Uri
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyFilters
 
 interface PropertyRepo {
 
     // Property Retrieval
-    suspend fun getAllProperties(): List<PropertyModel>
+    suspend fun getAllProperties(): List<PropertyModel> // For admins only
+    suspend fun getAllApprovedProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
+
+
 
     // Search & Filter
     suspend fun searchProperties(query: String): List<PropertyModel>

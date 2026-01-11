@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
 import android.app.Activity
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,7 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,7 +63,7 @@ class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { 
+        setContent {
             MessageScreen()
         }
     }
@@ -79,19 +77,33 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val isLoading by messageViewModel.isLoading
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
+    val chatNavigation by messageViewModel.chatNavigation
     val context = LocalContext.current
     val activity = context as Activity
-    
+
     LaunchedEffect(Unit) {
         messageViewModel.loadUsers()
     }
-    
+
     LaunchedEffect(searchText) {
         if (!isLoading) {
             messageViewModel.searchUsers()
         }
     }
-    
+
+    LaunchedEffect(chatNavigation) {
+        val nav = chatNavigation ?: return@LaunchedEffect
+        activity.startActivity(
+            MessageDetailsActivity.newIntent(
+                activity = activity,
+                otherUserId = nav.targetUserId,
+                otherUserName = nav.targetUserName,
+                otherUserImage = nav.targetUserImage
+            )
+        )
+        messageViewModel.onChatNavigationHandled()
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.White
@@ -111,7 +123,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 fontFamily = FontFamily.SansSerif,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)
             )
-            
+
             // Search Bar
             OutlinedTextField(
                 value = searchText,
@@ -120,7 +132,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     .fillMaxWidth()
                     .height(56.dp)
                     .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp)),
-                placeholder = { 
+                placeholder = {
                     Text(
                         "", // Empty placeholder as per design usually or icon
                         color = Color.Gray
@@ -144,9 +156,9 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 shape = RoundedCornerShape(28.dp),
                 singleLine = true
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -171,14 +183,16 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(users) { user ->
-                        val displayName = user.fullName.ifBlank { user.email }
+                        val displayName = user.fullName.ifBlank { 
+                            if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
+                        }
                         ChatListItem(
                             name = displayName,
                             message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
                             time = "Now", // Placeholder
                             imageUrl = user.profileImageUrl,
                             onClick = {
-                                messageViewModel.navigateToChat(user.userId, displayName, user.profileImageUrl, activity)
+                                messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
                             }
                         )
                     }
@@ -228,9 +242,9 @@ fun ChatListItem(
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         // Name and Message
         Column(
             modifier = Modifier.weight(1f)
@@ -253,7 +267,7 @@ fun ChatListItem(
                 )
             }
         }
-        
+
         // Time
         Text(
             text = time,
