@@ -14,8 +14,19 @@ import kotlinx.coroutines.launch
 
 private const val TAG = "AdminDeleteVM"
 
+data class DeletionRecord(
+    val propertyId: Int = 0,
+    val propertyTitle: String = "",
+    val ownerName: String = "",
+    val ownerEmail: String = "",
+    val deletedDate: String = "",
+    val deletedBy: String = "Admin",
+    val deletedTimestamp: Long = System.currentTimeMillis()
+)
+
 data class AdminDeleteUiState(
     val rejectedProperties: List<PropertyModel> = emptyList(),
+    val deletionHistory: List<DeletionRecord> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null
@@ -30,6 +41,7 @@ class AdminDeleteViewModel(
 
     init {
         loadRejectedProperties()
+        loadDeletionHistory()
     }
 
     private fun loadRejectedProperties() {
@@ -54,22 +66,47 @@ class AdminDeleteViewModel(
         }
     }
 
+    private fun loadDeletionHistory() {
+        viewModelScope.launch {
+            try {
+                repository.getDeletionHistory().collect { history ->
+                    _uiState.value = _uiState.value.copy(
+                        deletionHistory = history
+                    )
+                    Log.d(TAG, "Loaded ${history.size} deletion records")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading deletion history: ${e.message}")
+            }
+        }
+    }
+
     fun deleteProperty(propertyId: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val result = repository.deleteProperty(propertyId)
+                // Get property details before deleting
+                val property = _uiState.value.rejectedProperties.find { it.id == propertyId }
 
-                if (result.isSuccess) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        successMessage = "Property deleted permanently"
-                    )
-                    Log.d(TAG, "Property $propertyId deleted")
+                if (property != null) {
+                    val result = repository.deleteProperty(propertyId, property)
+
+                    if (result.isSuccess) {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            successMessage = "Property deleted permanently"
+                        )
+                        Log.d(TAG, "Property $propertyId deleted")
+                    } else {
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = result.exceptionOrNull()?.message ?: "Failed to delete property"
+                        )
+                    }
                 } else {
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
-                        error = result.exceptionOrNull()?.message ?: "Failed to delete property"
+                        error = "Property not found"
                     )
                 }
             } catch (e: Exception) {

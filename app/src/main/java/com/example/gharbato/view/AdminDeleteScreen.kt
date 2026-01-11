@@ -27,6 +27,7 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.AdminDeleteViewModel
 import com.example.gharbato.viewmodel.AdminDeleteViewModelFactory
+import com.example.gharbato.viewmodel.DeletionRecord
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -51,98 +52,103 @@ fun AdminDeleteScreen() {
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
-    ) {
-        // Header
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = Color.Red,
-            shadowElevation = 4.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(
-                            "Delete Management",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            "Manage rejected properties",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
+    Scaffold { padding ->
 
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF5F5F5))
+                .padding(top = padding.calculateTopPadding())
+        ) {
+            // Header
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.Red,
+                shadowElevation = 4.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier.padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Column {
                             Text(
-                                "${uiState.rejectedProperties.size}",
-                                fontSize = 20.sp,
+                                "Delete Management",
+                                fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
+                            Text(
+                                "Manage rejected properties",
+                                fontSize = 14.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White.copy(alpha = 0.2f)
+                        ) {
+                            Box(
+                                modifier = Modifier.padding(12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    "${uiState.rejectedProperties.size}",
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
                         }
                     }
                 }
             }
-        }
 
-        // Tabs
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = Color.White,
-            contentColor = Color.Red
-        ) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = {
-                    Text("Rejected Properties (${uiState.rejectedProperties.size})")
-                }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = {
-                    Text("Delete History (0)")
-                }
-            )
-        }
-
-        // Content
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            when (selectedTab) {
-                0 -> RejectedPropertiesTab(
-                    properties = uiState.rejectedProperties,
-                    isLoading = uiState.isLoading,
-                    error = uiState.error,
-                    onDelete = { propertyId ->
-                        viewModel.deleteProperty(propertyId)
-                    },
-                    onRestore = { propertyId ->
-                        viewModel.restoreProperty(propertyId)
+            // Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.White,
+                contentColor = Color.Red
+            ) {
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Text("Rejected Properties (${uiState.rejectedProperties.size})")
                     }
                 )
-                1 -> DeleteHistoryTab()
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Text("Delete History (0)")
+                    }
+                )
+            }
+
+            // Content
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (selectedTab) {
+                    0 -> RejectedPropertiesTab(
+                        properties = uiState.rejectedProperties,
+                        isLoading = uiState.isLoading,
+                        error = uiState.error,
+                        onDelete = { propertyId ->
+                            viewModel.deleteProperty(propertyId)
+                        },
+                        onRestore = { propertyId ->
+                            viewModel.restoreProperty(propertyId)
+                        }
+                    )
+
+                    1 -> DeleteHistoryTab()
+                }
             }
         }
     }
@@ -623,31 +629,158 @@ fun PropertyInfo(label: String, value: String) {
 
 @Composable
 fun DeleteHistoryTab() {
+    val viewModel: AdminDeleteViewModel = viewModel(
+        factory = AdminDeleteViewModelFactory()
+    )
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        modifier = Modifier.fillMaxSize()
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(
-                Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = Gray.copy(alpha = 0.3f)
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "No deletion history",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = Gray
-            )
-            Text(
-                "Deleted properties will appear here",
-                fontSize = 14.sp,
-                color = Gray.copy(alpha = 0.7f)
-            )
+        when {
+            uiState.isLoading -> {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
+            uiState.deletionHistory.isEmpty() -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.History,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = Gray.copy(alpha = 0.3f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "No deletion history",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Gray
+                    )
+                    Text(
+                        "Deleted properties will appear here",
+                        fontSize = 14.sp,
+                        color = Gray.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            else -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(uiState.deletionHistory) { record ->
+                        DeletionHistoryCard(record)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DeletionHistoryCard(record: DeletionRecord) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.Red.copy(alpha = 0.1f),
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = null,
+                                tint = Color.Red,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            record.propertyTitle,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            "by ${record.ownerName}",
+                            fontSize = 12.sp,
+                            color = Gray
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            HorizontalDivider()
+
+            Spacer(Modifier.height(12.dp))
+
+            // Deletion Details
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        "Deleted On",
+                        fontSize = 11.sp,
+                        color = Gray
+                    )
+                    Text(
+                        record.deletedDate,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "Property ID",
+                        fontSize = 11.sp,
+                        color = Gray
+                    )
+                    Text(
+                        record.propertyId.toString(),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            if (record.deletedBy.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Deleted by: ${record.deletedBy}",
+                    fontSize = 12.sp,
+                    color = Gray
+                )
+            }
         }
     }
 }

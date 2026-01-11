@@ -3,6 +3,7 @@ package com.example.gharbato.repository
 import android.util.Log
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
+import com.example.gharbato.viewmodel.DeletionRecord
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -11,11 +12,15 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.*
+
 class AdminDeleteRepoImpl : AdminDeleteRepo {
     private val TAG = "AdminDeleteRepo"
     private val ref = FirebaseDatabase.getInstance().getReference("Property")
+    private val deletionHistoryRef = FirebaseDatabase.getInstance().getReference("DeletionHistory")
 
-    override fun getRejectedProperties(): Flow<List<PropertyModel>>  = callbackFlow {
+    override fun getRejectedProperties(): Flow<List<PropertyModel>> = callbackFlow {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val properties = snapshot.children.mapNotNull {
@@ -36,19 +41,59 @@ class AdminDeleteRepoImpl : AdminDeleteRepo {
         awaitClose { ref.removeEventListener(listener) }
     }
 
-    override suspend fun deleteProperty(propertyId: Int): Result<Boolean> {
-        return  try {
+    override fun getDeletionHistory(): Flow<List<DeletionRecord>> = callbackFlow {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val records = snapshot.children.mapNotNull {
+                    it.getValue(DeletionRecord::class.java)
+                }.sortedByDescending { it.deletedTimestamp }
+
+                Log.d(TAG, "Loaded ${records.size} deletion records")
+                trySend(records)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(TAG, "Failed to read deletion history", error.toException())
+                close(error.toException())
+            }
+        }
+
+        deletionHistoryRef.addValueEventListener(listener)
+        awaitClose { deletionHistoryRef.removeEventListener(listener) }
+    }
+
+    override suspend fun deleteProperty(propertyId: Int, property: PropertyModel): Result<Boolean> {
+        return try {
             Log.d(TAG, "Attempting to delete property: $propertyId")
 
             val propertyQuery = ref.orderByChild("id").equalTo(propertyId.toDouble())
             val snapshot = propertyQuery.get().await()
 
             if (snapshot.exists()) {
+                // Create deletion record before deleting
+                val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
+                val deletionRecord = DeletionRecord(
+                    propertyId = property.id,
+                    propertyTitle = property.title,
+                    ownerName = property.ownerName,
+                    ownerEmail = property.ownerEmail,
+                    deletedDate = dateFormat.format(Date()),
+                    deletedBy = "Admin",
+                    deletedTimestamp = System.currentTimeMillis()
+                )
+
+                // Save to deletion history
+                val historyKey = deletionHistoryRef.push().key
+                if (historyKey != null) {
+                    deletionHistoryRef.child(historyKey).setValue(deletionRecord).await()
+                }
+
+                // Delete the property
                 snapshot.children.forEach { dataSnapshot ->
-                    // Permanently delete from Firebase
                     dataSnapshot.ref.removeValue().await()
                     Log.d(TAG, "Property $propertyId deleted permanently")
                 }
+
                 Result.success(true)
             } else {
                 Log.w(TAG, "Property $propertyId not found")
@@ -83,5 +128,4 @@ class AdminDeleteRepoImpl : AdminDeleteRepo {
             Result.failure(e)
         }
     }
-
 }
