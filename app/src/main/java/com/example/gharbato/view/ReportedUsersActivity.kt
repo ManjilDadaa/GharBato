@@ -37,6 +37,10 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.ReportedRed
 
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+
 class ReportedUsersActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,6 +66,7 @@ data class ReportedUser(
 fun ReportedUsersScreen() {
     var users by remember { mutableStateOf<List<ReportedUser>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var userToSuspend by remember { mutableStateOf<ReportedUser?>(null) }
     
     val context = LocalContext.current
     val activity = context as Activity
@@ -107,6 +112,9 @@ fun ReportedUsersScreen() {
                             
                             val latestReport = userReports.maxByOrNull { it.timestamp }
                             val reason = latestReport?.reason ?: "No reason provided"
+                            
+                            val isSuspended = userModel?.isSuspended ?: false
+                            val accountStatus = if (isSuspended) "Suspended" else "Active"
 
                             reportedUsersList.add(
                                 ReportedUser(
@@ -116,7 +124,7 @@ fun ReportedUsersScreen() {
                                     userImage = userImage,
                                     reportCount = userReports.size,
                                     reportReason = reason,
-                                    accountStatus = "Active" // You might want to fetch this from userModel if it exists
+                                    accountStatus = accountStatus
                                 )
                             )
 
@@ -142,6 +150,33 @@ fun ReportedUsersScreen() {
                 isLoading = false
             }
         })
+    }
+
+    if (userToSuspend != null) {
+        SuspendUserDialog(
+            user = userToSuspend!!,
+            onDismiss = { userToSuspend = null },
+            onSuspend = { duration, reason ->
+                val userId = userToSuspend!!.userId
+                val suspendedUntil = System.currentTimeMillis() + duration
+                
+                val updates = mapOf(
+                    "isSuspended" to true,
+                    "suspendedUntil" to suspendedUntil,
+                    "suspensionReason" to reason
+                )
+                
+                FirebaseDatabase.getInstance().getReference("Users").child(userId)
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                         Toast.makeText(context, "User suspended successfully", Toast.LENGTH_SHORT).show()
+                         userToSuspend = null
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(context, "Failed to suspend user", Toast.LENGTH_SHORT).show()
+                    }
+            }
+        )
     }
 
     Scaffold(
@@ -267,16 +302,16 @@ fun ReportedUsersScreen() {
                             }
 
                             Surface(
-                                color = Color.Red.copy(alpha = 0.1f),
+                                color = if (user.accountStatus == "Suspended") Color.Gray.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    text = "${user.reportCount} Reports",
+                                    text = if (user.accountStatus == "Suspended") "Suspended" else "${user.reportCount} Reports",
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp
                                     ),
-                                    color = Color.Red,
+                                    color = if (user.accountStatus == "Suspended") Color.Gray else Color.Red,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -305,8 +340,8 @@ fun ReportedUsersScreen() {
                                 Spacer(Modifier.height(12.dp))
 
                                 Text(
-//                                    text = "Reported on: ${user.reportedDate}",
-                                    text = "Reported on: xxxx-xx-xx}",
+                                //                                    text = "Reported on: ${user.reportedDate}",
+                                    text = "Status: ${user.accountStatus}",
                                     fontSize = 12.sp,
                                     color = Gray
                                 )
@@ -327,13 +362,18 @@ fun ReportedUsersScreen() {
                             }
 
                             Button(
-                                onClick = { /* Suspend user */ },
+                                onClick = { 
+                                    if (user.accountStatus != "Suspended") {
+                                        userToSuspend = user 
+                                    }
+                                },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Red
-                                )
+                                    containerColor = if (user.accountStatus == "Suspended") Color.Gray else Color.Red
+                                ),
+                                enabled = user.accountStatus != "Suspended"
                             ) {
-                                Text("Suspend")
+                                Text(if (user.accountStatus == "Suspended") "Suspended" else "Suspend")
                             }
                         }
                     }
@@ -341,4 +381,64 @@ fun ReportedUsersScreen() {
             }
         }
     }
+}
+
+@Composable
+fun SuspendUserDialog(
+    user: ReportedUser,
+    onDismiss: () -> Unit,
+    onSuspend: (Long, String) -> Unit
+) {
+    var selectedDuration by remember { mutableStateOf(1) } // Default 1 day
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Suspend ${user.userName}") },
+        text = {
+            Column {
+                Text("Select suspension duration:")
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                val options = listOf(
+                    "24 Hours" to 1,
+                    "3 Days" to 3,
+                    "1 Week" to 7,
+                    "1 Month" to 30,
+                    "Permanent" to 36500 // ~100 years
+                )
+                
+                options.forEach { (label, days) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedDuration = days }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = (selectedDuration == days),
+                            onClick = { selectedDuration = days }
+                        )
+                        Text(text = label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val durationInMillis = selectedDuration * 24 * 60 * 60 * 1000L
+                    onSuspend(durationInMillis, "Violation of community guidelines")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Text("Suspend")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

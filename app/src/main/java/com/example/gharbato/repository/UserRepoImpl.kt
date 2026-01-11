@@ -45,20 +45,57 @@ class UserRepoImpl : UserRepo{
         callback: (Boolean, String) -> Unit
     ) {
         auth.signInWithEmailAndPassword(email,password)
-            .addOnCompleteListener {
-                if (it.isSuccessful){
-                    callback(true,"Login Successful")
+            .addOnCompleteListener { task ->
+                if (task.isSuccessful){
+                    val userId = auth.currentUser?.uid
+                    if (userId != null) {
+                        ref.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                            override fun onDataChange(snapshot: DataSnapshot) {
+                                val isSuspended = snapshot.child("isSuspended").getValue(Boolean::class.java) ?: false
+                                val suspendedUntil = snapshot.child("suspendedUntil").getValue(Long::class.java) ?: 0L
+                                val suspensionReason = snapshot.child("suspensionReason").getValue(String::class.java) ?: ""
+                                
+                                android.util.Log.d("LoginCheck", "User: $userId, isSuspended: $isSuspended, until: $suspendedUntil")
+
+                                if (isSuspended) {
+                                    val currentTime = System.currentTimeMillis()
+                                    if (suspendedUntil > currentTime) {
+                                        // User is suspended
+                                        auth.signOut()
+                                        val date = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+                                            .format(java.util.Date(suspendedUntil))
+                                        callback(false, "Account suspended until $date. Reason: $suspensionReason")
+                                    } else {
+                                        // Suspension expired, lift it
+                                        ref.child(userId).child("isSuspended").setValue(false)
+                                        ref.child(userId).child("suspendedUntil").setValue(0)
+                                        ref.child(userId).child("suspensionReason").setValue("")
+                                        callback(true, "Login Successful")
+                                    }
+                                } else {
+                                    callback(true, "Login Successful")
+                                }
+                            }
+
+                            override fun onCancelled(error: DatabaseError) {
+                                android.util.Log.e("LoginCheck", "Database error: ${error.message}")
+                                callback(true, "Login Successful") // Proceed if check fails, or handle error
+                            }
+                        })
+                    } else {
+                        callback(true, "Login Successful")
+                    }
                 }
                 else{
-                    val exception = it.exception
+                    val exception = task.exception
                     when(exception){
                         is FirebaseAuthInvalidUserException -> {
-                            callback(false,it.exception?.message.toString())
+                            callback(false,task.exception?.message.toString())
                         }
                         is FirebaseAuthInvalidCredentialsException -> {
                             callback(false, "Invalid email or password")
                         }
-                        else -> callback(false, "${it.exception?.message}")
+                        else -> callback(false, "${task.exception?.message}")
                     }
                 }
             }
