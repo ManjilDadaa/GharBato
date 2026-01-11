@@ -6,7 +6,6 @@ import android.net.Uri
 import android.util.Log
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.ChatSession
-import android.util.Log
 import com.example.gharbato.model.MessageUser
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.view.ZegoCallActivity

@@ -2,6 +2,7 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -34,12 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
 import androidx.core.content.FileProvider
-import coil.request.ImageRequest
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -111,19 +112,18 @@ fun MessageDetailsScreen(
     val messageText by viewModel.messageText
     val isBlockedByMe by viewModel.isBlockedByMe
     val isBlockedByOther by viewModel.isBlockedByOther
-    
-    val listState = rememberLazyListState()
-    
-    var showReportDialog by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
+
+    var showReportDialog by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { 
+        uri?.let {
             Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
-            viewModel.sendImageMessage(context, it) 
+            viewModel.sendImageMessage(context, it)
         }
     }
 
@@ -140,7 +140,7 @@ fun MessageDetailsScreen(
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = context.getExternalFilesDir(null)
         val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
-        
+
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -244,7 +244,7 @@ fun ReportUserDialog(
     onReport: (String) -> Unit
 ) {
     var reason by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Report User") },
@@ -370,25 +370,25 @@ fun ChatTopBar(
             ) {
                 DropdownMenuItem(
                     text = { Text("Report User") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onReportClick() 
+                        onReportClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Report, null) }
                 )
                 DropdownMenuItem(
                     text = { Text("Delete Chat") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onDeleteClick() 
+                        onDeleteClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Delete, null) }
                 )
                 DropdownMenuItem(
                     text = { Text(if (isBlockedByMe) "Unblock User" else "Block User") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onBlockClick() 
+                        onBlockClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Block, null) }
                 )
@@ -399,8 +399,6 @@ fun ChatTopBar(
         )
     )
 }
-
-
 
 @Composable
 fun MessageBubble(
@@ -438,7 +436,7 @@ fun MessageBubble(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.LightGray),
                         contentScale = ContentScale.Crop,
-                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image) // Fallback
+                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
                     )
                     if (message.text.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -534,141 +532,8 @@ fun MessageInput(
                     tint = Color.White
                 )
             }
-        },
-        navigationIcon = {
-            IconButton(onClick = onBackClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.Black
-                )
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White
-        )
-    )
-}
-
-@Composable
-fun MessageBubble(
-    message: Message,
-    isCurrentUser: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
-    ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
-                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
-            ),
-            color = if (isCurrentUser) Blue else Color.White,
-            modifier = Modifier.widthIn(max = 280.dp),
-            shadowElevation = 2.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
-                Text(
-                    text = message.message,
-                    color = if (isCurrentUser) Color.White else Color.Black,
-                    fontSize = 15.sp
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
-                    fontSize = 11.sp
-                )
-            }
         }
     }
-}
-
-@Composable
-fun MessageInput(
-    messageText: String,
-    onMessageTextChange: (String) -> Unit,
-    onSendClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 8.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            OutlinedTextField(
-                value = messageText,
-                onValueChange = onMessageTextChange,
-                modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message...") },
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Blue,
-                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                    focusedContainerColor = Color(0xFFF5F5F5)
-                ),
-                maxLines = 4
-            )
-
-            IconButton(
-                onClick = onSendClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(Blue, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = Color.White
-                )
-            }
-        }
-    }
-}
-
-private fun sendMessage(
-    chatId: String,
-    currentUserId: String,
-    otherUserId: String,
-    messageText: String,
-    messagesRef: DatabaseReference
-) {
-    val messageId = messagesRef.push().key ?: return
-
-    val message = hashMapOf(
-        "senderId" to currentUserId,
-        "receiverId" to otherUserId,
-        "message" to messageText,
-        "timestamp" to ServerValue.TIMESTAMP,
-        "isRead" to false
-    )
-
-    Log.d("MessageDetails", "Sending message to chat: $chatId")
-    Log.d("MessageDetails", "From: $currentUserId, To: $otherUserId")
-
-    messagesRef
-        .child(messageId)
-        .setValue(message)
-        .addOnSuccessListener {
-            Log.d("MessageDetails", "Message sent successfully")
-        }
-        .addOnFailureListener { e ->
-            Log.e("MessageDetails", "Failed to send message", e)
-        }
 }
 
 private fun formatTimestamp(timestamp: Long): String {
