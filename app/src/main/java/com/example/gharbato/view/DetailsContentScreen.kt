@@ -1,20 +1,23 @@
 package com.example.gharbato.view
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,6 +32,28 @@ fun DetailsContentScreen(
     state: PropertyListingState,
     onStateChange: (PropertyListingState) -> Unit
 ) {
+    val context = LocalContext.current
+
+    // Launcher for Map Location Picker
+    val mapLocationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val latitude = data?.getDoubleExtra(MapLocationPickerActivity.RESULT_LATITUDE, 27.7172) ?: 27.7172
+            val longitude = data?.getDoubleExtra(MapLocationPickerActivity.RESULT_LONGITUDE, 85.3240) ?: 85.3240
+            val address = data?.getStringExtra(MapLocationPickerActivity.RESULT_ADDRESS) ?: ""
+
+            onStateChange(
+                state.copy(
+                    latitude = latitude,
+                    longitude = longitude,
+                    location = address,
+                    hasSelectedLocation = true
+                )
+            )
+        }
+    }
 
     val priceLabel = when(state.selectedPurpose) {
         "Sell" -> "Asking Price"
@@ -154,13 +179,14 @@ fun DetailsContentScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Location
-        CustomOutlinedTextField(
-            value = state.location,
-            onValueChange = { onStateChange(state.copy(location = it)) },
-            label = "Location",
-            placeholder = "e.g., Thamel, Kathmandu",
-            modifier = Modifier.fillMaxWidth()
+        // Location with Map Picker
+        LocationPickerField(
+            location = state.location,
+            hasSelectedLocation = state.hasSelectedLocation,
+            onPickLocation = {
+                val intent = android.content.Intent(context, MapLocationPickerActivity::class.java)
+                mapLocationPickerLauncher.launch(intent)
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -319,6 +345,104 @@ fun DetailsContentScreen(
     }
 }
 
+@Composable
+fun LocationPickerField(
+    location: String,
+    hasSelectedLocation: Boolean,
+    onPickLocation: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onPickLocation),
+        colors = CardDefaults.cardColors(
+            containerColor = if (hasSelectedLocation) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = if (hasSelectedLocation) Color(0xFF4CAF50) else Gray.copy(0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (hasSelectedLocation) Icons.Default.LocationOn else Icons.Default.AddLocation,
+                contentDescription = "Location",
+                tint = if (hasSelectedLocation) Color(0xFF4CAF50) else Gray,
+                modifier = Modifier.size(32.dp)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (hasSelectedLocation) "Location Selected" else "Select Property Location",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (hasSelectedLocation) Color(0xFF4CAF50) else Color.Black
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = if (location.isNotEmpty()) location else "Tap to pin exact location on map",
+                    fontSize = 13.sp,
+                    color = Gray,
+                    maxLines = 2
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Open Map",
+                tint = Gray,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+
+    // Show location info if selected
+    if (hasSelectedLocation) {
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF0F9FF)
+            ),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Color(0xFF4CAF50),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Exact coordinates saved - Your property will appear at this location on the map",
+                    fontSize = 12.sp,
+                    color = Color.Black,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FurnishingDropdown(
@@ -391,7 +515,6 @@ fun FurnishingDropdown(
                 )
             }
         }
-
     }
 }
 

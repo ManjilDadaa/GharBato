@@ -7,8 +7,8 @@ import android.os.Looper
 import android.util.Log
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
-import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.model.PropertyStatus
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
