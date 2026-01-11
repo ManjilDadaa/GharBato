@@ -4,6 +4,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.database.Exclude
 import com.google.firebase.database.IgnoreExtraProperties
 
+
 @IgnoreExtraProperties
 data class PropertyModel(
     val id: Int = 0,
@@ -16,9 +17,6 @@ data class PropertyModel(
     val images: Map<String, List<String>> = emptyMap(),
     val location: String = "",
     val marketType: String = "",
-
-
-    // Firebase stores lat/lng separately, not LatLng object
     val latitude: Double = 27.7172,
     val longitude: Double = 85.3240,
     val propertyType: String = "Apartment",
@@ -43,9 +41,7 @@ data class PropertyModel(
     val ownerEmail: String = "",
 
     val createdAt: Long = System.currentTimeMillis(),
-
-    ) {
-    //Computed property for LatLng (not stored in Firebase)
+) {
     @get:Exclude
     val latLng: LatLng
         get() = LatLng(latitude, longitude)
@@ -56,6 +52,14 @@ data class PropertyModel(
         get() = images["cover"]?.firstOrNull()
             ?: images.values.flatten().firstOrNull()
             ?: ""
+
+    @get:Exclude
+    val hasValidCoordinates: Boolean
+        get() = !(latitude == 27.7172 && longitude == 85.3240)
+
+    @get:Exclude
+    val isDefaultLocation: Boolean
+        get() = latitude == 27.7172 && longitude == 85.3240
 }
 
 object PropertyStatus {
@@ -63,3 +67,4 @@ object PropertyStatus {
     const val APPROVED = "APPROVED"
     const val REJECTED = "REJECTED"
 }
+
