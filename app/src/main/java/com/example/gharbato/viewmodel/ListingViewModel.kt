@@ -78,6 +78,10 @@ class ListingViewModel(
             state.location.isBlank() -> {
                 ListingValidationResult(false, "Location is required")
             }
+            // ⭐ NEW: Validate that location was selected on map
+            !state.hasSelectedLocation -> {
+                ListingValidationResult(false, "Please select property location on the map")
+            }
             state.floor.isBlank() -> {
                 ListingValidationResult(false, "Floor information is required")
             }
@@ -286,6 +290,27 @@ class ListingViewModel(
                     }
                 }
 
+                // ⭐ CRITICAL FIX: Log coordinate information before creating property
+                Log.d(TAG, "=== Property Location Information ===")
+                Log.d(TAG, "Location Selected: ${state.hasSelectedLocation}")
+                Log.d(TAG, "Location Address: ${state.location}")
+                Log.d(TAG, "Latitude: ${state.latitude}")
+                Log.d(TAG, "Longitude: ${state.longitude}")
+
+                // ⚠️ WARNING: Check if coordinates are default
+                if (state.latitude == 27.7172 && state.longitude == 85.3240) {
+                    Log.w(TAG, "⚠️ WARNING: Property is using default Kathmandu coordinates!")
+                    Log.w(TAG, "⚠️ This property will NOT appear at its actual location on the map")
+
+                    if (!state.hasSelectedLocation) {
+                        Log.e(TAG, "❌ ERROR: Location was not selected on map!")
+                        _isUploading.value = false
+                        _uploadSuccess.value = false
+                        onError("Please select the property location on the map")
+                        return@launch
+                    }
+                }
+
                 val property = PropertyModel(
                     id = System.currentTimeMillis().toInt(),
                     title = state.title,
@@ -301,8 +326,11 @@ class ListingViewModel(
                     bathrooms = state.bathrooms.toIntOrNull() ?: 0,
                     images = categorizedImages,
                     location = state.location,
-                    latitude = 27.7172,
-                    longitude = 85.3240,
+
+                    // ⭐⭐⭐ CRITICAL FIX: Use actual coordinates from state ⭐⭐⭐
+                    latitude = state.latitude,
+                    longitude = state.longitude,
+
                     propertyType = state.selectedPropertyType,
                     marketType = state.selectedPurpose,
                     floor = state.floor,
@@ -311,7 +339,7 @@ class ListingViewModel(
                     petsAllowed = state.petsAllowed,
                     description = state.description,
 
-                    // ⚠️ CRITICAL: Owner information
+                    // Owner information
                     ownerId = currentUserId,
                     ownerName = ownerName,
                     ownerImageUrl = ownerImageUrl,
@@ -329,7 +357,13 @@ class ListingViewModel(
                     isFavorite = false
                 )
 
-                Log.d(TAG, "Property created with ownerId: ${property.ownerId}")
+                // ⭐ FINAL VALIDATION LOG
+                Log.d(TAG, "=== Final Property Object ===")
+                Log.d(TAG, "Property ID: ${property.id}")
+                Log.d(TAG, "Title: ${property.title}")
+                Log.d(TAG, "Location: ${property.location}")
+                Log.d(TAG, "Coordinates: (${property.latitude}, ${property.longitude})")
+                Log.d(TAG, "Owner ID: ${property.ownerId}")
 
                 _uploadProgress.value = "Saving property to database..."
 
@@ -338,7 +372,10 @@ class ListingViewModel(
                     if (success) {
                         _uploadSuccess.value = true
                         _uploadProgress.value = "✅ Property created successfully!"
-                        Log.d(TAG, "✅ Property saved with ID: ${property.id}, ownerId: ${property.ownerId}")
+                        Log.d(TAG, "✅ Property saved successfully!")
+                        Log.d(TAG, "   ID: ${property.id}")
+                        Log.d(TAG, "   Coordinates: (${property.latitude}, ${property.longitude})")
+                        Log.d(TAG, "   Owner: ${property.ownerId}")
                         onSuccess()
                     } else {
                         _uploadSuccess.value = false
