@@ -2,11 +2,15 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,24 +29,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.database.*
+import androidx.core.content.FileProvider
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class Message(
-    val messageId: String = "",
-    val senderId: String = "",
-    val receiverId: String = "",
-    val message: String = "",
-    val timestamp: Long = 0L,
-    val isRead: Boolean = false
-)
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -67,7 +68,6 @@ class MessageDetailsActivity : ComponentActivity() {
     }
 
     private val auth = FirebaseAuth.getInstance()
-    private val database = FirebaseDatabase.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -85,34 +85,15 @@ class MessageDetailsActivity : ComponentActivity() {
             return
         }
 
-        // Generate consistent chat ID
-        val chatId = getChatId(currentUserId, otherUserId)
-
-        Log.d(TAG, "=== Chat Setup ===")
-        Log.d(TAG, "Current User ID: $currentUserId")
-        Log.d(TAG, "Other User ID: $otherUserId")
-        Log.d(TAG, "Other User Name: $otherUserName")
-        Log.d(TAG, "Chat ID: $chatId")
-
         setContent {
             MessageDetailsScreen(
                 currentUserId = currentUserId,
                 otherUserId = otherUserId,
                 otherUserName = otherUserName,
                 otherUserImage = otherUserImage,
-                chatId = chatId,
                 onBackClick = { finish() }
             )
         }
-    }
-
-    /**
-     * Generate consistent chat ID by sorting user IDs
-     * This ensures the same chat ID is generated regardless of who initiates the chat
-     */
-    private fun getChatId(userId1: String, userId2: String): String {
-        val sortedIds = listOf(userId1, userId2).sorted()
-        return "${sortedIds[0]}_${sortedIds[1]}"
     }
 }
 
@@ -123,63 +104,54 @@ fun MessageDetailsScreen(
     otherUserId: String,
     otherUserName: String,
     otherUserImage: String,
-    chatId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: MessageDetailsViewModel = viewModel()
 ) {
-    var messageText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    val context = LocalContext.current
+    val messages by viewModel.messages
+    val messageText by viewModel.messageText
+    val isBlockedByMe by viewModel.isBlockedByMe
+    val isBlockedByOther by viewModel.isBlockedByOther
+
     val listState = rememberLazyListState()
 
-    val database = FirebaseDatabase.getInstance()
-    val messagesRef = database.reference
-        .child("chats")
-        .child(chatId)
-        .child("messages")
+    var showReportDialog by remember { mutableStateOf(false) }
+    var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
-    // Listen for messages
-    LaunchedEffect(chatId) {
-        Log.d("MessageDetails", "Setting up listener for chat: $chatId")
-
-        val messageListener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val messageList = mutableListOf<Message>()
-
-                snapshot.children.forEach { messageSnapshot ->
-                    try {
-                        val messageId = messageSnapshot.key ?: ""
-                        val senderId = messageSnapshot.child("senderId").getValue(String::class.java) ?: ""
-                        val receiverId = messageSnapshot.child("receiverId").getValue(String::class.java) ?: ""
-                        val messageContent = messageSnapshot.child("message").getValue(String::class.java) ?: ""
-                        val timestamp = messageSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
-                        val isRead = messageSnapshot.child("isRead").getValue(Boolean::class.java) ?: false
-
-                        val message = Message(
-                            messageId = messageId,
-                            senderId = senderId,
-                            receiverId = receiverId,
-                            message = messageContent,
-                            timestamp = timestamp,
-                            isRead = isRead
-                        )
-
-                        messageList.add(message)
-                    } catch (e: Exception) {
-                        Log.e("MessageDetails", "Error parsing message", e)
-                    }
-                }
-
-                // Sort by timestamp
-                messages = messageList.sortedBy { it.timestamp }
-
-                Log.d("MessageDetails", "Loaded ${messages.size} messages for chat: $chatId")
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Log.e("MessageDetails", "Failed to load messages: ${error.message}")
-            }
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
+            viewModel.sendImageMessage(context, it)
         }
+    }
 
-        messagesRef.addValueEventListener(messageListener)
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && currentPhotoUri != null) {
+            Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
+            viewModel.sendImageMessage(context, currentPhotoUri!!)
+        }
+    }
+
+    fun launchCamera() {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = context.getExternalFilesDir(null)
+        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        currentPhotoUri = uri
+        cameraLauncher.launch(uri)
+    }
+
+    LaunchedEffect(otherUserId) {
+        viewModel.startChat(context, otherUserId)
     }
 
     // Auto-scroll to bottom when new messages arrive
@@ -189,12 +161,30 @@ fun MessageDetailsScreen(
         }
     }
 
+    if (showReportDialog) {
+        ReportUserDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportUser(reason) { success, msg ->
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
+                showReportDialog = false
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
-                onBackClick = onBackClick
+                isBlockedByMe = isBlockedByMe,
+                onBackClick = onBackClick,
+                onBlockClick = { viewModel.toggleBlockUser() },
+                onDeleteClick = { viewModel.deleteChat() },
+                onReportClick = { showReportDialog = true },
+                onAudioCallClick = { viewModel.initiateCall(context as Activity, false, otherUserName) },
+                onVideoCallClick = { viewModel.initiateCall(context as Activity, true, otherUserName) }
             )
         }
     ) { padding ->
@@ -222,24 +212,68 @@ fun MessageDetailsScreen(
             }
 
             // Message Input
-            MessageInput(
-                messageText = messageText,
-                onMessageTextChange = { messageText = it },
-                onSendClick = {
-                    if (messageText.isNotBlank()) {
-                        sendMessage(
-                            chatId = chatId,
-                            currentUserId = currentUserId,
-                            otherUserId = otherUserId,
-                            messageText = messageText,
-                            messagesRef = messagesRef
-                        )
-                        messageText = ""
-                    }
+            if (isBlockedByMe || isBlockedByOther) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (isBlockedByMe) "You blocked this user" else "You have been blocked",
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            )
+            } else {
+                MessageInput(
+                    messageText = messageText,
+                    onMessageTextChange = { viewModel.onMessageTextChanged(it) },
+                    onSendClick = { viewModel.sendTextMessage() },
+                    onCameraClick = { launchCamera() },
+                    onAttachClick = { imagePickerLauncher.launch("image/*") }
+                )
+            }
         }
     }
+}
+
+@Composable
+fun ReportUserDialog(
+    onDismiss: () -> Unit,
+    onReport: (String) -> Unit
+) {
+    var reason by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Report User") },
+        text = {
+            Column {
+                Text("Why are you reporting this user?")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("Reason") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onReport(reason) },
+                enabled = reason.isNotBlank()
+            ) {
+                Text("Report")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -247,8 +281,16 @@ fun MessageDetailsScreen(
 fun ChatTopBar(
     userName: String,
     userImage: String,
-    onBackClick: () -> Unit
+    isBlockedByMe: Boolean,
+    onBackClick: () -> Unit,
+    onBlockClick: () -> Unit,
+    onDeleteClick: () -> Unit,
+    onReportClick: () -> Unit,
+    onAudioCallClick: () -> Unit,
+    onVideoCallClick: () -> Unit
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     TopAppBar(
         title = {
             Row(
@@ -304,6 +346,54 @@ fun ChatTopBar(
                 )
             }
         },
+        actions = {
+            IconButton(onClick = onVideoCallClick) {
+                Icon(
+                    imageVector = Icons.Default.VideoCall,
+                    contentDescription = "Video Call",
+                    tint = Color.Black
+                )
+            }
+            IconButton(onClick = onAudioCallClick) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = "Audio Call",
+                    tint = Color.Black
+                )
+            }
+            IconButton(onClick = { menuExpanded = true }) {
+                Icon(Icons.Default.MoreVert, "Menu", tint = Color.Black)
+            }
+            DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Report User") },
+                    onClick = {
+                        menuExpanded = false
+                        onReportClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Report, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete Chat") },
+                    onClick = {
+                        menuExpanded = false
+                        onDeleteClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Delete, null) }
+                )
+                DropdownMenuItem(
+                    text = { Text(if (isBlockedByMe) "Unblock User" else "Block User") },
+                    onClick = {
+                        menuExpanded = false
+                        onBlockClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Block, null) }
+                )
+            }
+        },
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = Color.White
         )
@@ -312,7 +402,7 @@ fun ChatTopBar(
 
 @Composable
 fun MessageBubble(
-    message: Message,
+    message: ChatMessage,
     isCurrentUser: Boolean
 ) {
     Row(
@@ -333,11 +423,33 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                Text(
-                    text = message.message,
-                    color = if (isCurrentUser) Color.White else Color.Black,
-                    fontSize = 15.sp
-                )
+                if (message.imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(message.imageUrl)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Shared Image",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.LightGray),
+                        contentScale = ContentScale.Crop,
+                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
+                    )
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+
+                if (message.text.isNotEmpty()) {
+                    Text(
+                        text = message.text,
+                        color = if (isCurrentUser) Color.White else Color.Black,
+                        fontSize = 15.sp
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -355,7 +467,9 @@ fun MessageBubble(
 fun MessageInput(
     messageText: String,
     onMessageTextChange: (String) -> Unit,
-    onSendClick: () -> Unit
+    onSendClick: () -> Unit,
+    onCameraClick: () -> Unit,
+    onAttachClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -369,6 +483,28 @@ fun MessageInput(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            IconButton(
+                onClick = onCameraClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CameraAlt,
+                    contentDescription = "Camera",
+                    tint = Color.Gray
+                )
+            }
+
+            IconButton(
+                onClick = onAttachClick,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AttachFile,
+                    contentDescription = "Attach File",
+                    tint = Color.Gray
+                )
+            }
+
             OutlinedTextField(
                 value = messageText,
                 onValueChange = onMessageTextChange,
@@ -398,37 +534,6 @@ fun MessageInput(
             }
         }
     }
-}
-
-private fun sendMessage(
-    chatId: String,
-    currentUserId: String,
-    otherUserId: String,
-    messageText: String,
-    messagesRef: DatabaseReference
-) {
-    val messageId = messagesRef.push().key ?: return
-
-    val message = hashMapOf(
-        "senderId" to currentUserId,
-        "receiverId" to otherUserId,
-        "message" to messageText,
-        "timestamp" to ServerValue.TIMESTAMP,
-        "isRead" to false
-    )
-
-    Log.d("MessageDetails", "Sending message to chat: $chatId")
-    Log.d("MessageDetails", "From: $currentUserId, To: $otherUserId")
-
-    messagesRef
-        .child(messageId)
-        .setValue(message)
-        .addOnSuccessListener {
-            Log.d("MessageDetails", "Message sent successfully")
-        }
-        .addOnFailureListener { e ->
-            Log.e("MessageDetails", "Failed to send message", e)
-        }
 }
 
 private fun formatTimestamp(timestamp: Long): String {

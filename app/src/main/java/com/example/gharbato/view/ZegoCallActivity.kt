@@ -64,6 +64,7 @@ class ZegoCallActivity : FragmentActivity() {
         if (isEmulator || hasX86Abi) {
             // Show warning but don't crash - allow for testing
             android.util.Log.w("ZegoCall", "Running on emulator/x86. ZEGOCLOUD calls may have limited functionality.")
+            Toast.makeText(this, "Emulator detected. If video is black, enable 'Hardware - GLES 2.0' in AVD Settings.", Toast.LENGTH_LONG).show()
         }
 
         // Set up the container first
@@ -139,9 +140,18 @@ class ZegoCallActivity : FragmentActivity() {
             // Add try-catch around ZegoCloud initialization
             val config = try {
                 if (isVideoCall) {
-                    ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall()
+                    ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall().apply {
+                        turnOnCameraWhenJoining = true
+                        turnOnMicrophoneWhenJoining = true
+                        useSpeakerWhenJoining = true
+                    }
                 } else {
-                    ZegoUIKitPrebuiltCallConfig.oneOnOneVoiceCall()
+                    // Use VideoCall config even for audio calls to allow video toggling/viewing
+                    ZegoUIKitPrebuiltCallConfig.oneOnOneVideoCall().apply {
+                        turnOnCameraWhenJoining = false
+                        turnOnMicrophoneWhenJoining = true
+                        useSpeakerWhenJoining = false
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("ZegoCall", "Failed to create call config", e)
@@ -172,11 +182,8 @@ class ZegoCallActivity : FragmentActivity() {
 
                 android.util.Log.d("ZegoCall", "Fragment added to container")
 
-                // Send call invitation if this is an outgoing call
-                // DISABLED: Using pure ZegoCloud without Firebase for testing
                 if (!isIncomingCall && targetUserId.isNotEmpty()) {
-                    android.util.Log.d("ZegoCall", "Firebase invitations disabled - using pure ZegoCloud")
-                    // sendCallInvitation(targetUserId, callId, isVideoCall, userName)
+                    sendCallInvitation(targetUserId, callId, isVideoCall, userName)
                 }
             } catch (e: Exception) {
                 android.util.Log.e("ZegoCall", "Failed to create call fragment", e)
