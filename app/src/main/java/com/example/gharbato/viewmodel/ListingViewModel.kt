@@ -2,17 +2,22 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.model.PropertyStatus
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
-import com.example.gharbato.repository.UserRepoImpl
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+
+private const val TAG = "ListingViewModel"
 
 class ListingViewModel(
     private val repository: PropertyRepo
@@ -27,6 +32,7 @@ class ListingViewModel(
     private val _uploadSuccess = MutableStateFlow<Boolean?>(null)
     val uploadSuccess: StateFlow<Boolean?> = _uploadSuccess
 
+    // STEP 1 VALIDATION - Purpose & Property Type
     fun validateStep1(state: PropertyListingState): ListingValidationResult {
         return when {
             state.selectedPurpose.isBlank() -> {
@@ -39,60 +45,122 @@ class ListingViewModel(
         }
     }
 
+    // STEP 2 VALIDATION - Property Details
     fun validateStep2(state: PropertyListingState): ListingValidationResult {
         return when {
-            state.title.isBlank() -> ListingValidationResult(false, "Property title is required")
-            state.title.length < 10 -> ListingValidationResult(false, "Title must be at least 10 characters")
-            state.developer.isBlank() -> ListingValidationResult(false, "Owner/Developer name is required")
-            state.price.isBlank() -> ListingValidationResult(false, "Price is required")
-            state.price.toIntOrNull() == null -> ListingValidationResult(false, "Please enter a valid price")
-            state.price.toInt() <= 0 -> ListingValidationResult(false, "Price must be greater than 0")
-            state.area.isBlank() -> ListingValidationResult(false, "Area is required")
-            state.area.toIntOrNull() == null -> ListingValidationResult(false, "Please enter a valid area")
-            state.area.toInt() <= 0 -> ListingValidationResult(false, "Area must be greater than 0")
-            state.location.isBlank() -> ListingValidationResult(false, "Location is required")
-            state.floor.isBlank() -> ListingValidationResult(false, "Floor information is required")
-            state.furnishing.isBlank() -> ListingValidationResult(false, "Please select furnishing type")
-            state.bedrooms.isBlank() -> ListingValidationResult(false, "Number of bedrooms is required")
-            state.bedrooms.toIntOrNull() == null -> ListingValidationResult(false, "Please enter valid bedrooms")
-            state.bathrooms.isBlank() -> ListingValidationResult(false, "Number of bathrooms is required")
-            state.bathrooms.toIntOrNull() == null -> ListingValidationResult(false, "Please enter valid bathrooms")
-            state.description.isBlank() -> ListingValidationResult(false, "Property description is required")
-            state.description.length < 20 -> ListingValidationResult(false, "Description must be at least 20 characters")
+            state.title.isBlank() -> {
+                ListingValidationResult(false, "Property title is required")
+            }
+            state.title.length < 10 -> {
+                ListingValidationResult(false, "Property title must be at least 10 characters")
+            }
+            state.developer.isBlank() -> {
+                ListingValidationResult(false, "Owner/Developer name is required")
+            }
+            state.price.isBlank() -> {
+                ListingValidationResult(false, "Price is required")
+            }
+            state.price.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid price")
+            }
+            state.price.toInt() <= 0 -> {
+                ListingValidationResult(false, "Price must be greater than 0")
+            }
+            state.area.isBlank() -> {
+                ListingValidationResult(false, "Area is required")
+            }
+            state.area.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid area")
+            }
+            state.area.toInt() <= 0 -> {
+                ListingValidationResult(false, "Area must be greater than 0")
+            }
+            state.location.isBlank() -> {
+                ListingValidationResult(false, "Location is required")
+            }
+            state.floor.isBlank() -> {
+                ListingValidationResult(false, "Floor information is required")
+            }
+            state.furnishing.isBlank() -> {
+                ListingValidationResult(false, "Please select furnishing type")
+            }
+            state.bedrooms.isBlank() -> {
+                ListingValidationResult(false, "Number of bedrooms is required")
+            }
+            state.bedrooms.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid number of bedrooms")
+            }
+            state.bathrooms.isBlank() -> {
+                ListingValidationResult(false, "Number of bathrooms is required")
+            }
+            state.bathrooms.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid number of bathrooms")
+            }
+            state.description.isBlank() -> {
+                ListingValidationResult(false, "Property description is required")
+            }
+            state.description.length < 20 -> {
+                ListingValidationResult(false, "Description must be at least 20 characters")
+            }
             else -> ListingValidationResult(true)
         }
     }
 
+    // STEP 3 VALIDATION - Photos
     fun validateStep3(state: PropertyListingState): ListingValidationResult {
         val coverPhotos = state.imageCategories.find { it.id == "cover" }?.images ?: emptyList()
         val bedroomPhotos = state.imageCategories.find { it.id == "bedrooms" }?.images ?: emptyList()
         val totalPhotos = state.imageCategories.sumOf { it.images.size }
 
         return when {
-            coverPhotos.isEmpty() -> ListingValidationResult(false, "Cover photo is required")
-            bedroomPhotos.isEmpty() -> ListingValidationResult(false, "At least one bedroom photo is required")
-            totalPhotos < 3 -> ListingValidationResult(false, "Please add at least 3 photos in total")
+            coverPhotos.isEmpty() -> {
+                ListingValidationResult(false, "Cover photo is required")
+            }
+            bedroomPhotos.isEmpty() -> {
+                ListingValidationResult(false, "At least one bedroom photo is required")
+            }
+            totalPhotos < 3 -> {
+                ListingValidationResult(false, "Please add at least 3 photos in total")
+            }
             else -> ListingValidationResult(true)
         }
     }
 
+    // STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
     fun validateStep4(state: PropertyListingState): ListingValidationResult {
-        if (state.selectedPurpose == "Sell") return ListingValidationResult(true)
+        if (state.selectedPurpose == "Sell") {
+            return ListingValidationResult(true)
+        }
 
         return when {
-            state.utilitiesIncluded.isBlank() -> ListingValidationResult(false, "Please select utilities option")
-            state.commission.isBlank() -> ListingValidationResult(false, "Please select commission terms")
-            state.advancePayment.isBlank() -> ListingValidationResult(false, "Please select advance payment terms")
-            state.securityDeposit.isBlank() -> ListingValidationResult(false, "Please select security deposit terms")
-            state.minimumLease.isBlank() -> ListingValidationResult(false, "Please select minimum lease period")
-            state.availableFrom.isBlank() -> ListingValidationResult(false, "Please select availability date")
+            state.utilitiesIncluded.isBlank() -> {
+                ListingValidationResult(false, "Please select utilities option")
+            }
+            state.commission.isBlank() -> {
+                ListingValidationResult(false, "Please select commission terms")
+            }
+            state.advancePayment.isBlank() -> {
+                ListingValidationResult(false, "Please select advance payment terms")
+            }
+            state.securityDeposit.isBlank() -> {
+                ListingValidationResult(false, "Please select security deposit terms")
+            }
+            state.minimumLease.isBlank() -> {
+                ListingValidationResult(false, "Please select minimum lease period")
+            }
+            state.availableFrom.isBlank() -> {
+                ListingValidationResult(false, "Please select availability date")
+            }
             else -> ListingValidationResult(true)
         }
     }
 
+    // STEP 5 VALIDATION - Amenities
     fun validateStep5(state: PropertyListingState): ListingValidationResult {
         return when {
-            state.amenities.isEmpty() -> ListingValidationResult(false, "Please select at least one amenity")
+            state.amenities.isEmpty() -> {
+                ListingValidationResult(false, "Please select at least one amenity")
+            }
             else -> ListingValidationResult(true)
         }
     }
@@ -116,6 +184,19 @@ class ListingViewModel(
     ) {
         viewModelScope.launch {
             try {
+                val auth = FirebaseAuth.getInstance()
+                val currentUser = auth.currentUser
+
+                if (currentUser == null) {
+                    _uploadSuccess.value = false
+                    onError("You must be logged in to create a property listing")
+                    return@launch
+                }
+
+                Log.d(TAG, "=== Starting Property Submission ===")
+                Log.d(TAG, "Current User ID: ${currentUser.uid}")
+                Log.d(TAG, "Current User Email: ${currentUser.email}")
+
                 _isUploading.value = true
                 _uploadProgress.value = "Preparing images..."
 
@@ -125,14 +206,14 @@ class ListingViewModel(
                         try {
                             allImageUris.add(Uri.parse(uriString))
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            Log.e(TAG, "Error parsing URI: $uriString", e)
                         }
                     }
                 }
 
                 if (allImageUris.isEmpty()) {
                     _uploadProgress.value = "No images selected"
-                    createAndSubmitProperty(state, emptyList(), onSuccess, onError)
+                    createAndSubmitProperty(state, emptyList(), currentUser.uid, onSuccess, onError)
                     return@launch
                 }
 
@@ -143,18 +224,19 @@ class ListingViewModel(
                         if (uploadedUrls.isEmpty()) {
                             _isUploading.value = false
                             _uploadSuccess.value = false
-                            onError("Failed to upload images")
+                            onError("Failed to upload images. Please check your internet connection.")
                         } else {
-                            _uploadProgress.value = "✅ ${uploadedUrls.size} uploaded. Saving..."
-                            createAndSubmitProperty(state, uploadedUrls, onSuccess, onError)
+                            _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving..."
+                            createAndSubmitProperty(state, uploadedUrls, currentUser.uid, onSuccess, onError)
                         }
                     }
                 }
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Error in submitListing", e)
                 _isUploading.value = false
                 _uploadSuccess.value = false
+                _uploadProgress.value = ""
                 onError("Error: ${e.message}")
             }
         }
@@ -163,89 +245,116 @@ class ListingViewModel(
     private fun createAndSubmitProperty(
         state: PropertyListingState,
         uploadedUrls: List<String>,
+        currentUserId: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        try {
-            val categorizedImages = mutableMapOf<String, List<String>>()
-            var currentIndex = 0
+        viewModelScope.launch {
+            try {
+                _uploadProgress.value = "Fetching owner information..."
 
-            state.imageCategories.forEach { category ->
-                val count = category.images.size
-                if (count > 0) {
-                    categorizedImages[category.id] = uploadedUrls.drop(currentIndex).take(count)
-                    currentIndex += count
-                }
-            }
+                val database = FirebaseDatabase.getInstance()
+                val userRef = database.getReference("users").child(currentUserId)
 
-            val property = PropertyModel(
-                id = System.currentTimeMillis().toInt(),
-                title = state.title,
-                developer = state.developer,
-                price = when (state.selectedPurpose) {
-                    "Sell" -> "Rs ${state.price}"
-                    "Rent" -> "Rs ${state.price}/month"
-                    "Book" -> "Rs ${state.price}/night"
-                    else -> "Rs ${state.price}"
-                },
-                sqft = "${state.area} sq.ft",
-                bedrooms = state.bedrooms.toIntOrNull() ?: 0,
-                bathrooms = state.bathrooms.toIntOrNull() ?: 0,
-                images = categorizedImages,
-                location = state.location,
-                latitude = 27.7172,
-                longitude = 85.3240,
-                propertyType = state.selectedPropertyType,
-                floor = state.floor,
-                furnishing = state.furnishing,
-                parking = state.parking,
-                petsAllowed = state.petsAllowed,
-                description = state.description,
-                utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
-                commission = if (state.selectedPurpose != "Sell") state.commission else null,
-                advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
-                securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
-                minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
-                availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
-                amenities = state.amenities,
-                status = PropertyStatus.PENDING,
-                isFavorite = false
-            )
+                val userSnapshot = userRef.get().await()
 
-            _uploadProgress.value = "Saving property..."
+                val ownerName = userSnapshot.child("fullName").getValue(String::class.java)
+                    ?: FirebaseAuth.getInstance().currentUser?.displayName
+                    ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+                    ?: state.developer
 
-            repository.addProperty(property) { success, error ->
-                if (success) {
-                    // ✅ NOTIFY ALL USERS
-                    _uploadProgress.value = "Notifying users..."
+                val ownerImageUrl = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                val ownerEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
 
-                    val userRepo = UserRepoImpl()
-                    userRepo.notifyAllUsers(
-                        title = "New Listing Available!",
-                        message = "Check out: ${property.title}. Won't you check it out?",
-                        type = "property",
-                        imageUrl = categorizedImages.values.firstOrNull()?.firstOrNull() ?: "",
-                        actionData = property.id.toString()
-                    ) { notifySuccess, notifyMsg ->
-                        android.util.Log.d("ListingViewModel", "Notification: $notifyMsg")
+                Log.d(TAG, "=== Owner Information ===")
+                Log.d(TAG, "Owner ID: $currentUserId")
+                Log.d(TAG, "Owner Name: $ownerName")
+                Log.d(TAG, "Owner Email: $ownerEmail")
+                Log.d(TAG, "Owner Image: $ownerImageUrl")
+
+                val categorizedImages = mutableMapOf<String, List<String>>()
+                var currentIndex = 0
+
+                state.imageCategories.forEach { category ->
+                    val count = category.images.size
+                    if (count > 0) {
+                        val urlsForCategory = uploadedUrls
+                            .drop(currentIndex)
+                            .take(count)
+                        categorizedImages[category.id] = urlsForCategory
+                        currentIndex += count
                     }
-
-                    _isUploading.value = false
-                    _uploadSuccess.value = true
-                    _uploadProgress.value = "✅ Success!"
-                    onSuccess()
-                } else {
-                    _isUploading.value = false
-                    _uploadSuccess.value = false
-                    onError(error ?: "Failed")
                 }
-            }
 
-        } catch (e: Exception) {
-            e.printStackTrace()
-            _isUploading.value = false
-            _uploadSuccess.value = false
-            onError(e.message ?: "Unknown error")
+                val property = PropertyModel(
+                    id = System.currentTimeMillis().toInt(),
+                    title = state.title,
+                    developer = state.developer,
+                    price = when (state.selectedPurpose) {
+                        "Sell" -> "Rs ${state.price}"
+                        "Rent" -> "Rs ${state.price}/month"
+                        "Book" -> "Rs ${state.price}/night"
+                        else -> "Rs ${state.price}"
+                    },
+                    sqft = "${state.area} sq.ft",
+                    bedrooms = state.bedrooms.toIntOrNull() ?: 0,
+                    bathrooms = state.bathrooms.toIntOrNull() ?: 0,
+                    images = categorizedImages,
+                    location = state.location,
+                    latitude = 27.7172,
+                    longitude = 85.3240,
+                    propertyType = state.selectedPropertyType,
+                    marketType = state.selectedPurpose,
+                    floor = state.floor,
+                    furnishing = state.furnishing,
+                    parking = state.parking,
+                    petsAllowed = state.petsAllowed,
+                    description = state.description,
+
+                    // ⚠️ CRITICAL: Owner information
+                    ownerId = currentUserId,
+                    ownerName = ownerName,
+                    ownerImageUrl = ownerImageUrl,
+                    ownerEmail = ownerEmail,
+
+                    utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
+                    commission = if (state.selectedPurpose != "Sell") state.commission else null,
+                    advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
+                    securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
+                    minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
+                    availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
+
+                    amenities = state.amenities,
+                    status = PropertyStatus.PENDING,
+                    isFavorite = false
+                )
+
+                Log.d(TAG, "Property created with ownerId: ${property.ownerId}")
+
+                _uploadProgress.value = "Saving property to database..."
+
+                repository.addProperty(property) { success, error ->
+                    _isUploading.value = false
+                    if (success) {
+                        _uploadSuccess.value = true
+                        _uploadProgress.value = "✅ Property created successfully!"
+                        Log.d(TAG, "✅ Property saved with ID: ${property.id}, ownerId: ${property.ownerId}")
+                        onSuccess()
+                    } else {
+                        _uploadSuccess.value = false
+                        _uploadProgress.value = ""
+                        Log.e(TAG, "❌ Failed to save property: $error")
+                        onError(error ?: "Failed to save property")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error in createAndSubmitProperty", e)
+                _isUploading.value = false
+                _uploadSuccess.value = false
+                _uploadProgress.value = ""
+                onError(e.message ?: "Unknown error occurred")
+            }
         }
     }
 

@@ -1,7 +1,8 @@
-package com.example.gharbato.data.repository
+package com.example.gharbato.repository
 
 import com.example.gharbato.model.NearbyPlace
 import com.example.gharbato.data.model.PlaceType
+import com.example.gharbato.data.repository.NearbyPlacesRepository
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.delay
 import kotlin.math.*

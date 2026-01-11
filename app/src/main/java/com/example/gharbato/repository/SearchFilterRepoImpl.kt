@@ -1,7 +1,7 @@
 package com.example.gharbato.repository
 
 import android.util.Log
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyFilters
 import kotlin.math.*
 

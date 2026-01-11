@@ -2,7 +2,7 @@ package com.example.gharbato.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.LocationFilter
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SearchFilterState
