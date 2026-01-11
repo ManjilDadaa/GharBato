@@ -25,6 +25,11 @@ data class PropertyListingState(
     var kitchen: String = "",
     var totalRooms: String = "",
 
+    // Location Coordinates (NEW)
+    var latitude: Double = 27.7172, // Default to Kathmandu
+    var longitude: Double = 85.3240,
+    var hasSelectedLocation: Boolean = false,
+
     // Step 3: Images
     var imageCategories: List<ImageCategory> = getDefaultImageCategories(),
 

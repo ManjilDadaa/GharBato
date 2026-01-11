@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,12 +31,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.R
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.viewmodel.PendingPropertiesViewModel
+import kotlinx.coroutines.flow.collectLatest
 
 class PendingListingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,20 +52,28 @@ class PendingListingsActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PendingListingsBody() {
-
-    // Initialize ViewModel manually like in your AddProduct example
+    // Initialize ViewModel manually
     val viewModel = remember { PendingPropertiesViewModel(PendingPropertiesRepoImpl()) }
 
-    val pendingProperties by viewModel.pendingProperties.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    // Collect state
+    val uiState by viewModel.uiState.collectAsState()
 
     var expandedCard by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
     val activity = context as Activity
 
-    // Fetch data on first composition
+    // Show toast messages
     LaunchedEffect(Unit) {
-        viewModel.fetchPendingProperties()
+        viewModel.uiState.collectLatest { state ->
+            state.successMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                viewModel.clearMessages()
+            }
+            state.error?.let { error ->
+                Toast.makeText(context, error, Toast.LENGTH_SHORT).show()
+                viewModel.clearMessages()
+            }
+        }
     }
 
     Scaffold(
@@ -83,44 +93,72 @@ fun PendingListingsBody() {
         }
     ) { padding ->
 
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(Color(0xFFF5F5F5)),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Header card
-                item {
-                    PendingHeaderCard(total = pendingProperties.size)
-                }
-
-                // Listing cards
-                items(pendingProperties) { listing ->
-                    PendingListingCard(
-                        listing = listing,
-                        isExpanded = expandedCard == listing.id.toString(),
-                        onExpandToggle = {
-                            expandedCard = if (expandedCard == listing.id.toString()) null else listing.id.toString()
-                        },
-                        onApprove = {
-                            viewModel.approveProperty(listing.id)
-                        },
-                        onReject = {
-                            viewModel.rejectProperty(listing.id)
-                        }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            if (uiState.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else if (uiState.properties.isEmpty()) {
+                // Empty state
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_check_24),
+                        contentDescription = "No Pending",
+                        modifier = Modifier.size(80.dp),
+                        tint = LightGreen
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No Pending Listings",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "All properties have been reviewed",
+                        fontSize = 14.sp,
+                        color = Gray
+                    )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFFF5F5F5)),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Header card
+                    item {
+                        PendingHeaderCard(total = uiState.properties.size)
+                    }
+
+                    // Listing cards
+                    items(uiState.properties) { listing ->
+                        PendingListingCard(
+                            listing = listing,
+                            isExpanded = expandedCard == listing.id.toString(),
+                            onExpandToggle = {
+                                expandedCard = if (expandedCard == listing.id.toString()) null else listing.id.toString()
+                            },
+                            onApprove = {
+                                viewModel.approveProperty(listing.id)
+                            },
+                            onReject = {
+                                viewModel.rejectProperty(listing.id)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -168,11 +206,14 @@ fun PendingListingCard(
     if (showRejectDialog) {
         AlertDialog(
             onDismissRequest = { showRejectDialog = false },
-            title = { Text("Reject Listing?") },
-            text = { Text("Are you sure you want to reject '${listing.title}'?") },
+            title = { Text("Reject Listing?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to reject '${listing.title}'? This action cannot be undone.") },
             confirmButton = {
                 Button(
-                    onClick = { showRejectDialog = false; onReject() },
+                    onClick = {
+                        showRejectDialog = false
+                        onReject()
+                    },
                     colors = ButtonDefaults.buttonColors(Color.Red)
                 ) { Text("Reject") }
             },
@@ -186,11 +227,14 @@ fun PendingListingCard(
     if (showApproveDialog) {
         AlertDialog(
             onDismissRequest = { showApproveDialog = false },
-            title = { Text("Approve Listing?") },
-            text = { Text("Are you sure you want to approve '${listing.title}'?") },
+            title = { Text("Approve Listing?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to approve '${listing.title}'? It will be visible to all users.") },
             confirmButton = {
                 Button(
-                    onClick = { showApproveDialog = false; onApprove() },
+                    onClick = {
+                        showApproveDialog = false
+                        onApprove()
+                    },
                     colors = ButtonDefaults.buttonColors(Color(0xFF4CAF50))
                 ) { Text("Approve") }
             },
@@ -272,26 +316,6 @@ fun PendingListingCard(
                             )
                         }
                     }
-
-                    // View Profile Button
-                    val context = LocalContext.current
-                    TextButton(
-                        onClick = {
-//                            val intent = Intent(context, UserProfileActivity::class.java)
-//                            intent.putExtra("userId", listing.ownerId)
-//                            intent.putExtra("userName", listing.ownerName)
-//                            context.startActivity(intent)
-                        }
-                    ) {
-                        Text("View Profile", color = LightGreen, fontSize = 13.sp)
-                        Spacer(Modifier.width(4.dp))
-                        Icon(
-                            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = LightGreen
-                        )
-                    }
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -304,7 +328,7 @@ fun PendingListingCard(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Price - Fixed: Only show Rs once
+                // Price
                 Text(
                     listing.price,
                     fontSize = 20.sp,
@@ -343,7 +367,7 @@ fun PendingListingCard(
                     )
                 }
 
-                // Property Details Row - Fixed: sqft only shown once
+                // Property Details Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -366,7 +390,7 @@ fun PendingListingCard(
                     }
                 }
 
-                // Developer/Owner
+                // Developer
                 if (listing.developer.isNotEmpty()) {
                     Text(
                         "Developer: ${listing.developer}",
@@ -376,24 +400,13 @@ fun PendingListingCard(
                     )
                 }
 
-                if (listing.ownerName.isNotEmpty()) {
-                    Text(
-                        "Owner: ${listing.ownerName}",
-                        fontSize = 14.sp,
-                        color = Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
                 // Additional Details (Collapsible)
                 if (isExpanded) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                    // Floor & Furnishing
                     PropertyInfoRow("Floor", listing.floor)
                     PropertyInfoRow("Furnishing", listing.furnishing)
 
-                    // Parking & Pets
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -410,7 +423,6 @@ fun PendingListingCard(
                         )
                     }
 
-                    // Description
                     if (!listing.description.isNullOrEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -426,7 +438,6 @@ fun PendingListingCard(
                         )
                     }
 
-                    // Amenities
                     if (listing.amenities.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -450,29 +461,6 @@ fun PendingListingCard(
                                 }
                             }
                         }
-                    }
-
-                    // Financial Details
-                    if (!listing.commission.isNullOrEmpty() ||
-                        !listing.advancePayment.isNullOrEmpty() ||
-                        !listing.securityDeposit.isNullOrEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Financial Details",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
-                        listing.commission?.let { if (it.isNotEmpty()) PropertyInfoRow("Commission", it) }
-                        listing.advancePayment?.let { if (it.isNotEmpty()) PropertyInfoRow("Advance Payment", it) }
-                        listing.securityDeposit?.let { if (it.isNotEmpty()) PropertyInfoRow("Security Deposit", it) }
-                    }
-
-                    // Lease Details
-                    if (!listing.minimumLease.isNullOrEmpty() || !listing.availableFrom.isNullOrEmpty()) {
-                        Spacer(Modifier.height(8.dp))
-                        listing.minimumLease?.let { if (it.isNotEmpty()) PropertyInfoRow("Minimum Lease", it) }
-                        listing.availableFrom?.let { if (it.isNotEmpty()) PropertyInfoRow("Available From", it) }
                     }
                 }
 
@@ -500,7 +488,6 @@ fun PendingListingCard(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Reject Button
                 Button(
                     onClick = { showRejectDialog = true },
                     modifier = Modifier.weight(1f),
@@ -519,7 +506,6 @@ fun PendingListingCard(
                     Text("Reject")
                 }
 
-                // Approve Button
                 Button(
                     onClick = { showApproveDialog = true },
                     modifier = Modifier.weight(1f),

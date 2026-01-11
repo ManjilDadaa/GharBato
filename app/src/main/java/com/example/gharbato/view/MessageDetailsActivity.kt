@@ -2,7 +2,6 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -155,6 +154,7 @@ fun MessageDetailsScreen(
         viewModel.startChat(context, otherUserId)
     }
 
+    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -534,8 +534,141 @@ fun MessageInput(
                     tint = Color.White
                 )
             }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = Color.Black
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.White
+        )
+    )
+}
+
+@Composable
+fun MessageBubble(
+    message: Message,
+    isCurrentUser: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
+    ) {
+        Surface(
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+            ),
+            color = if (isCurrentUser) Blue else Color.White,
+            modifier = Modifier.widthIn(max = 280.dp),
+            shadowElevation = 2.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = message.message,
+                    color = if (isCurrentUser) Color.White else Color.Black,
+                    fontSize = 15.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = formatTimestamp(message.timestamp),
+                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                    fontSize = 11.sp
+                )
+            }
         }
     }
+}
+
+@Composable
+fun MessageInput(
+    messageText: String,
+    onMessageTextChange: (String) -> Unit,
+    onSendClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = messageText,
+                onValueChange = onMessageTextChange,
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Type a message...") },
+                shape = RoundedCornerShape(24.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = Blue,
+                    unfocusedContainerColor = Color(0xFFF5F5F5),
+                    focusedContainerColor = Color(0xFFF5F5F5)
+                ),
+                maxLines = 4
+            )
+
+            IconButton(
+                onClick = onSendClick,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(Blue, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+private fun sendMessage(
+    chatId: String,
+    currentUserId: String,
+    otherUserId: String,
+    messageText: String,
+    messagesRef: DatabaseReference
+) {
+    val messageId = messagesRef.push().key ?: return
+
+    val message = hashMapOf(
+        "senderId" to currentUserId,
+        "receiverId" to otherUserId,
+        "message" to messageText,
+        "timestamp" to ServerValue.TIMESTAMP,
+        "isRead" to false
+    )
+
+    Log.d("MessageDetails", "Sending message to chat: $chatId")
+    Log.d("MessageDetails", "From: $currentUserId, To: $otherUserId")
+
+    messagesRef
+        .child(messageId)
+        .setValue(message)
+        .addOnSuccessListener {
+            Log.d("MessageDetails", "Message sent successfully")
+        }
+        .addOnFailureListener { e ->
+            Log.e("MessageDetails", "Failed to send message", e)
+        }
 }
 
 private fun formatTimestamp(timestamp: Long): String {

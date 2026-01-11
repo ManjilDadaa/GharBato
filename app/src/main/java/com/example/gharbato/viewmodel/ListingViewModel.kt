@@ -2,16 +2,22 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.model.PropertyModel
-import com.example.gharbato.data.model.PropertyStatus
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+
+private const val TAG = "ListingViewModel"
 
 class ListingViewModel(
     private val repository: PropertyRepo
@@ -122,7 +128,6 @@ class ListingViewModel(
 
     // STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
     fun validateStep4(state: PropertyListingState): ListingValidationResult {
-        // Skip validation if selling
         if (state.selectedPurpose == "Sell") {
             return ListingValidationResult(true)
         }
@@ -160,7 +165,6 @@ class ListingViewModel(
         }
     }
 
-    // Master validation function
     fun validateStep(step: Int, state: PropertyListingState): ListingValidationResult {
         return when (step) {
             1 -> validateStep1(state)
@@ -180,28 +184,39 @@ class ListingViewModel(
     ) {
         viewModelScope.launch {
             try {
+                val auth = FirebaseAuth.getInstance()
+                val currentUser = auth.currentUser
+
+                if (currentUser == null) {
+                    _uploadSuccess.value = false
+                    onError("You must be logged in to create a property listing")
+                    return@launch
+                }
+
+                Log.d(TAG, "=== Starting Property Submission ===")
+                Log.d(TAG, "Current User ID: ${currentUser.uid}")
+                Log.d(TAG, "Current User Email: ${currentUser.email}")
+
                 _isUploading.value = true
                 _uploadProgress.value = "Preparing images..."
 
-                // Collect all image URIs from categories
                 val allImageUris = mutableListOf<Uri>()
                 state.imageCategories.forEach { category ->
                     category.images.forEach { uriString ->
                         try {
                             allImageUris.add(Uri.parse(uriString))
                         } catch (e: Exception) {
-                            e.printStackTrace()
+                            Log.e(TAG, "Error parsing URI: $uriString", e)
                         }
                     }
                 }
 
                 if (allImageUris.isEmpty()) {
                     _uploadProgress.value = "No images selected"
-                    createAndSubmitProperty(state, emptyList(), onSuccess, onError)
+                    createAndSubmitProperty(state, emptyList(), currentUser.uid, onSuccess, onError)
                     return@launch
                 }
 
-                // Upload images to Cloudinary
                 _uploadProgress.value = "Uploading ${allImageUris.size} images..."
 
                 repository.uploadMultipleImages(context, allImageUris) { uploadedUrls ->
@@ -211,14 +226,14 @@ class ListingViewModel(
                             _uploadSuccess.value = false
                             onError("Failed to upload images. Please check your internet connection.")
                         } else {
-                            _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving to database..."
-                            createAndSubmitProperty(state, uploadedUrls, onSuccess, onError)
+                            _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving..."
+                            createAndSubmitProperty(state, uploadedUrls, currentUser.uid, onSuccess, onError)
                         }
                     }
                 }
 
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Error in submitListing", e)
                 _isUploading.value = false
                 _uploadSuccess.value = false
                 _uploadProgress.value = ""
@@ -230,86 +245,116 @@ class ListingViewModel(
     private fun createAndSubmitProperty(
         state: PropertyListingState,
         uploadedUrls: List<String>,
+        currentUserId: String,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
-        try {
-            // Categorize images by their category IDs
-            val categorizedImages = mutableMapOf<String, List<String>>()
-            var currentIndex = 0
+        viewModelScope.launch {
+            try {
+                _uploadProgress.value = "Fetching owner information..."
 
-            state.imageCategories.forEach { category ->
-                val count = category.images.size
-                if (count > 0) {
-                    val urlsForCategory = uploadedUrls
-                        .drop(currentIndex)
-                        .take(count)
+                val database = FirebaseDatabase.getInstance()
+                val userRef = database.getReference("users").child(currentUserId)
 
-                    categorizedImages[category.id] = urlsForCategory
-                    currentIndex += count
+                val userSnapshot = userRef.get().await()
+
+                val ownerName = userSnapshot.child("fullName").getValue(String::class.java)
+                    ?: FirebaseAuth.getInstance().currentUser?.displayName
+                    ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
+                    ?: state.developer
+
+                val ownerImageUrl = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                val ownerEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
+
+                Log.d(TAG, "=== Owner Information ===")
+                Log.d(TAG, "Owner ID: $currentUserId")
+                Log.d(TAG, "Owner Name: $ownerName")
+                Log.d(TAG, "Owner Email: $ownerEmail")
+                Log.d(TAG, "Owner Image: $ownerImageUrl")
+
+                val categorizedImages = mutableMapOf<String, List<String>>()
+                var currentIndex = 0
+
+                state.imageCategories.forEach { category ->
+                    val count = category.images.size
+                    if (count > 0) {
+                        val urlsForCategory = uploadedUrls
+                            .drop(currentIndex)
+                            .take(count)
+                        categorizedImages[category.id] = urlsForCategory
+                        currentIndex += count
+                    }
                 }
-            }
 
-            // Create property model with all data
-            val property = PropertyModel(
-                id = System.currentTimeMillis().toInt(),
-                title = state.title,
-                developer = state.developer,
-                price = when (state.selectedPurpose) {
-                    "Sell" -> "Rs ${state.price}"
-                    "Rent" -> "Rs ${state.price}/month"
-                    "Book" -> "Rs ${state.price}/night"
-                    else -> "Rs ${state.price}"
-                },
-                sqft = "${state.area} sq.ft",
-                bedrooms = state.bedrooms.toIntOrNull() ?: 0,
-                bathrooms = state.bathrooms.toIntOrNull() ?: 0,
-                images = categorizedImages,
-                location = state.location,
-                latitude = 27.7172,  // Default Kathmandu coordinates
-                longitude = 85.3240,
-                propertyType = state.selectedPropertyType,
-                floor = state.floor,
-                furnishing = state.furnishing,
-                parking = state.parking,
-                petsAllowed = state.petsAllowed,
-                description = state.description,
+                val property = PropertyModel(
+                    id = System.currentTimeMillis().toInt(),
+                    title = state.title,
+                    developer = state.developer,
+                    price = when (state.selectedPurpose) {
+                        "Sell" -> "Rs ${state.price}"
+                        "Rent" -> "Rs ${state.price}/month"
+                        "Book" -> "Rs ${state.price}/night"
+                        else -> "Rs ${state.price}"
+                    },
+                    sqft = "${state.area} sq.ft",
+                    bedrooms = state.bedrooms.toIntOrNull() ?: 0,
+                    bathrooms = state.bathrooms.toIntOrNull() ?: 0,
+                    images = categorizedImages,
+                    location = state.location,
+                    latitude = 27.7172,
+                    longitude = 85.3240,
+                    propertyType = state.selectedPropertyType,
+                    marketType = state.selectedPurpose,
+                    floor = state.floor,
+                    furnishing = state.furnishing,
+                    parking = state.parking,
+                    petsAllowed = state.petsAllowed,
+                    description = state.description,
 
-                // Rental Terms (only applicable for Rent/Book)
-                utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
-                commission = if (state.selectedPurpose != "Sell") state.commission else null,
-                advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
-                securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
-                minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
-                availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
+                    // ⚠️ CRITICAL: Owner information
+                    ownerId = currentUserId,
+                    ownerName = ownerName,
+                    ownerImageUrl = ownerImageUrl,
+                    ownerEmail = ownerEmail,
 
-                // Amenities
-                amenities = state.amenities,
-                status = PropertyStatus.PENDING,
-                isFavorite = false
-            )
+                    utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
+                    commission = if (state.selectedPurpose != "Sell") state.commission else null,
+                    advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
+                    securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
+                    minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
+                    availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
 
-            _uploadProgress.value = "Saving..."
+                    amenities = state.amenities,
+                    status = PropertyStatus.PENDING,
+                    isFavorite = false
+                )
 
-            repository.addProperty(property) { success, error ->
+                Log.d(TAG, "Property created with ownerId: ${property.ownerId}")
+
+                _uploadProgress.value = "Saving property to database..."
+
+                repository.addProperty(property) { success, error ->
+                    _isUploading.value = false
+                    if (success) {
+                        _uploadSuccess.value = true
+                        _uploadProgress.value = "✅ Property created successfully!"
+                        Log.d(TAG, "✅ Property saved with ID: ${property.id}, ownerId: ${property.ownerId}")
+                        onSuccess()
+                    } else {
+                        _uploadSuccess.value = false
+                        _uploadProgress.value = ""
+                        Log.e(TAG, "❌ Failed to save property: $error")
+                        onError(error ?: "Failed to save property")
+                    }
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Error in createAndSubmitProperty", e)
                 _isUploading.value = false
-                if (success) {
-                    _uploadSuccess.value = true
-                    _uploadProgress.value = "✅ Listing created successfully!"
-                    onSuccess()
-                } else {
-                    _uploadSuccess.value = false
-                    _uploadProgress.value = ""
-                    onError(error ?: "Failed to save property")
-                }
+                _uploadSuccess.value = false
+                _uploadProgress.value = ""
+                onError(e.message ?: "Unknown error occurred")
             }
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            _isUploading.value = false
-            _uploadSuccess.value = false
-            _uploadProgress.value = ""
-            onError(e.message ?: "Unknown error")
         }
     }
 
