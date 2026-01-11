@@ -53,7 +53,9 @@ fun AdminSearchScreen() {
         }
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        containerColor = Color(0xFF0061ff)
+    ) { padding ->
 
         Column(
             modifier = Modifier
