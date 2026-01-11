@@ -525,45 +525,77 @@ fun RejectedPropertyCard(
                 Spacer(Modifier.height(16.dp))
 
                 // Action Buttons
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // More/Less button
                     OutlinedButton(
                         onClick = { showDetails = !showDetails },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
                             if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            null,
-                            Modifier.size(18.dp)
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(Modifier.width(4.dp))
-                        Text(if (showDetails) "Less" else "More")
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (showDetails) "Show Less" else "Show More",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
-                    Button(
-                        onClick = { showRestoreDialog = true },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
-                        )
+                    // Restore and Delete buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(Icons.Default.Restore, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Restore")
-                    }
+                        Button(
+                            onClick = { showRestoreDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF4CAF50)
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Restore,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Restore",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
 
-                    Button(
-                        onClick = { showDeleteDialog = true },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Red
-                        )
-                    ) {
-                        Icon(Icons.Default.DeleteForever, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Delete")
+                        Button(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Red
+                            ),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Delete",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
