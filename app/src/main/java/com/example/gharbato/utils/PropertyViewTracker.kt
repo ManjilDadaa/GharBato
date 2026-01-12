@@ -10,10 +10,6 @@ private const val TAG = "PropertyViewTracker"
 
 object PropertyViewTracker {
 
-    /**
-     * Track a property view
-     * Updates: totalViews, todayViews, uniqueViewers, and viewerIds
-     */
     fun trackPropertyView(propertyFirebaseKey: String, propertyId: Int) {
         val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: "anonymous"
         val database = FirebaseDatabase.getInstance()
@@ -35,20 +31,16 @@ object PropertyViewTracker {
                 val viewerIds = currentData.child("viewerIds").value as? Map<String, Long> ?: emptyMap()
                 val lastViewedAt = currentData.child("lastViewedAt").value as? Long ?: 0L
 
-                // Check if this is a new unique viewer
                 val isNewViewer = !viewerIds.containsKey(currentUserId)
 
-                // Check if we need to reset today's views (new day)
                 val needsReset = !isSameDay(lastViewedAt, System.currentTimeMillis())
 
-                // Update values
                 currentData.child("totalViews").value = totalViews + 1
                 currentData.child("todayViews").value = if (needsReset) 1L else todayViews + 1
                 currentData.child("uniqueViewers").value = if (isNewViewer) uniqueViewers + 1 else uniqueViewers
                 currentData.child("lastViewedAt").value = ServerValue.TIMESTAMP
                 currentData.child("updatedAt").value = ServerValue.TIMESTAMP
 
-                // Update viewer IDs map
                 val updatedViewerIds = viewerIds.toMutableMap()
                 updatedViewerIds[currentUserId] = System.currentTimeMillis()
                 currentData.child("viewerIds").value = updatedViewerIds
@@ -72,9 +64,7 @@ object PropertyViewTracker {
         })
     }
 
-    /**
-     * Track view using property ID (finds Firebase key first)
-     */
+
     fun trackPropertyViewById(propertyId: Int) {
         val database = FirebaseDatabase.getInstance()
         val propertyRef = database.getReference("Property")
@@ -97,9 +87,7 @@ object PropertyViewTracker {
             })
     }
 
-    /**
-     * Check if two timestamps are on the same day
-     */
+
     private fun isSameDay(timestamp1: Long, timestamp2: Long): Boolean {
         if (timestamp1 == 0L) return false
 
@@ -110,9 +98,7 @@ object PropertyViewTracker {
                 cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
     }
 
-    /**
-     * Reset today's views at midnight (call this from a daily scheduler if needed)
-     */
+
     fun resetTodayViews() {
         val database = FirebaseDatabase.getInstance()
         val propertyRef = database.getReference("Property")

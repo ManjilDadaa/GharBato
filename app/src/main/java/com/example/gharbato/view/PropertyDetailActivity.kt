@@ -118,6 +118,7 @@ import com.example.gharbato.model.ReportStatus
 import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
+import com.example.gharbato.util.PropertyViewTracker
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -137,12 +138,12 @@ private fun getCurrentUserId(): String {
 }
 
 
+
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
         PropertyViewModelFactory(this@PropertyDetailActivity)
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -152,6 +153,8 @@ class PropertyDetailActivity : ComponentActivity() {
 
         if (propertyId != -1) {
             viewModel.getPropertyById(propertyId)
+
+            PropertyViewTracker.trackPropertyViewById(propertyId)
         }
 
         setContent {
@@ -166,7 +169,6 @@ class PropertyDetailActivity : ComponentActivity() {
                     }
                 )
             } ?: run {
-                // Loading or Error State
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -813,24 +815,36 @@ fun ContactOwnerSection(property: PropertyModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(50.dp),
-                        color = Color(0xFFE0E0E0),
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
+                    // Owner Image
+                    if (property.ownerImageUrl.isNotEmpty()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(property.ownerImageUrl),
                             contentDescription = "Owner",
-                            modifier = Modifier.padding(12.dp),
-                            tint = Color.Gray
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(50.dp),
+                            color = Color(0xFFE0E0E0),
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Owner",
+                                modifier = Modifier.padding(12.dp),
+                                tint = Color.Gray
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column {
                         Text(
-                            text = property.developer,
+                            text = property.ownerName.ifBlank { property.developer },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -876,12 +890,26 @@ fun ContactOwnerSection(property: PropertyModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Updated: Today, 5:30 PM", fontSize = 12.sp, color = Color.Gray)
-            Text("156 views, 12 today", fontSize = 12.sp, color = Color.Gray)
-            Text("98 unique visitors", fontSize = 12.sp, color = Color.Gray)
+            // ⭐ REAL DATA FROM FIREBASE
+            Text(
+                text = "Updated: ${property.formattedUpdatedTime}",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.viewsText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.uniqueViewersText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
+
 
 @Composable
 fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
