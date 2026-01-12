@@ -3,7 +3,8 @@ package com.example.gharbato.model
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.database.Exclude
 import com.google.firebase.database.IgnoreExtraProperties
-
+import java.text.SimpleDateFormat
+import java.util.*
 
 @IgnoreExtraProperties
 data class PropertyModel(
@@ -41,12 +42,18 @@ data class PropertyModel(
     val ownerEmail: String = "",
 
     val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(), // Last updated timestamp
+
+    val totalViews: Int = 0,
+    val todayViews: Int = 0,
+    val uniqueViewers: Int = 0,
+    val lastViewedAt: Long = 0,
+    val viewerIds: Map<String, Long> = emptyMap()
 ) {
     @get:Exclude
     val latLng: LatLng
         get() = LatLng(latitude, longitude)
 
-    // Get first image URL
     @get:Exclude
     val imageUrl: String
         get() = images["cover"]?.firstOrNull()
@@ -60,6 +67,36 @@ data class PropertyModel(
     @get:Exclude
     val isDefaultLocation: Boolean
         get() = latitude == 27.7172 && longitude == 85.3240
+
+
+    @get:Exclude
+    val formattedUpdatedTime: String
+        get() {
+            val now = System.currentTimeMillis()
+            val diff = now - updatedAt
+
+            return when {
+                diff < 60000 -> "Just now" // Less than 1 minute
+                diff < 3600000 -> "${diff / 60000} minutes ago" // Less than 1 hour
+                diff < 86400000 -> { // Less than 24 hours
+                    val hours = diff / 3600000
+                    if (hours == 1L) "1 hour ago" else "$hours hours ago"
+                }
+                diff < 172800000 -> "Yesterday" // Less than 2 days
+                else -> {
+                    val sdf = SimpleDateFormat("MMM dd, h:mm a", Locale.getDefault())
+                    sdf.format(Date(updatedAt))
+                }
+            }
+        }
+
+    @get:Exclude
+    val viewsText: String
+        get() = "$totalViews views, $todayViews today"
+
+    @get:Exclude
+    val uniqueViewersText: String
+        get() = "$uniqueViewers unique visitors"
 }
 
 object PropertyStatus {
@@ -67,4 +104,3 @@ object PropertyStatus {
     const val APPROVED = "APPROVED"
     const val REJECTED = "REJECTED"
 }
-
