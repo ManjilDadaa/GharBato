@@ -68,6 +68,10 @@ fun ListingBody() {
     var showConfirmDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
+    // Determine if rental terms should be shown
+    val isRent = listingState.selectedPurpose == "Rent"
+    val totalSteps = if (isRent) 5 else 4
+
     //Collect states from ViewModel
     val isUploading by listingViewModel.isUploading.collectAsState()
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
@@ -168,7 +172,7 @@ fun ListingBody() {
                                 onSuccess = {
                                     showConfirmDialog = false
                                     showSuccessDialog = true
-                                    Toast.makeText(context, "Listing Added succesfully, Admin Approval Required ", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Listing Added successfully, Admin Approval Required ", Toast.LENGTH_LONG).show()
                                 },
                                 onError = { error ->
                                     showConfirmDialog = false
@@ -324,7 +328,7 @@ fun ListingBody() {
 
             Spacer(modifier = Modifier.height(30.dp))
 
-            // Progress Indicator
+            // Progress Indicator - Dynamic based on purpose
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -332,7 +336,7 @@ fun ListingBody() {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                for (i in 1..5) {
+                for (i in 1..totalSteps) {
                     Column {
                         val circleColor by animateColorAsState(
                             targetValue = if (step >= i) Blue else Gray.copy(0.3f),
@@ -348,12 +352,13 @@ fun ListingBody() {
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            when (i) {
-                                1 -> "Purpose"
-                                2 -> "Details"
-                                3 -> "Photos"
-                                4 -> "Terms"
-                                5 -> "Amenities"
+                            when {
+                                i == 1 -> "Purpose"
+                                i == 2 -> "Details"
+                                i == 3 -> "Photos"
+                                i == 4 && !isRent -> "Amenities" // For Sell
+                                i == 4 && isRent -> "Terms" // For Rent
+                                i == 5 -> "Amenities"
                                 else -> ""
                             },
                             fontSize = 12.sp,
@@ -361,7 +366,7 @@ fun ListingBody() {
                         )
                     }
 
-                    if (i < 5) {
+                    if (i < totalSteps) {
                         Box(
                             modifier = Modifier
                                 .padding(horizontal = 7.dp)
@@ -375,15 +380,15 @@ fun ListingBody() {
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Content based on step
+            // Content based on step and purpose
             Column(
                 modifier = Modifier
                     .padding(horizontal = 10.dp)
                     .fillMaxWidth()
                     .weight(1f, fill = false)
             ) {
-                when (step) {
-                    1 -> PurposeContentScreen(
+                when {
+                    step == 1 -> PurposeContentScreen(
                         selectedPurpose = listingState.selectedPurpose,
                         selectedPropertyType = listingState.selectedPropertyType,
                         onPropertyTypeChange = { newType ->
@@ -393,25 +398,31 @@ fun ListingBody() {
                             listingState = listingState.copy(selectedPurpose = newPurpose)
                         }
                     )
-                    2 -> DetailsContentScreen(
+                    step == 2 -> DetailsContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
                         }
                     )
-                    3 -> PhotosContentScreen(
+                    step == 3 -> PhotosContentScreen(
                         imageCategories = listingState.imageCategories,
                         onCategoriesChange = { newCategories ->
                             listingState = listingState.copy(imageCategories = newCategories)
                         }
                     )
-                    4 -> RentalTermsContentScreen(
+                    step == 4 && !isRent -> AmenitiesContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
                         }
                     )
-                    5 -> AmenitiesContentScreen(
+                    step == 4 && isRent -> RentalTermsContentScreen(
+                        state = listingState,
+                        onStateChange = { newState ->
+                            listingState = newState
+                        }
+                    )
+                    step == 5 && isRent -> AmenitiesContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
@@ -454,11 +465,11 @@ fun ListingBody() {
                         val validationResult = listingViewModel.validateStep(step, listingState)
 
                         if (validationResult.isValid) {
-                            if (step < 5) {
-                                // Move to next step (1 → 2 → 3 → 4 → 5)
+                            if (step < totalSteps) {
+                                // Move to next step
                                 step += 1
                             } else {
-                                // ONLY submit at step 5
+                                // Submit at final step
                                 showConfirmDialog = true
                             }
                         } else {
@@ -474,17 +485,9 @@ fun ListingBody() {
                     colors = ButtonDefaults.buttonColors(containerColor = Blue)
                 ) {
                     Text(
-                        when (step) {
-                            1 -> "Continue"
-                            2 -> "Next"
-                            3 -> "Next"
-                            4 -> "Next"
-                            5 -> "Submit"
-                            else -> "Next"
-                        }
+                        if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next"
                     )
                 }
-
             }
         }
     }

@@ -17,9 +17,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -27,6 +31,12 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.ReportedRed
+import android.widget.Toast
+import androidx.compose.foundation.clickable
+import com.example.gharbato.repository.ReportUserRepoImpl
+import com.example.gharbato.repository.UserRepoImpl
+import com.example.gharbato.viewmodel.ReportedUser
+import com.example.gharbato.viewmodel.ReportedUsersViewModel
 
 class ReportedUsersActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,40 +48,33 @@ class ReportedUsersActivity : ComponentActivity() {
     }
 }
 
-data class ReportedUser(
-    val userId: String,
-    val userName: String,
-    val userEmail: String,
-    val reportCount: Int,
-    val reportReason: String,
-    val accountStatus: String
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportedUsersScreen() {
-    val users = remember {
-        listOf(
-            ReportedUser(
-                "u1",
-                "Spam User",
-                "spam@example.com",
-                5,
-                "Posting spam content",
-                "Active"
-            ),
-            ReportedUser(
-                "u2",
-                "Fake Account",
-                "fake@example.com",
-                3,
-                "Fraudulent activity",
-                "Active"
-            )
-        )
-    }
     val context = LocalContext.current
     val activity = context as Activity
+    val viewModel = remember { ReportedUsersViewModel(ReportUserRepoImpl(), UserRepoImpl()) }
+    
+    val users by viewModel.reportedUsers.observeAsState(emptyList())
+    val isLoading by viewModel.isLoading.observeAsState(true)
+    var userToSuspend by remember { mutableStateOf<ReportedUser?>(null) }
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadReportedUsers()
+    }
+
+    if (userToSuspend != null) {
+        SuspendUserDialog(
+            user = userToSuspend!!,
+            onDismiss = { userToSuspend = null },
+            onSuspend = { duration, reason ->
+                viewModel.suspendUser(userToSuspend!!.userId, duration, reason) { success, message ->
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (success) userToSuspend = null
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -158,13 +161,25 @@ fun ReportedUsersScreen() {
                                 shape = CircleShape,
                                 color = Color.Red.copy(alpha = 0.1f)
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = user.userName.first().uppercase(),
-                                        color = Color.Red,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 20.sp
+                                if (user.userImage.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(user.userImage)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Reported User Image",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
                                     )
+                                } else {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            text = user.userName.firstOrNull()?.toString()?.uppercase() ?: "?",
+                                            color = Color.Red,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp
+                                        )
+                                    }
                                 }
                             }
 
@@ -184,16 +199,16 @@ fun ReportedUsersScreen() {
                             }
 
                             Surface(
-                                color = Color.Red.copy(alpha = 0.1f),
+                                color = if (user.accountStatus == "Suspended") Color.Gray.copy(alpha = 0.1f) else Color.Red.copy(alpha = 0.1f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    text = "${user.reportCount} Reports",
+                                    text = if (user.accountStatus == "Suspended") "Suspended" else "${user.reportCount} Reports",
                                     modifier = Modifier.padding(
                                         horizontal = 12.dp,
                                         vertical = 6.dp
                                     ),
-                                    color = Color.Red,
+                                    color = if (user.accountStatus == "Suspended") Color.Gray else Color.Red,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -222,8 +237,7 @@ fun ReportedUsersScreen() {
                                 Spacer(Modifier.height(12.dp))
 
                                 Text(
-//                                    text = "Reported on: ${user.reportedDate}",
-                                    text = "Reported on: xxxx-xx-xx}",
+                                    text = "Status: ${user.accountStatus}",
                                     fontSize = 12.sp,
                                     color = Gray
                                 )
@@ -244,13 +258,18 @@ fun ReportedUsersScreen() {
                             }
 
                             Button(
-                                onClick = { /* Suspend user */ },
+                                onClick = { 
+                                    if (user.accountStatus != "Suspended") {
+                                        userToSuspend = user 
+                                    }
+                                },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Red
-                                )
+                                    containerColor = if (user.accountStatus == "Suspended") Color.Gray else Color.Red
+                                ),
+                                enabled = user.accountStatus != "Suspended"
                             ) {
-                                Text("Suspend")
+                                Text(if (user.accountStatus == "Suspended") "Suspended" else "Suspend")
                             }
                         }
                     }
@@ -258,4 +277,64 @@ fun ReportedUsersScreen() {
             }
         }
     }
+}
+
+@Composable
+fun SuspendUserDialog(
+    user: ReportedUser,
+    onDismiss: () -> Unit,
+    onSuspend: (Long, String) -> Unit
+) {
+    var selectedDuration by remember { mutableStateOf(1) } // Default 1 day
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Suspend ${user.userName}") },
+        text = {
+            Column {
+                Text("Select suspension duration:")
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                val options = listOf(
+                    "24 Hours" to 1,
+                    "3 Days" to 3,
+                    "1 Week" to 7,
+                    "1 Month" to 30,
+                    "Permanent" to 36500 // ~100 years
+                )
+                
+                options.forEach { (label, days) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedDuration = days }
+                            .padding(vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = (selectedDuration == days),
+                            onClick = { selectedDuration = days }
+                        )
+                        Text(text = label, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val durationInMillis = selectedDuration * 24 * 60 * 60 * 1000L
+                    onSuspend(durationInMillis, "Violation of community guidelines")
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) {
+                Text("Suspend")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

@@ -2,7 +2,10 @@ package com.example.gharbato.repository
 
 import android.app.Activity
 import android.content.Context
+import android.net.Uri
 import android.util.Log
+import com.example.gharbato.model.ChatMessage
+import com.example.gharbato.model.ChatSession
 import com.example.gharbato.model.MessageUser
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.view.ZegoCallActivity
@@ -12,6 +15,11 @@ import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ServerValue
+import com.cloudinary.Cloudinary
+import com.cloudinary.utils.ObjectUtils
+import java.io.InputStream
+import java.util.concurrent.Executors
 
 interface MessageRepository {
     fun getOrCreateLocalUserId(context: Context): String
@@ -21,6 +29,16 @@ interface MessageRepository {
     fun searchUsers(query: String, callback: (Boolean, List<UserModel>?, String) -> Unit)
     fun initiateCall(activity: Activity, targetUserId: String, targetUserName: String, isVideoCall: Boolean)
     fun navigateToChat(activity: Activity, targetUserId: String, targetUserName: String, targetUserImage: String = "")
+
+    // Chat Session Management
+    fun createChatSession(context: Context, otherUserId: String): ChatSession
+    fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
+    fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
+    fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
+    fun blockUser(myUserId: String, otherUserId: String)
+    fun unblockUser(myUserId: String, otherUserId: String)
+    fun deleteChat(chatId: String)
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -31,6 +49,15 @@ class MessageRepositoryImpl : MessageRepository {
 
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
+    
+    // Cloudinary configuration
+    private val cloudinary = Cloudinary(
+        mapOf(
+            "cloud_name" to "dwqybrjf2",
+            "api_key" to "929885821451753",
+            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
+        )
+    )
 
     override fun getOrCreateLocalUserId(context: Context): String {
         val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
@@ -131,7 +158,7 @@ class MessageRepositoryImpl : MessageRepository {
 
         Log.d(TAG, "Fetching details for ${userIds.size} users")
 
-        val usersRef = database.getReference("users")
+        val usersRef = database.getReference("Users")
         val allUsers = mutableListOf<UserModel>()
         var completedQueries = 0
 
@@ -140,8 +167,14 @@ class MessageRepositoryImpl : MessageRepository {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val user = snapshot.getValue(UserModel::class.java)
                     if (user != null) {
-                        allUsers.add(user)
-                        Log.d(TAG, "Loaded user details: ${user.fullName} (${user.userId})")
+                        // Ensure userId is set from the key if missing in the data
+                        val userWithId = if (user.userId.isBlank()) {
+                            user.copy(userId = userId)
+                        } else {
+                            user
+                        }
+                        allUsers.add(userWithId)
+                        Log.d(TAG, "Loaded user details: ${userWithId.fullName} (${userWithId.userId})")
                     } else {
                         Log.w(TAG, "User not found: $userId")
                     }
@@ -219,5 +252,174 @@ class MessageRepositoryImpl : MessageRepository {
             otherUserImage = targetUserImage
         )
         activity.startActivity(intent)
+    }
+
+    // Chat Session Management Implementation
+
+    override fun createChatSession(context: Context, otherUserId: String): ChatSession {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+        
+        val sortedIds = listOf(currentUserId, otherUserId).sorted()
+        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
+        
+        return ChatSession(
+            chatId = chatId,
+            myUserId = currentUserId,
+            myUserName = currentUserName,
+            otherUserId = otherUserId
+        )
+    }
+
+    override fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit {
+        val blockedRef = database.getReference("blocks")
+        
+        // Listener for "Am I blocked by them?"
+        val blockedByOtherListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val isBlocked = snapshot.child(otherUserId).child(myUserId).exists()
+                // We need to fetch the other status too, or manage state. 
+                // For simplicity, let's just trigger a check
+                checkBothBlockStatuses(myUserId, otherUserId, callback)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
+        // Listener for "Did I block them?"
+        val blockedByMeListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                checkBothBlockStatuses(myUserId, otherUserId, callback)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+
+        blockedRef.child(otherUserId).child(myUserId).addValueEventListener(blockedByOtherListener)
+        blockedRef.child(myUserId).child(otherUserId).addValueEventListener(blockedByMeListener)
+
+        return {
+            blockedRef.child(otherUserId).child(myUserId).removeEventListener(blockedByOtherListener)
+            blockedRef.child(myUserId).child(otherUserId).removeEventListener(blockedByMeListener)
+        }
+    }
+
+    private fun checkBothBlockStatuses(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit) {
+        val blockedRef = database.getReference("blocks")
+        
+        blockedRef.child(otherUserId).child(myUserId).get().addOnSuccessListener { snapshot1 ->
+            val isBlockedByOther = snapshot1.exists()
+            
+            blockedRef.child(myUserId).child(otherUserId).get().addOnSuccessListener { snapshot2 ->
+                val isBlockedByMe = snapshot2.exists()
+                callback(isBlockedByMe, isBlockedByOther)
+            }
+        }
+    }
+
+    override fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+        
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val messageList = mutableListOf<ChatMessage>()
+                snapshot.children.forEach { msgSnapshot ->
+                    try {
+                        val message = msgSnapshot.getValue(ChatMessage::class.java)
+                        if (message != null) {
+                            messageList.add(message)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing message", e)
+                    }
+                }
+                onMessages(messageList.sortedBy { it.timestamp })
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Failed to load messages: ${error.message}")
+            }
+        }
+        
+        messagesRef.addValueEventListener(listener)
+        
+        return {
+            messagesRef.removeEventListener(listener)
+        }
+    }
+
+    override fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String) {
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+        
+        val message = ChatMessage(
+            id = messageId,
+            senderId = senderId,
+            senderName = senderName,
+            text = text,
+            timestamp = System.currentTimeMillis()
+        )
+        
+        messagesRef.child(messageId).setValue(message)
+    }
+
+    override fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri) {
+        Log.d(TAG, "Starting image upload for chat $chatId")
+        val executor = Executors.newSingleThreadExecutor()
+        executor.execute {
+            try {
+                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
+                if (inputStream == null) {
+                    Log.e(TAG, "Could not open input stream for $imageUri")
+                    return@execute
+                }
+
+                val fileName = "chat_${chatId}_${System.currentTimeMillis()}"
+
+                val response = cloudinary.uploader().upload(
+                    inputStream, ObjectUtils.asMap(
+                        "public_id", fileName,
+                        "folder", "chat_images"
+                    )
+                )
+                // Use secure_url to ensure HTTPS, which is required by Android by default
+                val imageUrl = response["secure_url"] as String? ?: response["url"] as String?
+
+                if (imageUrl != null) {
+                    Log.d(TAG, "Image uploaded successfully: $imageUrl")
+                    val messagesRef = database.getReference("chats").child(chatId).child("messages")
+                    val messageId = messagesRef.push().key ?: return@execute
+                    
+                    val message = ChatMessage(
+                        id = messageId,
+                        senderId = senderId,
+                        senderName = senderName,
+                        text = "",
+                        imageUrl = imageUrl,
+                        timestamp = System.currentTimeMillis()
+                    )
+                    
+                    messagesRef.child(messageId).setValue(message)
+                } else {
+                    Log.e(TAG, "Image upload failed, url is null")
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                Log.e(TAG, "Error uploading image", e)
+            }
+        }
+    }
+
+    override fun blockUser(myUserId: String, otherUserId: String) {
+        val blockedRef = database.getReference("blocks")
+        blockedRef.child(myUserId).child(otherUserId).setValue(true)
+    }
+
+    override fun unblockUser(myUserId: String, otherUserId: String) {
+        val blockedRef = database.getReference("blocks")
+        blockedRef.child(myUserId).child(otherUserId).removeValue()
+    }
+
+    override fun deleteChat(chatId: String) {
+        val chatRef = database.getReference("chats").child(chatId)
+        chatRef.removeValue()
     }
 }
