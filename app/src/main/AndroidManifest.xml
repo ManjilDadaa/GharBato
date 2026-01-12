@@ -208,6 +208,10 @@
             android:name=".view.TrustAndVerificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.NotificationActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
 
         <activity
             android:name=".view.EditProfileActivity"
