@@ -88,6 +88,7 @@ fun SearchScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             SearchTopBar(
                 searchQuery = uiState.searchQuery,
@@ -428,7 +429,7 @@ fun SearchTopBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars),
         color = Color.White,
-        shadowElevation = 4.dp
+        shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
