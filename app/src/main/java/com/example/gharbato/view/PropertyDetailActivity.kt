@@ -105,6 +105,15 @@ import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.viewmodel.ReportViewModel
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.material.icons.filled.Balcony
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.Pool
+import androidx.compose.material.icons.filled.PowerSettingsNew
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.Yard
 
 
 private fun getCurrentUserId(): String {
@@ -215,6 +224,8 @@ fun PropertyDetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Replace the LazyColumn items in PropertyDetailScreen with this:
+
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 // Image Gallery Section
                 item {
@@ -248,6 +259,13 @@ fun PropertyDetailScreen(
                     BuildingInfoSection(property = property)
                 }
 
+                // Description Section (NEW - show property description)
+                if (!property.description.isNullOrBlank()) {
+                    item {
+                        DescriptionSection(property = property)
+                    }
+                }
+
                 // Map Preview
                 item {
                     MapPreviewSection(
@@ -278,14 +296,14 @@ fun PropertyDetailScreen(
                     PropertyDetailsInfoSection(property = property)
                 }
 
-                // Rental Terms
+                // Rental Terms (only show if property has rental terms)
                 item {
-                    RentalTermsSection()
+                    RentalTermsSection(property = property)
                 }
 
-                // Amenities
+                // Amenities (only show if property has amenities)
                 item {
-                    AmenitiesSection()
+                    AmenitiesSection(property = property)
                 }
 
                 // Report Section
@@ -293,7 +311,6 @@ fun PropertyDetailScreen(
                     ReportSection(
                         onReportClick = { showReportDialog = true }
                     )
-
                 }
 
                 // Bottom spacing
@@ -947,9 +964,22 @@ fun PropertyDetailRow(label: String, value: String) {
         )
     }
 }
+// Replace the RentalTermsSection and AmenitiesSection in PropertyDetailActivity.kt
 
 @Composable
-fun RentalTermsSection() {
+fun RentalTermsSection(property: PropertyModel) {
+    // Only show rental terms if they exist (not null and not a "Sell" property)
+    val hasRentalTerms = property.utilitiesIncluded != null ||
+            property.commission != null ||
+            property.advancePayment != null ||
+            property.securityDeposit != null ||
+            property.minimumLease != null ||
+            property.availableFrom != null
+
+    if (!hasRentalTerms) {
+        return // Don't show section if no rental terms
+    }
+
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             text = "Rental Terms",
@@ -959,17 +989,52 @@ fun RentalTermsSection() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        PropertyDetailRow("Utilities", "Included (electricity extra)")
-        PropertyDetailRow("Commission", "No commission")
-        PropertyDetailRow("Advance Payment", "1 month rent")
-        PropertyDetailRow("Security Deposit", "2 months rent")
-        PropertyDetailRow("Minimum Lease", "12 months")
-        PropertyDetailRow("Available From", "Immediate")
+        // Only show fields that have values
+        property.utilitiesIncluded?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Utilities", it)
+            }
+        }
+
+        property.commission?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Commission", it)
+            }
+        }
+
+        property.advancePayment?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Advance Payment", it)
+            }
+        }
+
+        property.securityDeposit?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Security Deposit", it)
+            }
+        }
+
+        property.minimumLease?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Minimum Lease", it)
+            }
+        }
+
+        property.availableFrom?.let {
+            if (it.isNotEmpty()) {
+                PropertyDetailRow("Available From", it)
+            }
+        }
     }
 }
 
 @Composable
-fun AmenitiesSection() {
+fun AmenitiesSection(property: PropertyModel) {
+    // Only show if property has amenities
+    if (property.amenities.isEmpty()) {
+        return // Don't show section if no amenities
+    }
+
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             text = "Amenities",
@@ -979,12 +1044,13 @@ fun AmenitiesSection() {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        AmenityItem("Air Conditioning", Icons.Default.AcUnit)
-        AmenityItem("WiFi Internet", Icons.Default.Wifi)
-        AmenityItem("Washing Machine", Icons.Default.LocalLaundryService)
-        AmenityItem("Refrigerator", Icons.Default.Kitchen)
-        AmenityItem("Security", Icons.Default.Security)
-        AmenityItem("Elevator", Icons.Default.Apartment)
+        // Display all amenities from the property
+        property.amenities.forEach { amenity ->
+            AmenityItem(
+                name = amenity,
+                icon = getAmenityIcon(amenity)
+            )
+        }
     }
 }
 
@@ -1007,6 +1073,26 @@ fun AmenityItem(name: String, icon: ImageVector) {
     }
 }
 
+// Helper function to get appropriate icon for each amenity
+fun getAmenityIcon(amenityName: String): ImageVector {
+    return when (amenityName.lowercase()) {
+        "air conditioning" -> Icons.Default.AcUnit
+        "wifi internet", "wifi" -> Icons.Default.Wifi
+        "washing machine" -> Icons.Default.LocalLaundryService
+        "refrigerator", "kitchen" -> Icons.Default.Kitchen
+        "security" -> Icons.Default.Security
+        "elevator", "lift" -> Icons.Default.Apartment
+        "gym", "fitness center" -> Icons.Default.FitnessCenter
+        "swimming pool", "pool" -> Icons.Default.Pool
+        "garden" -> Icons.Default.Yard
+        "balcony" -> Icons.Default.Balcony
+        "power backup", "generator" -> Icons.Default.PowerSettingsNew
+        "water supply 24/7", "water supply" -> Icons.Default.WaterDrop
+        "parking" -> Icons.Default.LocalParking
+        "cctv", "surveillance" -> Icons.Default.Videocam
+        else -> Icons.Default.CheckCircle
+    }
+}
 @Composable
 fun ReportSection(
     onReportClick: () -> Unit
