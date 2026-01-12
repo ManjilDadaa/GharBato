@@ -69,8 +69,8 @@ fun ListingBody() {
     var showSuccessDialog by remember { mutableStateOf(false) }
 
     // Determine if rental terms should be shown
-    val isRentOrBook = listingState.selectedPurpose == "Rent" || listingState.selectedPurpose == "Book"
-    val totalSteps = if (isRentOrBook) 5 else 4 // Sell: 1,2,3,4(Amenities) | Rent/Book: 1,2,3,4(Terms),5(Amenities)
+    val isRent = listingState.selectedPurpose == "Rent"
+    val totalSteps = if (isRent) 5 else 4
 
     //Collect states from ViewModel
     val isUploading by listingViewModel.isUploading.collectAsState()
@@ -356,8 +356,8 @@ fun ListingBody() {
                                 i == 1 -> "Purpose"
                                 i == 2 -> "Details"
                                 i == 3 -> "Photos"
-                                i == 4 && !isRentOrBook -> "Amenities" // For Sell
-                                i == 4 && isRentOrBook -> "Terms" // For Rent/Book
+                                i == 4 && !isRent -> "Amenities" // For Sell
+                                i == 4 && isRent -> "Terms" // For Rent
                                 i == 5 -> "Amenities"
                                 else -> ""
                             },
@@ -410,19 +410,19 @@ fun ListingBody() {
                             listingState = listingState.copy(imageCategories = newCategories)
                         }
                     )
-                    step == 4 && !isRentOrBook -> AmenitiesContentScreen(
+                    step == 4 && !isRent -> AmenitiesContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
                         }
                     )
-                    step == 4 && isRentOrBook -> RentalTermsContentScreen(
+                    step == 4 && isRent -> RentalTermsContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
                         }
                     )
-                    step == 5 && isRentOrBook -> AmenitiesContentScreen(
+                    step == 5 && isRent -> AmenitiesContentScreen(
                         state = listingState,
                         onStateChange = { newState ->
                             listingState = newState
