@@ -1,7 +1,14 @@
 package com.example.gharbato.view
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +32,6 @@ import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LocalLaundryService
 import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Pool
@@ -40,14 +46,20 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,12 +101,30 @@ fun AmenitiesContentScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        Text(
-            "$selectedCount selected",
-            fontSize = 13.sp,
-            color = Blue,
-            fontWeight = FontWeight.Medium
-        )
+        // Selection counter badge
+        Surface(
+            color = Blue.copy(alpha = 0.1f),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = Blue,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "$selectedCount selected",
+                    fontSize = 13.sp,
+                    color = Blue,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -116,11 +146,21 @@ fun AmenitiesContentScreen(
                         onStateChange(state.copy(amenities = updated))
                     },
                     label = {
-                        Text(
-                            amenity,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = getAmenityIcon(amenity),
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                amenity,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = Blue.copy(alpha = 0.12f),
@@ -128,9 +168,18 @@ fun AmenitiesContentScreen(
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
-                        selected = selected
-                    )
-
+                        selected = selected,
+                        borderColor = if (selected) Blue else Gray.copy(0.3f)
+                    ),
+                    leadingIcon = if (selected) {
+                        {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    } else null
                 )
             }
         }
@@ -219,23 +268,29 @@ fun getAmenityIcon(amenityName: String): ImageVector {
 
 @Composable
 fun InfoHint(text: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF0F6FF), RoundedCornerShape(12.dp))
-            .padding(14.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF0F9FF)
+        ),
+        shape = RoundedCornerShape(12.dp)
     ) {
-        Icon(
-            painter = painterResource(R.drawable.baseline_info_24),
-            contentDescription = null,
-            tint = Blue,
-            modifier = Modifier.size(20.dp)
-        )
-        Text(
-            text,
-            fontSize = 13.sp,
-            color = Color.DarkGray
-        )
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.baseline_info_24),
+                contentDescription = null,
+                tint = Blue,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text,
+                fontSize = 13.sp,
+                color = Color.DarkGray,
+                lineHeight = 18.sp
+            )
+        }
     }
 }
