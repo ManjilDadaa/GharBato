@@ -117,22 +117,21 @@ fun VerifyUserScreen() {
             confirmButton = {
                 Button(
                     onClick = {
-                        if (rejectionReason.isNotBlank()) {
+                        if (rejectionReason.isNotBlank() && selectedKyc != null) {
+                            val kycToReject = selectedKyc!!
                             kycViewModel.updateKycStatus(
-                                kycId = selectedKyc!!.kycId,
+                                kycId = kycToReject.kycId,
                                 status = "Rejected",
                                 reviewedBy = "Admin",
                                 rejectionReason = rejectionReason
                             ) { success, message ->
                                 if (success) {
-                                    // Notify user about rejection
                                     userViewModel.createNotificationForUser(
-                                        userId = selectedKyc!!.userId,
+                                        userId = kycToReject.userId,
                                         title = "❌ KYC Rejected",
                                         message = "Your KYC verification was rejected. Reason: $rejectionReason",
                                         type = "system"
                                     ) { _, _ -> }
-                                    
                                     Toast.makeText(context, "KYC rejected", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
