@@ -327,7 +327,6 @@ class ListingViewModel(
                     images = categorizedImages,
                     location = state.location,
 
-                    // ⭐⭐⭐ CRITICAL FIX: Use actual coordinates from state ⭐⭐⭐
                     latitude = state.latitude,
                     longitude = state.longitude,
 

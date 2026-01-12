@@ -5,11 +5,47 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Accessible
+import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Celebration
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Deck
+import androidx.compose.material.icons.filled.FireExtinguisher
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory
+import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.LocalLaundryService
+import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.Pool
+import androidx.compose.material.icons.filled.Power
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Theaters
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +89,6 @@ fun AmenitiesContentScreen(
 
         Spacer(Modifier.height(8.dp))
 
-        // ✅ Proper inline counter (fixes your UI issue)
         Text(
             "$selectedCount selected",
             fontSize = 13.sp,
@@ -111,18 +146,76 @@ fun AmenitiesContentScreen(
 }
 
 
-@Composable
-fun getAmenityIcon(amenity: String): Int {
-    return when (amenity) {
-        "Air Conditioning" -> R.drawable.baseline_ac_unit_24
-        "WiFi Internet" -> R.drawable.baseline_wifi_24
-        "Washing Machine" -> R.drawable.baseline_local_laundry_service_24
-        "Refrigerator" -> R.drawable.baseline_kitchen_24
-        "Security" -> R.drawable.baseline_security_24
-        "Elevator" -> R.drawable.baseline_elevator_24
-        else -> R.drawable.baseline_check_24
+fun getAmenityIcon(amenityName: String): ImageVector {
+    return when (amenityName.lowercase()) {
+        // Climate Control
+        "air conditioning", "ac", "cooling" -> Icons.Default.AcUnit
+
+        // Internet & Connectivity
+        "wifi internet", "wifi", "internet" -> Icons.Default.Wifi
+
+        // Appliances
+        "washing machine", "laundry" -> Icons.Default.LocalLaundryService
+        "refrigerator", "fridge", "kitchen" -> Icons.Default.Kitchen
+
+        // Security
+        "security", "guard" -> Icons.Default.Security
+        "cctv", "surveillance", "camera" -> Icons.Default.Videocam
+        "alarm", "fire alarm" -> Icons.Default.Warning
+
+        // Building Features
+        "elevator", "lift" -> Icons.Default.Apartment
+        "parking", "car parking", "bike parking" -> Icons.Default.LocalParking
+        "garage" -> Icons.Default.Home
+
+        // Recreation & Fitness
+        "gym", "fitness center", "fitness" -> Icons.Default.FitnessCenter
+        "swimming pool", "pool" -> Icons.Default.Pool
+        "playground", "play area", "sports" -> Icons.Default.SportsSoccer
+
+        // Outdoor Spaces
+        "garden", "lawn", "park", "green space" -> Icons.Default.Park
+        "balcony", "terrace" -> Icons.Default.Deck
+        "rooftop" -> Icons.Default.Apartment
+
+        // Utilities
+        "power backup", "generator", "backup" -> Icons.Default.Power
+        "water supply 24/7", "water supply", "water" -> Icons.Default.WaterDrop
+        "gas", "gas connection" -> Icons.Default.LocalFireDepartment
+        "solar panels", "solar" -> Icons.Default.WbSunny
+
+        // Dining & Kitchen
+        "dining area", "dining room" -> Icons.Default.Restaurant
+
+        // Entertainment
+        "tv", "television", "cable tv" -> Icons.Default.Tv
+        "home theater", "theater" -> Icons.Default.Theaters
+        "clubhouse", "club" -> Icons.Default.Celebration
+
+        // Services
+        "housekeeping", "cleaning" -> Icons.Default.CleaningServices
+        "maintenance", "24/7 maintenance" -> Icons.Default.Build
+        "concierge", "reception" -> Icons.Default.Business
+
+        // Accessibility
+        "wheelchair access", "disabled access" -> Icons.Default.Accessible
+
+        // Pets
+        "pet friendly", "pets allowed" -> Icons.Default.Pets
+
+        // Additional Rooms
+        "study room", "study" -> Icons.AutoMirrored.Filled.MenuBook
+        "store room", "storage" -> Icons.Default.Inventory
+
+        // Safety
+        "fire safety", "fire extinguisher" -> Icons.Default.FireExtinguisher
+        "medical facility", "medical", "first aid" -> Icons.Default.MedicalServices
+
+        // Default icon for unrecognized amenities
+        else -> Icons.Default.CheckCircle
     }
 }
+
 
 @Composable
 fun InfoHint(text: String) {

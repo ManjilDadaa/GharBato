@@ -1,7 +1,10 @@
 package com.example.gharbato.view
 
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,28 +31,55 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AcUnit
+import androidx.compose.material.icons.filled.Accessible
 import androidx.compose.material.icons.filled.Apartment
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Business
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Deck
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.FireExtinguisher
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.Kitchen
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.LocalLaundryService
+import androidx.compose.material.icons.filled.LocalParking
 import androidx.compose.material.icons.filled.LocationCity
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Pool
+import androidx.compose.material.icons.filled.Power
+import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Theaters
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,7 +95,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,46 +108,28 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.ReportStatus
+import com.example.gharbato.model.ReportedProperty
+import com.example.gharbato.repository.ReportPropertyRepoImpl
+import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
+import com.example.gharbato.viewmodel.ReportViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import android.content.Context
-import android.content.Intent
-import android.widget.Toast
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.style.TextAlign
-import com.example.gharbato.model.ReportStatus
-import com.example.gharbato.model.ReportedProperty
-import com.example.gharbato.repository.ReportPropertyRepoImpl
-import com.example.gharbato.ui.view.FullMapActivity
-import com.example.gharbato.viewmodel.ReportViewModel
-import com.google.firebase.auth.FirebaseAuth
-import androidx.compose.material.icons.filled.Balcony
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.LocalParking
-import androidx.compose.material.icons.filled.Pool
-import androidx.compose.material.icons.filled.PowerSettingsNew
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.Yard
 
 
 private fun getCurrentUserId(): String {
@@ -964,11 +980,9 @@ fun PropertyDetailRow(label: String, value: String) {
         )
     }
 }
-// Replace the RentalTermsSection and AmenitiesSection in PropertyDetailActivity.kt
 
 @Composable
 fun RentalTermsSection(property: PropertyModel) {
-    // Only show rental terms if they exist (not null and not a "Sell" property)
     val hasRentalTerms = property.utilitiesIncluded != null ||
             property.commission != null ||
             property.advancePayment != null ||
@@ -989,7 +1003,6 @@ fun RentalTermsSection(property: PropertyModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Only show fields that have values
         property.utilitiesIncluded?.let {
             if (it.isNotEmpty()) {
                 PropertyDetailRow("Utilities", it)
@@ -1028,6 +1041,8 @@ fun RentalTermsSection(property: PropertyModel) {
     }
 }
 
+
+
 @Composable
 fun AmenitiesSection(property: PropertyModel) {
     // Only show if property has amenities
@@ -1039,7 +1054,8 @@ fun AmenitiesSection(property: PropertyModel) {
         Text(
             text = "Amenities",
             fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1059,40 +1075,24 @@ fun AmenityItem(name: String, icon: ImageVector) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             imageVector = icon,
             contentDescription = name,
             tint = Color(0xFF4CAF50),
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Text(text = name, fontSize = 14.sp, color = Color.Black)
+        Text(
+            text = name,
+            fontSize = 15.sp,
+            color = Color.Black
+        )
     }
 }
 
-// Helper function to get appropriate icon for each amenity
-fun getAmenityIcon(amenityName: String): ImageVector {
-    return when (amenityName.lowercase()) {
-        "air conditioning" -> Icons.Default.AcUnit
-        "wifi internet", "wifi" -> Icons.Default.Wifi
-        "washing machine" -> Icons.Default.LocalLaundryService
-        "refrigerator", "kitchen" -> Icons.Default.Kitchen
-        "security" -> Icons.Default.Security
-        "elevator", "lift" -> Icons.Default.Apartment
-        "gym", "fitness center" -> Icons.Default.FitnessCenter
-        "swimming pool", "pool" -> Icons.Default.Pool
-        "garden" -> Icons.Default.Yard
-        "balcony" -> Icons.Default.Balcony
-        "power backup", "generator" -> Icons.Default.PowerSettingsNew
-        "water supply 24/7", "water supply" -> Icons.Default.WaterDrop
-        "parking" -> Icons.Default.LocalParking
-        "cctv", "surveillance" -> Icons.Default.Videocam
-        else -> Icons.Default.CheckCircle
-    }
-}
 @Composable
 fun ReportSection(
     onReportClick: () -> Unit
@@ -1322,6 +1322,37 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Message", fontWeight = FontWeight.Bold, color = Color.White)
             }
+        }
+    }
+}
+
+
+@Composable
+fun DescriptionSection(property: PropertyModel) {
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "About this property",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF5F7FA)
+            ),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = property.description ?: "",
+                fontSize = 14.sp,
+                color = Color.DarkGray,
+                lineHeight = 22.sp,
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }
