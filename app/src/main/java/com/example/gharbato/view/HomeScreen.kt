@@ -107,6 +107,7 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
@@ -165,7 +166,10 @@ fun HomeScreen(
                         }
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         },
     ) { padding ->
@@ -184,7 +188,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFFF8F9FB))
-                    .padding(padding),
+                    .padding(top = padding.calculateTopPadding()),
             ) {
                 item {
                     OutlinedTextField(

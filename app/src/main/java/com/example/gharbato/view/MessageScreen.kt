@@ -116,7 +116,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
         ) {
             // Header Title
             Text(
-                text = "Message",
+                text = "Messages",
                 color = Blue, // Light Purple color
                 fontSize = 32.sp,
                 fontWeight = FontWeight.W500,

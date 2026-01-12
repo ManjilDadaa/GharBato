@@ -43,6 +43,7 @@ fun SavedScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = {
@@ -57,11 +58,11 @@ fun SavedScreen(
                 )
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = padding.calculateTopPadding())
                 .background(Color(0xFFF8F9FA))
         ) {
             when {
