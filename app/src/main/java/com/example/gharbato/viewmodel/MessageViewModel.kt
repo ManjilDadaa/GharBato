@@ -188,7 +188,11 @@ class MessageDetailsViewModel(
         
         stopListening = repository.listenToChatMessages(
             chatId = session.chatId,
-            onMessages = { _messages.value = it }
+            onMessages = { 
+                _messages.value = it 
+                // Mark messages as read when received/loaded while in chat
+                repository.markMessagesAsRead(session.chatId, session.myUserId)
+            }
         )
 
         stopBlockListening = repository.listenToBlockStatus(

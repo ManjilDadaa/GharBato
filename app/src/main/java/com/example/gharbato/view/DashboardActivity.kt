@@ -45,6 +45,13 @@ import com.example.gharbato.ui.theme.Blue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.collectAsState
+import com.example.gharbato.viewmodel.DashboardViewModel
+import com.example.gharbato.viewmodel.DashboardViewModelFactory
+
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +75,9 @@ fun DashboardBody(){
 
     val context = LocalContext.current
     val activity = context as Activity
+    
+    val dashboardViewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory())
+    val unreadCount by dashboardViewModel.unreadMessageCount.collectAsState()
 
     //Bottom NavigationBar data class and its requirements
     data class NavItem(val label : String, val icon : Int)
@@ -91,8 +101,21 @@ fun DashboardBody(){
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = {
-                            Icon(painter = painterResource(item.icon),
-                                contentDescription = null)
+                            if (item.label == "Messages" && unreadCount > 0) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge {
+                                            Text(text = unreadCount.toString())
+                                        }
+                                    }
+                                ) {
+                                    Icon(painter = painterResource(item.icon),
+                                        contentDescription = null)
+                                }
+                            } else {
+                                Icon(painter = painterResource(item.icon),
+                                    contentDescription = null)
+                            }
                         },
                         label = {
                             Text(item.label)

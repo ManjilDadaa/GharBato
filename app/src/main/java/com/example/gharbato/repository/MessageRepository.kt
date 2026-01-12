@@ -39,6 +39,8 @@ interface MessageRepository {
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+    fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
+    fun markMessagesAsRead(chatId: String, currentUserId: String)
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -421,5 +423,64 @@ class MessageRepositoryImpl : MessageRepository {
     override fun deleteChat(chatId: String) {
         val chatRef = database.getReference("chats").child(chatId)
         chatRef.removeValue()
+    }
+
+    override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
+        val chatsRef = database.getReference("chats")
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var totalUnread = 0
+                for (chatSnapshot in snapshot.children) {
+                    val chatId = chatSnapshot.key ?: continue
+                    if (chatId.contains(userId)) {
+                        val messagesSnapshot = chatSnapshot.child("messages")
+                        for (msgSnapshot in messagesSnapshot.children) {
+                            try {
+                                val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                                if (msg != null && msg.senderId != userId && !msg.isRead) {
+                                    totalUnread++
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error parsing message for unread count", e)
+                            }
+                        }
+                    }
+                }
+                onCountChange(totalUnread)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Failed to listen to unread count: ${error.message}")
+            }
+        }
+
+        chatsRef.addValueEventListener(listener)
+
+        return {
+            chatsRef.removeEventListener(listener)
+        }
+    }
+
+    override fun markMessagesAsRead(chatId: String, currentUserId: String) {
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+        messagesRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (msgSnapshot in snapshot.children) {
+                    try {
+                        val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                        if (msg != null && msg.senderId != currentUserId && !msg.isRead) {
+                            msgSnapshot.ref.child("isRead").setValue(true)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error marking message as read", e)
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Failed to mark messages as read: ${error.message}")
+            }
+        })
     }
 }
