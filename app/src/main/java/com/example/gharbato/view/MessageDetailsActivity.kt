@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -159,9 +161,11 @@ fun MessageDetailsScreen(
         viewModel.startChat(context, otherUserId)
     }
 
-// Set initial message once
-    LaunchedEffect(Unit) {
+// Set initial message AFTER a small delay to ensure ViewModel is ready
+    LaunchedEffect(initialMessage) {
         if (initialMessage.isNotBlank()) {
+            // Small delay to ensure the ViewModel is fully initialized
+            kotlinx.coroutines.delay(200)
             viewModel.setInitialMessage(initialMessage)
         }
     }
@@ -406,6 +410,8 @@ fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean
 ) {
+    val context = LocalContext.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
@@ -424,6 +430,25 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
+                // Property Card (if exists)
+                if (message.hasPropertyCard) {
+                    PropertyCardInMessage(
+                        message = message,
+                        onClick = {
+                            // Navigate to property details
+                            val intent = Intent(context, PropertyDetailActivity::class.java).apply {
+                                putExtra("propertyId", message.propertyId)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
+                // Image (if exists)
                 if (message.imageUrl.isNotEmpty()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -436,14 +461,14 @@ fun MessageBubble(
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.LightGray),
-                        contentScale = ContentScale.Crop,
-                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
+                        contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
+                // Text message
                 if (message.text.isNotEmpty()) {
                     Text(
                         text = message.text,
@@ -464,6 +489,104 @@ fun MessageBubble(
     }
 }
 
+
+@Composable
+fun PropertyCardInMessage(
+    message: ChatMessage,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        color = Color.White,
+        shadowElevation = 2.dp
+    ) {
+        Column {
+            // Property Image
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(message.propertyImage)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Property",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                contentScale = ContentScale.Crop,
+                error = painterResource(id = android.R.drawable.ic_menu_gallery)
+            )
+
+            // Property Details
+            Column(
+                modifier = Modifier.padding(8.dp)
+            ) {
+                Text(
+                    text = message.propertyTitle,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = message.propertyPrice,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF4CAF50)
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Text(
+                        text = message.propertyLocation,
+                        fontSize = 11.sp,
+                        color = Color.Gray,
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row {
+                    Text(
+                        text = "${message.propertyBedrooms} Bed",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "${message.propertyBathrooms} Bath",
+                        fontSize = 11.sp,
+                        color = Color.Gray
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = "Tap to view details",
+                    fontSize = 10.sp,
+                    color = Color(0xFF2196F3),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
 @Composable
 fun MessageInput(
     messageText: String,

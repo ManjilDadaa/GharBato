@@ -18,6 +18,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ServerValue
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
+import com.example.gharbato.model.PropertyModel
 import java.io.InputStream
 import java.util.concurrent.Executors
 
@@ -51,6 +52,20 @@ interface MessageRepository {
 
     fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
+    fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    )
+    fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    )
+
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -520,4 +535,66 @@ class MessageRepositoryImpl : MessageRepository {
             }
         })
     }
+    override fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Send the message immediately
+        sendTextMessage(
+            chatId = session.chatId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            text = message
+        )
+
+        // Callback to notify completion
+        onComplete()
+    }
+    override fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Create message with property data
+        val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+
+        val chatMessage = ChatMessage(
+            id = messageId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            text = message,
+            timestamp = System.currentTimeMillis(),
+            propertyId = property.id,
+            propertyTitle = property.developer,
+            propertyPrice = property.price,
+            propertyImage = property.imageUrl,
+            propertyLocation = property.location,
+            propertyBedrooms = property.bedrooms,
+            propertyBathrooms = property.bathrooms
+        )
+
+        messagesRef.child(messageId).setValue(chatMessage)
+
+        // Callback to notify completion
+        onComplete()
+    }
+
+
 }

@@ -954,20 +954,34 @@ fun ContactOwnerSection(property: PropertyModel) {
     }
 }
 
+// Replace the sendQuickMessage function in PropertyDetailActivity.kt:
+
 private fun sendQuickMessage(
     context: Context,
     property: PropertyModel,
     message: String
 ) {
     val repository = MessageRepositoryImpl()
-    repository.navigateToChatWithMessage(
-        activity = context as Activity,
-        targetUserId = property.ownerId,
-        targetUserName = property.ownerName.ifBlank { property.developer },
-        targetUserImage = property.ownerImageUrl,
-        initialMessage = message
+
+    Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
+
+    // Send message with property card
+    repository.sendQuickMessageWithProperty(
+        context = context,
+        otherUserId = property.ownerId,
+        message = message,
+        property = property,
+        onComplete = {
+            repository.navigateToChat(
+                activity = context as Activity,
+                targetUserId = property.ownerId,
+                targetUserName = property.ownerName.ifBlank { property.developer },
+                targetUserImage = property.ownerImageUrl
+            )
+        }
     )
 }
+
 
 @Composable
 fun QuickMessageButton(
