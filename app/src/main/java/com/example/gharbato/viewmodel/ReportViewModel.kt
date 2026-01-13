@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.ReportPropertyRepo
+import com.example.gharbato.repository.UserRepoImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +22,8 @@ data class ReportUiState(
 )
 
 class ReportViewModel(
-    private val repository: ReportPropertyRepo
+    private val repository: ReportPropertyRepo,
+    private val userRepo: UserRepoImpl = UserRepoImpl()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportUiState())
@@ -31,9 +33,6 @@ class ReportViewModel(
         loadReportedProperties()
     }
 
-    /**
-     * Load all reported properties
-     */
     private fun loadReportedProperties() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -56,12 +55,10 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Submit a new report
-     */
     fun submitReport(report: ReportedProperty) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, reportSubmitted = false)
+            _uiState.value =
+                _uiState.value.copy(isLoading = true, error = null, reportSubmitted = false)
             try {
                 val result = repository.reportProperty(report)
 
@@ -88,16 +85,27 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Delete a reported property (admin action)
-     */
-    fun deleteReportedProperty(reportId: String, propertyId: Int) {
+    fun deleteReportedProperty(
+        reportId: String,
+        propertyId: Int,
+        ownerId: String,
+        propertyTitle: String
+    ) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val result = repository.deleteReportedProperty(reportId, propertyId)
 
                 if (result.isSuccess) {
+                    userRepo.createNotification(
+                        userId = ownerId,
+                        title = "⚠️ Property Removed",
+                        message = "Your property '$propertyTitle' has been removed due to reports violating our community guidelines.",
+                        type = "system",
+                        imageUrl = "",
+                        actionData = ""
+                    ) { _, _ -> }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         successMessage = "Property removed successfully"
@@ -119,9 +127,6 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Keep the reported property (dismiss the report)
-     */
     fun keepProperty(reportId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -150,9 +155,6 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Get report count for a specific property
-     */
     fun getReportCount(propertyId: Int, callback: (Int) -> Unit) {
         viewModelScope.launch {
             try {
@@ -165,9 +167,6 @@ class ReportViewModel(
         }
     }
 
-    /**
-     * Clear success/error messages
-     */
     fun clearMessages() {
         _uiState.value = _uiState.value.copy(
             successMessage = null,
