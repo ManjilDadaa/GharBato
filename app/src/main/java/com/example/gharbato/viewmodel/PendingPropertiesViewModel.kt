@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PendingPropertiesRepo
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
+import com.example.gharbato.repository.UserRepoImpl
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,8 @@ data class PendingPropertiesUiState(
 )
 
 class PendingPropertiesViewModel(
-    private val repository: PendingPropertiesRepo
+    private val repository: PendingPropertiesRepo,
+    private val userRepo: UserRepoImpl = UserRepoImpl()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PendingPropertiesUiState())
@@ -54,13 +56,34 @@ class PendingPropertiesViewModel(
         }
     }
 
-    fun approveProperty(propertyId: Int) {
+    fun approveProperty(propertyId: Int, propertyTitle: String, propertyOwnerId: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val result = repository.approveProperty(propertyId)
 
                 if (result.isSuccess) {
+                    // Notify the property owner
+                    userRepo.createNotification(
+                        userId = propertyOwnerId,
+                        title = "🎉 Property Approved!",
+                        message = "Your property '$propertyTitle' has been approved and is now live!",
+                        type = "listing_approved",
+                        imageUrl = "",
+                        actionData = propertyId.toString()
+                    ) { _, _ -> }
+
+                    // Notify ALL users about new listing
+                    userRepo.notifyAllUsers(
+                        title = "🏠 New Listing Available",
+                        message = "Check out the new property: $propertyTitle",
+                        type = "property",
+                        imageUrl = "",
+                        actionData = propertyId.toString()
+                    ) { success, msg ->
+                        Log.d(TAG, "Notified all users: $msg")
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         successMessage = "Property approved successfully"
@@ -82,13 +105,23 @@ class PendingPropertiesViewModel(
         }
     }
 
-    fun rejectProperty(propertyId: Int) {
+    fun rejectProperty(propertyId: Int, propertyTitle: String, propertyOwnerId: String, rejectionReason: String = "Not meeting community guidelines") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val result = repository.rejectProperty(propertyId)
 
                 if (result.isSuccess) {
+                    // Notify ONLY the property owner about rejection
+                    userRepo.createNotification(
+                        userId = propertyOwnerId,
+                        title = "❌ Property Rejected",
+                        message = "Your property '$propertyTitle' was rejected. Reason: $rejectionReason",
+                        type = "system",
+                        imageUrl = "",
+                        actionData = propertyId.toString()
+                    ) { _, _ -> }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         successMessage = "Property rejected"
