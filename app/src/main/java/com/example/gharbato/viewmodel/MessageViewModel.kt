@@ -185,7 +185,7 @@ class MessageDetailsViewModel(
 
         val session = repository.createChatSession(context, otherUserId)
         _chatSession.value = session
-        
+
         stopListening = repository.listenToChatMessages(
             chatId = session.chatId,
             onMessages = {
@@ -207,9 +207,13 @@ class MessageDetailsViewModel(
         _messageText.value = text
     }
 
+    fun setInitialMessage(message: String) {
+        _messageText.value = message
+    }
+
     fun sendTextMessage() {
         if (_isBlockedByMe.value || _isBlockedByOther.value) return
-        
+
         val session = _chatSession.value ?: return
         val text = _messageText.value
         if (text.isBlank()) return
@@ -225,7 +229,7 @@ class MessageDetailsViewModel(
 
     fun sendImageMessage(context: Context, uri: Uri) {
         if (_isBlockedByMe.value || _isBlockedByOther.value) return
-        
+
         val session = _chatSession.value ?: return
         repository.sendImageMessage(
             context = context,

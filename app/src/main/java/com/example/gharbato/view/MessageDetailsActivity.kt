@@ -52,6 +52,7 @@ class MessageDetailsActivity : ComponentActivity() {
         private const val EXTRA_OTHER_USER_ID = "other_user_id"
         private const val EXTRA_OTHER_USER_NAME = "other_user_name"
         private const val EXTRA_OTHER_USER_IMAGE = "other_user_image"
+        private const val EXTRA_INITIAL_MESSAGE = "initial_message"
 
         fun newIntent(
             activity: Activity,
@@ -76,6 +77,7 @@ class MessageDetailsActivity : ComponentActivity() {
         val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
         val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: ""
         val otherUserImage = intent.getStringExtra(EXTRA_OTHER_USER_IMAGE) ?: ""
+        val initialMessage = intent.getStringExtra(EXTRA_INITIAL_MESSAGE) ?: ""
 
         val currentUserId = auth.currentUser?.uid ?: ""
 
@@ -91,7 +93,9 @@ class MessageDetailsActivity : ComponentActivity() {
                 otherUserId = otherUserId,
                 otherUserName = otherUserName,
                 otherUserImage = otherUserImage,
+                initialMessage = initialMessage,
                 onBackClick = { finish() }
+
             )
         }
     }
@@ -104,6 +108,7 @@ fun MessageDetailsScreen(
     otherUserId: String,
     otherUserName: String,
     otherUserImage: String,
+    initialMessage: String = "",
     onBackClick: () -> Unit,
     viewModel: MessageDetailsViewModel = viewModel()
 ) {
@@ -154,24 +159,20 @@ fun MessageDetailsScreen(
         viewModel.startChat(context, otherUserId)
     }
 
-    // Auto-scroll to bottom when new messages arrive
+// Set initial message once
+    LaunchedEffect(Unit) {
+        if (initialMessage.isNotBlank()) {
+            viewModel.setInitialMessage(initialMessage)
+        }
+    }
+
+// Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
 
-    if (showReportDialog) {
-        ReportUserDialog(
-            onDismiss = { showReportDialog = false },
-            onReport = { reason ->
-                viewModel.reportUser(reason) { success, msg ->
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                }
-                showReportDialog = false
-            }
-        )
-    }
 
     Scaffold(
         topBar = {
