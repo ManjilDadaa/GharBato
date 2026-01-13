@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.viewmodel.SavedPropertiesViewModel
 import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
 
@@ -43,6 +43,7 @@ fun SavedScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = {
@@ -57,11 +58,11 @@ fun SavedScreen(
                 )
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = padding.calculateTopPadding())
                 .background(Color(0xFFF8F9FA))
         ) {
             when {
@@ -71,7 +72,7 @@ fun SavedScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = Color(0xFF2196F3))
                     }
                 }
 
@@ -114,6 +115,15 @@ fun SavedScreen(
                                         viewModel.removeFromSaved(property.id)
                                     }
                                 )
+                            }
+
+                            // Add "Explore More" button at the bottom of the list
+                            item {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                ExploreMoreCard(
+                                    onExploreClick = onNavigateToSearch
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
                             }
                         }
                     }
@@ -188,18 +198,87 @@ fun EmptySavedState(
                 containerColor = Color(0xFF2196F3)
             ),
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.height(56.dp)
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .height(56.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = Color.White
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Explore Properties",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+fun ExploreMoreCard(
+    onExploreClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onExploreClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF5F9FF)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    color = Color(0xFF2196F3),
+                    shape = CircleShape
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = "Explore More Properties",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "Find your perfect home",
+                        fontSize = 13.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Go",
+                tint = Color(0xFF2196F3),
+                modifier = Modifier.size(24.dp)
             )
         }
     }

@@ -13,9 +13,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,13 +26,32 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.view.ui.theme.LightBlue
 import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.view.ui.theme.ReportedRed
+import com.example.gharbato.viewmodel.ReportViewModel
+import com.example.gharbato.viewmodel.ReportViewModelFactory
+import com.example.gharbato.repository.PendingPropertiesRepoImpl
+import com.example.gharbato.viewmodel.PendingPropertiesViewModel
+import com.example.gharbato.viewmodel.PendingPropertiesViewModelFactory
 
 @Composable
 fun AdminHomeScreen() {
     val context = LocalContext.current
+
+    // ViewModels for real-time data
+    val reportViewModel: ReportViewModel = viewModel(
+        factory = ReportViewModelFactory()
+    )
+
+    val pendingViewModel: PendingPropertiesViewModel = viewModel(
+        factory = PendingPropertiesViewModelFactory()
+    )
+
+    val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
+    val pendingUiState by pendingViewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = Color.White
@@ -48,7 +69,6 @@ fun AdminHomeScreen() {
                     .height(250.dp)
                     .padding(15.dp)
                     .clickable {
-                        // Navigate to Pending Listings Activity
                         val intent = Intent(context, PendingListingsActivity::class.java)
                         context.startActivity(intent)
                     },
@@ -71,13 +91,22 @@ fun AdminHomeScreen() {
                             fontSize = 18.sp
                         )
                     )
-                    Text(
-                        "17",
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 45.sp
+
+                    if (pendingUiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.padding(20.dp)
                         )
-                    )
+                    } else {
+                        Text(
+                            "${pendingUiState.properties.size}",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 45.sp
+                            )
+                        )
+                    }
+
                     Text(
                         "Tap to review",
                         style = TextStyle(
@@ -95,7 +124,6 @@ fun AdminHomeScreen() {
                     .height(250.dp)
                     .padding(15.dp)
                     .clickable {
-                        // Navigate to Reported Properties Activity
                         val intent = Intent(context, ReportedPropertiesActivity::class.java)
                         context.startActivity(intent)
                     },
@@ -118,13 +146,22 @@ fun AdminHomeScreen() {
                             fontSize = 18.sp
                         )
                     )
-                    Text(
-                        "17",
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 45.sp
+
+                    if (reportUiState.isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.padding(20.dp)
                         )
-                    )
+                    } else {
+                        Text(
+                            "${reportUiState.reportedProperties.size}",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 45.sp
+                            )
+                        )
+                    }
+
                     Text(
                         "Tap to review",
                         style = TextStyle(
@@ -142,7 +179,6 @@ fun AdminHomeScreen() {
                     .height(250.dp)
                     .padding(15.dp)
                     .clickable {
-                        // Navigate to Reported Users Activity
                         val intent = Intent(context, ReportedUsersActivity::class.java)
                         context.startActivity(intent)
                     },
@@ -166,7 +202,7 @@ fun AdminHomeScreen() {
                         )
                     )
                     Text(
-                        "17",
+                        "0",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 45.sp

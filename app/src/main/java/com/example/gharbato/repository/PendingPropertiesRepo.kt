@@ -1,6 +1,6 @@
 package com.example.gharbato.repository
 
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import kotlinx.coroutines.flow.Flow
 
 interface PendingPropertiesRepo {

@@ -3,9 +3,11 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -39,20 +41,19 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
-import com.example.gharbato.data.model.PropertyModel
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.SortOption
-import com.example.gharbato.ui.view.FullSearchMapActivity
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen() {
-    // Initialize context and viewModel inside composable body
     val context = LocalContext.current
     val viewModel: PropertyViewModel = viewModel(
         factory = PropertyViewModelFactory(context)
@@ -87,6 +88,7 @@ fun SearchScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             SearchTopBar(
                 searchQuery = uiState.searchQuery,
@@ -114,13 +116,14 @@ fun SearchScreen() {
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (mapHeight > 0.dp) {
+                // Map Section - Only show if there are properties
+                if (mapHeight > 0.dp && uiState.properties.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(mapHeight)
                     ) {
-                        MapSection(
+                        PropertiesMapSection(
                             properties = uiState.properties,
                             context = context,
                             onMarkerClick = { property ->
@@ -132,6 +135,7 @@ fun SearchScreen() {
                             }
                         )
 
+                        // Property Detail Overlay when a marker is selected
                         uiState.selectedProperty?.let { property ->
                             PropertyDetailOverlay(
                                 property = property,
@@ -251,6 +255,167 @@ fun SearchScreen() {
         )
     }
 }
+
+/**
+ */
+@Composable
+fun PropertiesMapSection(
+    properties: List<PropertyModel>,
+    context: Context,
+    onMarkerClick: (PropertyModel) -> Unit,
+    onMapClick: () -> Unit
+) {
+    // Calculate center position based on all property locations
+    val centerLocation = remember(properties) {
+        if (properties.isEmpty()) {
+            LatLng(27.7172, 85.3240) // Default Kathmandu
+        } else {
+            val avgLat = properties.map { it.latitude }.average()
+            val avgLng = properties.map { it.longitude }.average()
+            LatLng(avgLat, avgLng)
+        }
+    }
+
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(centerLocation, 11f)
+    }
+
+    // Auto-fit bounds to show all properties
+    LaunchedEffect(properties) {
+        if (properties.isNotEmpty()) {
+            try {
+                val boundsBuilder = LatLngBounds.builder()
+                properties.forEach { property ->
+                    boundsBuilder.include(property.latLng)
+                }
+                val bounds = boundsBuilder.build()
+                val padding = 100 // Padding in pixels
+                cameraPositionState.move(
+                    CameraUpdateFactory.newLatLngBounds(bounds, padding)
+                )
+            } catch (e: Exception) {
+                Log.e("PropertiesMap", "Error fitting bounds: ${e.message}")
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                mapToolbarEnabled = false
+            ),
+            onMapClick = {
+                onMapClick()
+            }
+        ) {
+            // Display all properties with custom price markers
+            properties.forEach { property ->
+                Marker(
+                    state = MarkerState(position = property.latLng),
+                    title = property.title,
+                    snippet = "${property.location} - ${property.price}",
+                    icon = CustomMarkerHelper.createPriceMarker(context, property.price),
+                    onClick = {
+                        onMarkerClick(property)
+                        true
+                    }
+                )
+            }
+        }
+
+        // Zoom Controls
+        Column(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .padding(16.dp)
+                .zIndex(1f)
+        ) {
+            FloatingActionButton(
+                onClick = {
+                    cameraPositionState.move(CameraUpdateFactory.zoomIn())
+                },
+                modifier = Modifier.size(40.dp),
+                containerColor = Color.White
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Zoom In",
+                    tint = Color.Black
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            FloatingActionButton(
+                onClick = {
+                    cameraPositionState.move(CameraUpdateFactory.zoomOut())
+                },
+                modifier = Modifier.size(40.dp),
+                containerColor = Color.White
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = "Zoom Out",
+                    tint = Color.Black
+                )
+            }
+        }
+
+        // Full Screen Button
+        FloatingActionButton(
+            onClick = onMapClick,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .size(40.dp)
+                .zIndex(1f),
+            containerColor = Color.White
+        ) {
+            Icon(
+                imageVector = Icons.Default.Fullscreen,
+                contentDescription = "Full Screen",
+                tint = Color.Black
+            )
+        }
+
+        // Property Count Badge
+        if (properties.isNotEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(16.dp)
+                    .zIndex(1f),
+                color = Color(0xFF2196F3),
+                shape = RoundedCornerShape(20.dp),
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "${properties.size} Properties",
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun SearchTopBar(
     searchQuery: String,
@@ -264,9 +429,11 @@ fun SearchTopBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars),
         color = Color.White,
-        shadowElevation = 2.dp
+        shadowElevation = 1.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
@@ -275,8 +442,8 @@ fun SearchTopBar(
                     .height(56.dp),
                 placeholder = {
                     Text(
-                        text = "Search by location, property type...",
-                        color = Color.Gray,
+                        text = "Search location, property type...",
+                        color = Color(0xFF9E9E9E),
                         fontSize = 15.sp
                     )
                 },
@@ -284,64 +451,70 @@ fun SearchTopBar(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = Color.Gray,
+                        tint = Color(0xFF757575),
                         modifier = Modifier.size(24.dp)
                     )
                 },
-                trailingIcon = {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color(0xFF2196F3), CircleShape)
-                                .clickable { onFilterClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.FilterList,
-                                contentDescription = "Filters",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(Color(0xFF2196F3), CircleShape)
-                                .clickable { onLocationClick() },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = "Select Location",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                    }
-                },
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
+                    unfocusedBorderColor = Color(0xFFE0E0E0),
                     focusedBorderColor = Color(0xFF2196F3),
-                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                    focusedContainerColor = Color(0xFFF5F5F5),
+                    unfocusedContainerColor = Color(0xFFFAFAFA),
+                    focusedContainerColor = Color.White,
                     cursorColor = Color(0xFF2196F3)
                 ),
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Search
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        onSearchClick()
-                    }
-                )
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearchClick() })
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onFilterClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color(0xFF2196F3)
+                    ),
+                    border = BorderStroke(1.5.dp, Color(0xFF2196F3))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filters",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Filters", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Button(
+                    onClick = onLocationClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2196F3),
+                        contentColor = Color.White
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 4.dp
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Select Location",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Near Me", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+            }
         }
     }
 }
@@ -407,106 +580,6 @@ fun SortBar(
 }
 
 @Composable
-fun MapSection(
-    properties: List<PropertyModel>,
-    context: Context,
-    onMarkerClick: (PropertyModel) -> Unit,
-    onMapClick: () -> Unit
-) {
-    val startLocation = properties.firstOrNull()?.latLng
-        ?: LatLng(27.7172, 85.3240)
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(startLocation, 11f)
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            uiSettings = MapUiSettings(
-                zoomControlsEnabled = false,
-                myLocationButtonEnabled = false,
-                mapToolbarEnabled = false
-            ),
-            onMapClick = {
-                onMapClick()
-            }
-        ) {
-            properties.forEach { property ->
-                Marker(
-                    state = MarkerState(position = property.latLng),
-                    title = property.price,
-                    snippet = property.location,
-                    icon = CustomMarkerHelper.createPriceMarker(context, property.price),
-                    onClick = {
-                        onMarkerClick(property)
-                        true
-                    }
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(16.dp)
-                .zIndex(1f)
-        ) {
-            FloatingActionButton(
-                onClick = {
-                    cameraPositionState.move(
-                        CameraUpdateFactory.zoomIn()
-                    )
-                },
-                modifier = Modifier.size(40.dp),
-                containerColor = Color.White
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Zoom In",
-                    tint = Color.Black
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            FloatingActionButton(
-                onClick = {
-                    cameraPositionState.move(
-                        CameraUpdateFactory.zoomOut()
-                    )
-                },
-                modifier = Modifier.size(40.dp),
-                containerColor = Color.White
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = "Zoom Out",
-                    tint = Color.Black
-                )
-            }
-        }
-
-        FloatingActionButton(
-            onClick = onMapClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-                .size(40.dp)
-                .zIndex(1f),
-            containerColor = Color.White
-        ) {
-            Icon(
-                imageVector = Icons.Default.Fullscreen,
-                contentDescription = "Full Screen",
-                tint = Color.Black
-            )
-        }
-    }
-}
-
-@Composable
 fun PropertyList(
     properties: List<PropertyModel>,
     listState: LazyListState,
@@ -537,9 +610,7 @@ fun PropertyCard(
     val context = LocalContext.current
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
@@ -549,35 +620,24 @@ fun PropertyCard(
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
                     contentDescription = property.title,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
                     contentScale = ContentScale.Crop
                 )
 
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
                     horizontalArrangement = Arrangement.End
                 ) {
                     IconButton(
                         onClick = { onFavoriteClick(property) },
-                        modifier = Modifier
-                            .size(36.dp)
+                        modifier = Modifier.size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
                     ) {
                         Icon(
-                            imageVector = if (property.isFavorite) {
-                                Icons.Default.Favorite
-                            } else {
-                                Icons.Default.FavoriteBorder
-                            },
-                            contentDescription = if (property.isFavorite) {
-                                "Remove from favorites"
-                            } else {
-                                "Add to favorites"
-                            },
+                            imageVector = if (property.isFavorite) Icons.Default.Favorite
+                            else Icons.Default.FavoriteBorder,
+                            contentDescription = if (property.isFavorite) "Remove from favorites"
+                            else "Add to favorites",
                             tint = if (property.isFavorite) Color.Red else Color.Gray,
                             modifier = Modifier.size(20.dp)
                         )
@@ -587,8 +647,7 @@ fun PropertyCard(
 
                     IconButton(
                         onClick = { },
-                        modifier = Modifier
-                            .size(36.dp)
+                        modifier = Modifier.size(36.dp)
                             .background(Color.White.copy(alpha = 0.9f), CircleShape)
                     ) {
                         Icon(
@@ -601,60 +660,26 @@ fun PropertyCard(
                 }
 
                 Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .background(
-                            Color.Black.copy(alpha = 0.6f),
-                            RoundedCornerShape(topEnd = 12.dp)
-                        )
+                    modifier = Modifier.align(Alignment.BottomStart)
+                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(topEnd = 12.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Home, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = property.sqft,
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(property.sqft, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${property.bedrooms}",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("${property.bedrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
                     Spacer(modifier = Modifier.width(16.dp))
 
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${property.bathrooms}",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("${property.bathrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -665,64 +690,39 @@ fun PropertyCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = property.developer,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = "Developer",
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
+                        Text(property.developer, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                        Text("Developer", fontSize = 12.sp, color = Color.Gray)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(
-                            text = property.price,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF4CAF50)
-                        )
+                        Text(property.price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(top = 4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(14.dp)
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
+                            Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = property.location,
-                                fontSize = 12.sp,
-                                color = Color.Gray
-                            )
+                            Text(property.location, fontSize = 12.sp, color = Color.Gray)
                         }
                     }
 
                     Surface(
                         shape = CircleShape,
                         color = Color(0xFF4CAF50),
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clickable {
+                        modifier = Modifier.size(48.dp).clickable {
+                            if (property.ownerId.isNotEmpty()) {
                                 val intent = MessageDetailsActivity.newIntent(
                                     activity = context as Activity,
                                     otherUserId = property.ownerId,
-                                    otherUserName = property.ownerName.ifBlank { property.developer }
+                                    otherUserName = property.ownerName.ifBlank { property.developer },
+                                    otherUserImage = property.ownerImageUrl ?: ""
                                 )
                                 context.startActivity(intent)
                             }
+                        }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Chat With Owner",
+                                Icons.AutoMirrored.Filled.Send,
+                                "Chat With Owner",
                                 tint = Color.White,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -742,9 +742,7 @@ fun PropertyDetailOverlay(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .wrapContentHeight(),
+        modifier = modifier.fillMaxWidth().wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
@@ -758,41 +756,21 @@ fun PropertyDetailOverlay(
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
                     contentDescription = property.title,
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                    modifier = Modifier.size(100.dp).clip(RoundedCornerShape(12.dp)),
                     contentScale = ContentScale.Crop
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = property.price,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
-                    )
-
+                    Text(property.price, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
                     Spacer(modifier = Modifier.height(4.dp))
-
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(14.dp)
-                        )
+                        Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = property.location,
-                            fontSize = 14.sp,
-                            color = Color.Gray
-                        )
+                        Text(property.location, fontSize = 14.sp, color = Color.Gray)
                     }
-
                     Spacer(modifier = Modifier.height(8.dp))
-
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         PropertyInfoChip(Icons.Default.Home, property.sqft)
                         PropertyInfoChip(Icons.Default.Info, "${property.bedrooms} BD")
@@ -800,15 +778,8 @@ fun PropertyDetailOverlay(
                     }
                 }
 
-                IconButton(
-                    onClick = onClose,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close",
-                        tint = Color.Gray
-                    )
+                IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.Close, "Close", tint = Color.Gray)
                 }
             }
 
@@ -817,9 +788,7 @@ fun PropertyDetailOverlay(
             Button(
                 onClick = onViewDetails,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("View Details", fontWeight = FontWeight.Bold)
@@ -829,30 +798,15 @@ fun PropertyDetailOverlay(
 }
 
 @Composable
-fun PropertyInfoChip(
-    icon: ImageVector,
-    text: String
-) {
-    Surface(
-        color = Color(0xFFF5F5F5),
-        shape = RoundedCornerShape(8.dp)
-    ) {
+fun PropertyInfoChip(icon: ImageVector, text: String) {
+    Surface(color = Color(0xFFF5F5F5), shape = RoundedCornerShape(8.dp)) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.Gray,
-                modifier = Modifier.size(14.dp)
-            )
+            Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = text,
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
+            Text(text, fontSize = 12.sp, color = Color.Gray)
         }
     }
 }

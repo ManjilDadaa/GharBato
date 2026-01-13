@@ -3,20 +3,24 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -32,17 +36,22 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -54,6 +63,7 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
+import com.example.gharbato.viewmodel.UserViewModelProvider
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,12 +72,19 @@ fun HomeScreen(
         factory = PropertyViewModelFactory(LocalContext.current)
     )
 ) {
+    val context = LocalContext.current
+    val activity = context as Activity
+
+    // Get UserViewModel for notifications
+    val userViewModel = remember { UserViewModelProvider.getInstance() }
+    val unreadCount by userViewModel.unreadCount.observeAsState(0)
+
     var search by remember { mutableStateOf("") }
 
-    //  Get UI state from ViewModel
+    // Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // variables required for multi selection FilterChips
+    // Filter chips state
     var selectedFilters by remember { mutableStateOf(setOf<String>()) }
     val filters = mapOf(
         "Trending" to R.drawable.baseline_trending_up_24,
@@ -76,10 +93,21 @@ fun HomeScreen(
         "New" to R.drawable.baseline_star_border_purple500_24
     )
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    val context = LocalContext.current
-    val activity = context as Activity
+
+    // Start observing notifications
+    LaunchedEffect(Unit) {
+        userViewModel.startObservingNotifications()
+    }
+
+    // Keep observers running when leaving screen
+    DisposableEffect(Unit) {
+        onDispose {
+            // Don't stop observers - keep them running for real-time updates
+        }
+    }
 
     Scaffold(
+        containerColor = Color.White,
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             CenterAlignedTopAppBar(
@@ -93,23 +121,59 @@ fun HomeScreen(
                     ) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_add_24),
-                            contentDescription = null
+                            contentDescription = "Add Property"
                         )
                     }
                 },
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            painter = painterResource(R.drawable.outline_notifications_24),
-                            contentDescription = null,
-                        )
+                    // Notification icon with badge
+                    Box(modifier = Modifier.padding(end = 8.dp)) {
+                        IconButton(
+                            onClick = {
+                                val intent = Intent(context, NotificationActivity::class.java)
+                                context.startActivity(intent)
+                            },
+                            modifier = Modifier.size(48.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.outline_notifications_24),
+                                contentDescription = "Notifications",
+                                tint = Blue,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        // Badge - only show if count > 0
+                        if (unreadCount > 0) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .offset(x = (-2).dp, y = 6.dp)
+                                    .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFF3B30))
+                                    .border(2.dp, Color.White, CircleShape)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 },
-                scrollBehavior = scrollBehavior
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         },
     ) { padding ->
-        //  Show loading state
+        // Show loading state
         if (uiState.isLoading) {
             Box(
                 modifier = Modifier
@@ -124,7 +188,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFFF8F9FB))
-                    .padding(padding),
+                    .padding(top = padding.calculateTopPadding()),
             ) {
                 item {
                     OutlinedTextField(
@@ -201,7 +265,7 @@ fun HomeScreen(
                     }
                 }
 
-                //  Use properties from ViewModel's state
+                // Use properties from ViewModel's state
                 items(uiState.properties) { property ->
                     PropertyCard(
                         property = property,
@@ -242,6 +306,6 @@ fun HomeScreen(
 
 @Composable
 @Preview
-fun HomeScreenPreview(){
+fun HomeScreenPreview() {
     HomeScreen()
 }

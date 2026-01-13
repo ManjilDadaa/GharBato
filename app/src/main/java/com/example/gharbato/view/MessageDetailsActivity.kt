@@ -35,12 +35,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
 import androidx.core.content.FileProvider
-import coil.request.ImageRequest
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -112,19 +112,18 @@ fun MessageDetailsScreen(
     val messageText by viewModel.messageText
     val isBlockedByMe by viewModel.isBlockedByMe
     val isBlockedByOther by viewModel.isBlockedByOther
-    
-    val listState = rememberLazyListState()
-    
-    var showReportDialog by remember { mutableStateOf(false) }
 
+    val listState = rememberLazyListState()
+
+    var showReportDialog by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { 
+        uri?.let {
             Toast.makeText(context, "Sending photo...", Toast.LENGTH_SHORT).show()
-            viewModel.sendImageMessage(context, it) 
+            viewModel.sendImageMessage(context, it)
         }
     }
 
@@ -141,7 +140,7 @@ fun MessageDetailsScreen(
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
         val storageDir = context.getExternalFilesDir(null)
         val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
-        
+
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",
@@ -155,6 +154,7 @@ fun MessageDetailsScreen(
         viewModel.startChat(context, otherUserId)
     }
 
+    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -244,7 +244,7 @@ fun ReportUserDialog(
     onReport: (String) -> Unit
 ) {
     var reason by remember { mutableStateOf("") }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Report User") },
@@ -370,25 +370,25 @@ fun ChatTopBar(
             ) {
                 DropdownMenuItem(
                     text = { Text("Report User") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onReportClick() 
+                        onReportClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Report, null) }
                 )
                 DropdownMenuItem(
                     text = { Text("Delete Chat") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onDeleteClick() 
+                        onDeleteClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Delete, null) }
                 )
                 DropdownMenuItem(
                     text = { Text(if (isBlockedByMe) "Unblock User" else "Block User") },
-                    onClick = { 
+                    onClick = {
                         menuExpanded = false
-                        onBlockClick() 
+                        onBlockClick()
                     },
                     leadingIcon = { Icon(Icons.Default.Block, null) }
                 )
@@ -399,8 +399,6 @@ fun ChatTopBar(
         )
     )
 }
-
-
 
 @Composable
 fun MessageBubble(
@@ -438,7 +436,7 @@ fun MessageBubble(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.LightGray),
                         contentScale = ContentScale.Crop,
-                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image) // Fallback
+                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
                     )
                     if (message.text.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
