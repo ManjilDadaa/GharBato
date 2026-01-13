@@ -39,6 +39,16 @@ interface MessageRepository {
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+
+    fun navigateToChatWithMessage(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        targetUserImage: String = "",
+        initialMessage: String = ""
+    )
+
+
     fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
 }
@@ -424,6 +434,33 @@ class MessageRepositoryImpl : MessageRepository {
         val chatRef = database.getReference("chats").child(chatId)
         chatRef.removeValue()
     }
+
+
+
+    override fun navigateToChatWithMessage(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        targetUserImage: String,
+        initialMessage: String
+    ) {
+        Log.d(TAG, "=== Navigating to Chat with Message ===")
+        Log.d(TAG, "Target User ID: $targetUserId")
+        Log.d(TAG, "Target User Name: $targetUserName")
+        Log.d(TAG, "Initial Message: $initialMessage")
+
+        val intent = MessageDetailsActivity.newIntent(
+            activity = activity,
+            otherUserId = targetUserId,
+            otherUserName = targetUserName,
+            otherUserImage = targetUserImage
+        ).apply {
+            putExtra("INITIAL_MESSAGE", initialMessage)
+        }
+        activity.startActivity(intent)
+    }
+
+
 
     override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
         val chatsRef = database.getReference("chats")

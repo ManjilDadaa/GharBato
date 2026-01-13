@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -116,8 +117,10 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.ReportStatus
 import com.example.gharbato.model.ReportedProperty
+import com.example.gharbato.repository.MessageRepositoryImpl
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
+import com.example.gharbato.util.PropertyViewTracker
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -137,12 +140,12 @@ private fun getCurrentUserId(): String {
 }
 
 
+
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
         PropertyViewModelFactory(this@PropertyDetailActivity)
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -152,6 +155,8 @@ class PropertyDetailActivity : ComponentActivity() {
 
         if (propertyId != -1) {
             viewModel.getPropertyById(propertyId)
+
+            PropertyViewTracker.trackPropertyViewById(propertyId)
         }
 
         setContent {
@@ -166,7 +171,6 @@ class PropertyDetailActivity : ComponentActivity() {
                     }
                 )
             } ?: run {
-                // Loading or Error State
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -789,8 +793,13 @@ fun MapPreviewSection(
     }
 }
 
+
+
+
 @Composable
 fun ContactOwnerSection(property: PropertyModel) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -813,24 +822,36 @@ fun ContactOwnerSection(property: PropertyModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(50.dp),
-                        color = Color(0xFFE0E0E0),
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
+                    // Owner Image
+                    if (property.ownerImageUrl.isNotEmpty()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(property.ownerImageUrl),
                             contentDescription = "Owner",
-                            modifier = Modifier.padding(12.dp),
-                            tint = Color.Gray
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(50.dp),
+                            color = Color(0xFFE0E0E0),
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Owner",
+                                modifier = Modifier.padding(12.dp),
+                                tint = Color.Gray
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column {
                         Text(
-                            text = property.developer,
+                            text = property.ownerName.ifBlank { property.developer },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -843,7 +864,15 @@ fun ContactOwnerSection(property: PropertyModel) {
                 }
 
                 IconButton(
-                    onClick = { /* Handle call */ },
+                    onClick = {
+                        val messageViewModel = MessageViewModel()
+                        messageViewModel.initiateCall(
+                            targetUserId = property.ownerId,
+                            targetUserName = property.ownerName.ifBlank { property.developer },
+                            isVideoCall = false,
+                            activity = context as Activity
+                        )
+                    },
                     modifier = Modifier
                         .size(48.dp)
                         .background(Color(0xFF4CAF50), CircleShape)
@@ -866,27 +895,88 @@ fun ContactOwnerSection(property: PropertyModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                QuickMessageButton("Call me back", Modifier.weight(1f))
-                QuickMessageButton("Still available?", Modifier.weight(1f))
+                QuickMessageButton(
+                    text = "Call me back",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        sendQuickMessage(
+                            context = context,
+                            property = property,
+                            message = "Hi, I'm interested in ${property.developer}. Could you please call me back?"
+                        )
+                    }
+                )
+                QuickMessageButton(
+                    text = "Still available?",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        sendQuickMessage(
+                            context = context,
+                            property = property,
+                            message = "Hello! Is this property still available for ${property.marketType.lowercase()}?"
+                        )
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            QuickMessageButton("Schedule a visit", Modifier.fillMaxWidth())
+            QuickMessageButton(
+                text = "Schedule a visit",
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    sendQuickMessage(
+                        context = context,
+                        property = property,
+                        message = "Hi, I'd like to schedule a visit to view ${property.developer}. When would be a good time?"
+                    )
+                }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Updated: Today, 5:30 PM", fontSize = 12.sp, color = Color.Gray)
-            Text("156 views, 12 today", fontSize = 12.sp, color = Color.Gray)
-            Text("98 unique visitors", fontSize = 12.sp, color = Color.Gray)
+            Text(
+                text = "Updated: ${property.formattedUpdatedTime}",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.viewsText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.uniqueViewersText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
 
+private fun sendQuickMessage(
+    context: Context,
+    property: PropertyModel,
+    message: String
+) {
+    val repository = MessageRepositoryImpl()
+    repository.navigateToChatWithMessage(
+        activity = context as Activity,
+        targetUserId = property.ownerId,
+        targetUserName = property.ownerName.ifBlank { property.developer },
+        targetUserImage = property.ownerImageUrl,
+        initialMessage = message
+    )
+}
+
 @Composable
-fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
+fun QuickMessageButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Surface(
-        modifier = modifier.clickable { /* Handle message */ },
+        modifier = modifier.clickable(onClick = onClick),
         color = Color(0xFFE3F2FD),
         shape = RoundedCornerShape(8.dp)
     ) {
