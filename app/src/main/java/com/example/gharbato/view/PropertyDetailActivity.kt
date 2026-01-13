@@ -580,8 +580,12 @@ fun StatusChip(
     }
 }
 
+
 @Composable
 fun PriceSection(property: PropertyModel) {
+    val context = LocalContext.current
+    var offerPrice by remember { mutableStateOf("") }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -614,25 +618,64 @@ fun PriceSection(property: PropertyModel) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = offerPrice,
+                    onValueChange = { offerPrice = it },
                     placeholder = { Text("e.g., NPR 12,000/month") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = Color.White
                     ),
                     trailingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                            tint = Color.Gray
-                        )
+                        IconButton(
+                            onClick = {
+                                if (offerPrice.isNotBlank()) {
+                                    sendOfferMessage(context, property, offerPrice)
+                                    offerPrice = ""
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter an offer price",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Send Offer",
+                                tint = if (offerPrice.isNotBlank()) Color(0xFF2196F3) else Color.Gray
+                            )
+                        }
                     }
                 )
             }
         }
     }
 }
+
+private fun sendOfferMessage(
+    context: Context,
+    property: PropertyModel,
+    offerPrice: String
+) {
+    val repository = MessageRepositoryImpl()
+
+    val message = "Hi, I'm interested in ${property.developer}. I'd like to make an offer of $offerPrice."
+
+    Toast.makeText(context, "Sending offer...", Toast.LENGTH_SHORT).show()
+
+    repository.sendQuickMessageWithPropertyAndNavigate(
+        context = context,
+        activity = context as Activity,
+        otherUserId = property.ownerId,
+        otherUserName = property.ownerName.ifBlank { property.developer },
+        otherUserImage = property.ownerImageUrl,
+        message = message,
+        property = property
+    )
+}
+
+
 
 @Composable
 fun PropertyDetailsSection(property: PropertyModel) {
@@ -954,7 +997,6 @@ fun ContactOwnerSection(property: PropertyModel) {
     }
 }
 
-// Replace the sendQuickMessage function in PropertyDetailActivity.kt:
 
 private fun sendQuickMessage(
     context: Context,
@@ -965,20 +1007,15 @@ private fun sendQuickMessage(
 
     Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
 
-    // Send message with property card
-    repository.sendQuickMessageWithProperty(
+    // Use the new method that sends message AND navigates
+    repository.sendQuickMessageWithPropertyAndNavigate(
         context = context,
+        activity = context as Activity,
         otherUserId = property.ownerId,
+        otherUserName = property.ownerName.ifBlank { property.developer },
+        otherUserImage = property.ownerImageUrl,
         message = message,
-        property = property,
-        onComplete = {
-            repository.navigateToChat(
-                activity = context as Activity,
-                targetUserId = property.ownerId,
-                targetUserName = property.ownerName.ifBlank { property.developer },
-                targetUserImage = property.ownerImageUrl
-            )
-        }
+        property = property
     )
 }
 

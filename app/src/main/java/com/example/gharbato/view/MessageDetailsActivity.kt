@@ -13,7 +13,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -21,10 +33,41 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Bathroom
+import androidx.compose.material.icons.filled.Bed
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.VideoCall
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +78,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -42,10 +86,11 @@ import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
-import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -60,12 +105,16 @@ class MessageDetailsActivity : ComponentActivity() {
             activity: Activity,
             otherUserId: String,
             otherUserName: String,
-            otherUserImage: String = ""
+            otherUserImage: String = "",
+            initialMessage: String = ""
         ): Intent {
             return Intent(activity, MessageDetailsActivity::class.java).apply {
                 putExtra(EXTRA_OTHER_USER_ID, otherUserId)
                 putExtra(EXTRA_OTHER_USER_NAME, otherUserName)
                 putExtra(EXTRA_OTHER_USER_IMAGE, otherUserImage)
+                if (initialMessage.isNotEmpty()) {
+                    putExtra(EXTRA_INITIAL_MESSAGE, initialMessage)
+                }
             }
         }
     }
@@ -97,7 +146,6 @@ class MessageDetailsActivity : ComponentActivity() {
                 otherUserImage = otherUserImage,
                 initialMessage = initialMessage,
                 onBackClick = { finish() }
-
             )
         }
     }
@@ -157,26 +205,25 @@ fun MessageDetailsScreen(
         cameraLauncher.launch(uri)
     }
 
+    // Initialize chat session
     LaunchedEffect(otherUserId) {
         viewModel.startChat(context, otherUserId)
     }
 
-// Set initial message AFTER a small delay to ensure ViewModel is ready
+    // Handle initial message - this was missing the proper check
     LaunchedEffect(initialMessage) {
         if (initialMessage.isNotBlank()) {
-            // Small delay to ensure the ViewModel is fully initialized
-            kotlinx.coroutines.delay(200)
+            kotlinx.coroutines.delay(300) // Give time for chat to initialize
             viewModel.setInitialMessage(initialMessage)
         }
     }
 
-// Auto-scroll to bottom when new messages arrive
+    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
         }
     }
-
 
     Scaffold(
         topBar = {
@@ -242,6 +289,10 @@ fun MessageDetailsScreen(
         }
     }
 }
+
+
+
+
 
 @Composable
 fun ReportUserDialog(
@@ -405,6 +456,7 @@ fun ChatTopBar(
     )
 }
 
+
 @Composable
 fun MessageBubble(
     message: ChatMessage,
@@ -430,7 +482,7 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Property Card (if exists)
+                // Property Card (if exists) - Check with hasPropertyCard
                 if (message.hasPropertyCard) {
                     PropertyCardInMessage(
                         message = message,
@@ -500,46 +552,65 @@ fun PropertyCardInMessage(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
-        color = Color.White,
+        color = Color(0xFFF5F5F5),
         shadowElevation = 2.dp
     ) {
         Column {
             // Property Image
-            AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(message.propertyImage)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = "Property",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                contentScale = ContentScale.Crop,
-                error = painterResource(id = android.R.drawable.ic_menu_gallery)
-            )
+            if (message.propertyImage.isNotEmpty()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(message.propertyImage)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Property",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(id = android.R.drawable.ic_menu_gallery),
+                    placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
+                )
+            } else {
+                // Placeholder image if no image URL
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Color(0xFFE0E0E0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Property",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                }
+            }
 
             // Property Details
             Column(
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(12.dp)
             ) {
                 Text(
                     text = message.propertyTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black,
-                    maxLines = 1
+                    maxLines = 2
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Text(
                     text = message.propertyPrice,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
                     color = Color(0xFF4CAF50)
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -547,42 +618,74 @@ fun PropertyCardInMessage(
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(14.dp),
                         tint = Color.Gray
                     )
-                    Spacer(modifier = Modifier.width(2.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = message.propertyLocation,
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = Color.Gray,
                         maxLines = 1
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row {
-                    Text(
-                        text = "${message.propertyBedrooms} Bed",
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "${message.propertyBathrooms} Bath",
-                        fontSize = 11.sp,
-                        color = Color.Gray
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Text(
-                    text = "Tap to view details",
-                    fontSize = 10.sp,
-                    color = Color(0xFF2196F3),
-                    fontWeight = FontWeight.Medium
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bed,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${message.propertyBedrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bathroom,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${message.propertyBathrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Tap to view details",
+                        fontSize = 11.sp,
+                        color = Color(0xFF2196F3),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF2196F3)
+                    )
+                }
             }
         }
     }
