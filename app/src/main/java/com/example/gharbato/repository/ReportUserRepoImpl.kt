@@ -50,4 +50,44 @@ class ReportUserRepoImpl : ReportUserRepo {
             .addOnSuccessListener { callback(true, "User suspended successfully") }
             .addOnFailureListener { callback(false, "Failed to suspend user") }
     }
+
+    override fun activateUser(userId: String, callback: (Boolean, String) -> Unit) {
+        val updates = mapOf(
+            "isSuspended" to false,
+            "suspendedUntil" to 0L,
+            "suspensionReason" to ""
+        )
+
+        usersRef.child(userId).updateChildren(updates)
+            .addOnSuccessListener { callback(true, "User activated successfully") }
+            .addOnFailureListener { callback(false, "Failed to activate user") }
+    }
+
+    override fun resolveUser(userId: String, callback: (Boolean, String) -> Unit) {
+        reportsRef.orderByChild("reportedUserId").equalTo(userId)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    if (!snapshot.exists()) {
+                        callback(true, "No reports found")
+                        return
+                    }
+
+                    var deletedCount = 0
+                    val total = snapshot.childrenCount
+
+                    snapshot.children.forEach { 
+                        it.ref.removeValue().addOnCompleteListener {
+                            deletedCount++
+                            if (deletedCount.toLong() == total) {
+                                callback(true, "All reports resolved")
+                            }
+                        }
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    callback(false, error.message)
+                }
+            })
+    }
 }
