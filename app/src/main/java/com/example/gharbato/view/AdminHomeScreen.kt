@@ -36,6 +36,12 @@ import com.example.gharbato.viewmodel.ReportViewModelFactory
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.viewmodel.PendingPropertiesViewModel
 import com.example.gharbato.viewmodel.PendingPropertiesViewModelFactory
+import androidx.compose.runtime.livedata.observeAsState
+import com.example.gharbato.repository.ReportUserRepoImpl
+import com.example.gharbato.repository.UserRepoImpl
+import com.example.gharbato.viewmodel.ReportedUsersViewModel
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun AdminHomeScreen() {
@@ -50,8 +56,16 @@ fun AdminHomeScreen() {
         factory = PendingPropertiesViewModelFactory()
     )
 
+    val reportedUsersViewModel = remember { ReportedUsersViewModel(ReportUserRepoImpl(), UserRepoImpl()) }
+    
     val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
     val pendingUiState by pendingViewModel.uiState.collectAsStateWithLifecycle()
+    val reportedUsers by reportedUsersViewModel.reportedUsers.observeAsState(emptyList())
+    val reportedUsersLoading by reportedUsersViewModel.isLoading.observeAsState(true)
+
+    LaunchedEffect(Unit) {
+        reportedUsersViewModel.loadReportedUsers()
+    }
 
     Scaffold(
         containerColor = Color.White
@@ -201,13 +215,22 @@ fun AdminHomeScreen() {
                             fontSize = 18.sp
                         )
                     )
-                    Text(
-                        "0",
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 45.sp
+                    
+                    if (reportedUsersLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.padding(20.dp)
                         )
-                    )
+                    } else {
+                        Text(
+                            "${reportedUsers.size}",
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 45.sp
+                            )
+                        )
+                    }
+                    
                     Text(
                         "Tap to review",
                         style = TextStyle(

@@ -315,7 +315,7 @@ fun ReportedUsersScreen() {
                             Button(
                                 onClick = { userToResolve = user },
                                 modifier = Modifier.weight(1f),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                                colors = ButtonDefaults.buttonColors(containerColor = Blue),
                                 contentPadding = PaddingValues(horizontal = 2.dp)
                             ) {
                                 Text("Resolve", fontSize = 11.sp, maxLines = 1)
