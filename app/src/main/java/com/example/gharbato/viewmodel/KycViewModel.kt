@@ -15,6 +15,15 @@ class KycViewModel(private val repo: KycRepo) : ViewModel() {
     
     private val _loading = MutableLiveData<Boolean>()
     val loading: LiveData<Boolean> get() = _loading
+
+    fun getKycStatus(
+        userId: String,
+        callback: (status: String?, docType: String?, frontUrl: String?, backUrl: String?) -> Unit
+    ) {
+        // Implement this to fetch KYC data from your database
+        // Return: status ("Verified", "Pending", "Not Verified"),
+        //         docType, frontUrl, backUrl
+    }
     
     fun submitKyc(
         userId: String,
