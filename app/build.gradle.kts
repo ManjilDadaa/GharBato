@@ -152,7 +152,8 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
     implementation("com.google.firebase:firebase-auth")
 
-    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:3.9.11")
+    implementation("com.github.ZEGOCLOUD:zego_uikit_plugin_adapter_android:3.0.5")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
 
     implementation("com.cloudinary:cloudinary-android:2.1.0")
