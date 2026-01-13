@@ -296,30 +296,49 @@ fun LoginBody() {
                                 isLoading = true
                                 userViewModel.login(email, password) { success, message ->
                                     if (success) {
-                                        // Check if email is verified
-                                        userViewModel.checkEmailVerified { isVerified ->
-                                            isLoading = false
-                                            if (isVerified) {
-                                                // Email verified - proceed to dashboard
+                                        userViewModel.checkIsSuspended { isSuspended, reason, until ->
+                                            if (isSuspended) {
+                                                isLoading = false
+                                                userViewModel.logout { _, _ -> }
+                                                
+                                                val dateStr = if (until != null && until > 0) {
+                                                    java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date(until))
+                                                } else "Indefinitely"
+                                                
+                                                val msg = "Account Suspended\nReason: ${reason ?: "Unknown"}\nUntil: $dateStr"
+                                                
                                                 Toast.makeText(
                                                     context,
-                                                    "Welcome back!",
-                                                    Toast.LENGTH_SHORT
-                                                ).show()
-                                                val intent = Intent(context, DashboardActivity::class.java)
-                                                context.startActivity(intent)
-                                                activity.finish()
-                                            } else {
-                                                // Email not verified - redirect to verification screen
-                                                Toast.makeText(
-                                                    context,
-                                                    "Please verify your email to continue",
+                                                    msg,
                                                     Toast.LENGTH_LONG
                                                 ).show()
-                                                val intent = Intent(context, EmailVerificationActivity::class.java)
-                                                intent.putExtra("USER_EMAIL", email)
-                                                context.startActivity(intent)
-                                                activity.finish()
+                                            } else {
+                                                // Check if email is verified
+                                                userViewModel.checkEmailVerified { isVerified ->
+                                                    isLoading = false
+                                                    if (isVerified) {
+                                                        // Email verified - proceed to dashboard
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Welcome back!",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                        val intent = Intent(context, DashboardActivity::class.java)
+                                                        context.startActivity(intent)
+                                                        activity.finish()
+                                                    } else {
+                                                        // Email not verified - redirect to verification screen
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Please verify your email to continue",
+                                                            Toast.LENGTH_LONG
+                                                        ).show()
+                                                        val intent = Intent(context, EmailVerificationActivity::class.java)
+                                                        intent.putExtra("USER_EMAIL", email)
+                                                        context.startActivity(intent)
+                                                        activity.finish()
+                                                    }
+                                                }
                                             }
                                         }
                                     } else {

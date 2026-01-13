@@ -42,6 +42,15 @@ class UserRepoImpl : UserRepo {
         }
     }
 
+    override fun logout(callback: (Boolean, String) -> Unit) {
+        try {
+            auth.signOut()
+            callback(true, "Logged out successfully")
+        } catch (e: Exception) {
+            callback(false, e.message ?: "Logout failed")
+        }
+    }
+
     override fun signUp(
         email: String,
         password: String,

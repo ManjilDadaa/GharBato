@@ -83,6 +83,20 @@ class ReportedUsersViewModel(
             callback(success, message)
         }
     }
+
+    fun activateUser(userId: String, callback: (Boolean, String) -> Unit) {
+        reportRepo.activateUser(userId) { success, message ->
+            if (success) loadReportedUsers()
+            callback(success, message)
+        }
+    }
+
+    fun resolveUser(userId: String, callback: (Boolean, String) -> Unit) {
+        reportRepo.resolveUser(userId) { success, message ->
+            if (success) loadReportedUsers()
+            callback(success, message)
+        }
+    }
     
     fun formatDate(timestamp: Long): String {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())

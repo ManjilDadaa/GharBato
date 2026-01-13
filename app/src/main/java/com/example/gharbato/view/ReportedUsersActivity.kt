@@ -58,6 +58,8 @@ fun ReportedUsersScreen() {
     val users by viewModel.reportedUsers.observeAsState(emptyList())
     val isLoading by viewModel.isLoading.observeAsState(true)
     var userToSuspend by remember { mutableStateOf<ReportedUser?>(null) }
+    var userToActivate by remember { mutableStateOf<ReportedUser?>(null) }
+    var userToResolve by remember { mutableStateOf<ReportedUser?>(null) }
     
     LaunchedEffect(Unit) {
         viewModel.loadReportedUsers()
@@ -71,6 +73,58 @@ fun ReportedUsersScreen() {
                 viewModel.suspendUser(userToSuspend!!.userId, duration, reason) { success, message ->
                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                     if (success) userToSuspend = null
+                }
+            }
+        )
+    }
+
+    if (userToActivate != null) {
+        AlertDialog(
+            onDismissRequest = { userToActivate = null },
+            title = { Text("Activate User") },
+            text = { Text("Are you sure you want to activate ${userToActivate!!.userName}?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.activateUser(userToActivate!!.userId) { success, message ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            if (success) userToActivate = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Text("Activate")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToActivate = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (userToResolve != null) {
+        AlertDialog(
+            onDismissRequest = { userToResolve = null },
+            title = { Text("Resolve Reports") },
+            text = { Text("Are you sure you want to resolve all reports for ${userToResolve!!.userName}? This will remove the user from this list.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.resolveUser(userToResolve!!.userId) { success, message ->
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                            if (success) userToResolve = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Text("Resolve")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { userToResolve = null }) {
+                    Text("Cancel")
                 }
             }
         )
@@ -248,28 +302,40 @@ fun ReportedUsersScreen() {
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             OutlinedButton(
                                 onClick = { showDetails = !showDetails },
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 2.dp)
                             ) {
-                                Text(if (showDetails) "Hide Details" else "View Details")
+                                Text(if (showDetails) "Hide" else "View", fontSize = 11.sp, maxLines = 1)
+                            }
+                            
+                            Button(
+                                onClick = { userToResolve = user },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color.Blue),
+                                contentPadding = PaddingValues(horizontal = 2.dp)
+                            ) {
+                                Text("Resolve", fontSize = 11.sp, maxLines = 1)
                             }
 
                             Button(
                                 onClick = { 
-                                    if (user.accountStatus != "Suspended") {
+                                    if (user.accountStatus == "Suspended") {
+                                        userToActivate = user
+                                    } else {
                                         userToSuspend = user 
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (user.accountStatus == "Suspended") Color.Gray else Color.Red
+                                    containerColor = if (user.accountStatus == "Suspended") Color(0xFF4CAF50) else Color.Red
                                 ),
-                                enabled = user.accountStatus != "Suspended"
+                                contentPadding = PaddingValues(horizontal = 2.dp)
                             ) {
-                                Text(if (user.accountStatus == "Suspended") "Suspended" else "Suspend")
+                                Text(if (user.accountStatus == "Suspended") "Activate" else "Suspend", fontSize = 11.sp, maxLines = 1)
                             }
                         }
                     }
