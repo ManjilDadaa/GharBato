@@ -225,6 +225,20 @@ fun MessageDetailsScreen(
         }
     }
 
+    if (showReportDialog) {
+        ReportUserDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportUser(reason) { success, message ->
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        showReportDialog = false
+                    }
+                }
+            }
+        )
+    }
+
     val lastMessageTime = messages.lastOrNull()?.timestamp ?: 0L
     val statusText = if (lastMessageTime > 0L) getChatStatus(lastMessageTime) else ""
 
