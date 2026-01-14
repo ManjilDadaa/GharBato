@@ -67,6 +67,9 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
                         val userSnapshot = usersRef.child(property.ownerId).get().await()
 
                         if (userSnapshot.exists()) {
+                            // Debug: Print all available fields
+                            Log.d(TAG, "User data for ${property.ownerId}: ${userSnapshot.value}")
+
                             val ownerName = userSnapshot.child("name").getValue(String::class.java)
                                 ?: userSnapshot.child("userName").getValue(String::class.java)
                                 ?: userSnapshot.child("fullName").getValue(String::class.java)
@@ -75,9 +78,10 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
                             val ownerEmail = userSnapshot.child("email").getValue(String::class.java) ?: ""
                             val ownerImageUrl = userSnapshot.child("imageUrl").getValue(String::class.java)
                                 ?: userSnapshot.child("profileImage").getValue(String::class.java)
+                                ?: userSnapshot.child("profileImageUrl").getValue(String::class.java)
                                 ?: ""
 
-                            Log.d(TAG, "Fetched owner name: $ownerName for property ${property.id}")
+                            Log.d(TAG, "Fetched - Name: $ownerName, Email: $ownerEmail, ImageUrl: $ownerImageUrl for property ${property.id}")
 
                             property.copy(
                                 ownerName = ownerName,

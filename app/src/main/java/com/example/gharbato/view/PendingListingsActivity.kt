@@ -272,7 +272,7 @@ fun PendingListingCard(
             }
 
             Column(Modifier.padding(horizontal = 16.dp)) {
-                // User Profile Section
+                // User Profile Section - UPDATED
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -284,19 +284,30 @@ fun PendingListingCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f)
                     ) {
-                        // User Avatar
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(20.dp),
-                            color = LightGreen.copy(alpha = 0.2f)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = listing.ownerName.firstOrNull()?.uppercase() ?: "U",
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = LightGreen
-                                )
+                        // User Avatar - Show image if available, otherwise show initial
+                        if (listing.ownerImageUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = listing.ownerImageUrl,
+                                contentDescription = "Owner Profile",
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(20.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Surface(
+                                modifier = Modifier.size(40.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                color = LightGreen.copy(alpha = 0.2f)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = listing.ownerName.firstOrNull()?.uppercase() ?: "U",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = LightGreen
+                                    )
+                                }
                             }
                         }
 
@@ -305,14 +316,14 @@ fun PendingListingCard(
                         // User Info
                         Column {
                             Text(
-                                text = listing.ownerName.ifEmpty { "Unknown User" },
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
                                 text = "Posted by",
                                 fontSize = 12.sp,
                                 color = Gray
+                            )
+                            Text(
+                                text = listing.ownerName.ifEmpty { "Unknown User" },
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
