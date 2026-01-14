@@ -8,17 +8,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +23,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -37,7 +32,6 @@ import com.example.gharbato.repository.KycRepoImpl
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.KycViewModel
-import com.example.gharbato.viewmodel.UserViewModel
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -46,21 +40,22 @@ import java.util.*
 fun VerifyUserScreen() {
     val context = LocalContext.current
     val kycViewModel = remember { KycViewModel(KycRepoImpl()) }
-    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-    
+    // FIXED: Use UserRepoImpl directly instead of UserViewModel
+    val userRepo = remember { UserRepoImpl() }
+
     val kycSubmissions by kycViewModel.kycSubmissions.observeAsState(emptyList())
     val loading by kycViewModel.loading.observeAsState(false)
-    
+
     var selectedKyc by remember { mutableStateOf<KycModel?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     var selectedImageUrl by remember { mutableStateOf("") }
     var showRejectDialog by remember { mutableStateOf(false) }
     var rejectionReason by remember { mutableStateOf("") }
-    
+
     LaunchedEffect(Unit) {
         kycViewModel.loadAllKycSubmissions()
     }
-    
+
     // Image Dialog
     if (showImageDialog) {
         Dialog(onDismissRequest = { showImageDialog = false }) {
@@ -96,7 +91,7 @@ fun VerifyUserScreen() {
             }
         }
     }
-    
+
     // Reject Dialog
     if (showRejectDialog && selectedKyc != null) {
         AlertDialog(
@@ -126,12 +121,17 @@ fun VerifyUserScreen() {
                                 rejectionReason = rejectionReason
                             ) { success, message ->
                                 if (success) {
-                                    userViewModel.createNotificationForUser(
+                                    // FIXED: Use userRepo.createNotification with callback
+                                    userRepo.createNotification(
                                         userId = kycToReject.userId,
                                         title = "❌ KYC Rejected",
                                         message = "Your KYC verification was rejected. Reason: $rejectionReason",
-                                        type = "system"
-                                    ) { _, _ -> }
+                                        type = "system",
+                                        imageUrl = "",
+                                        actionData = ""
+                                    ) { notifSuccess, notifMsg ->
+                                        // Notification callback (optional handling)
+                                    }
                                     Toast.makeText(context, "KYC rejected", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
@@ -148,7 +148,7 @@ fun VerifyUserScreen() {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     showRejectDialog = false
                     rejectionReason = ""
                 }) {
@@ -157,7 +157,7 @@ fun VerifyUserScreen() {
             }
         )
     }
-    
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -186,9 +186,9 @@ fun VerifyUserScreen() {
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         // Stats Cards
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -213,9 +213,9 @@ fun VerifyUserScreen() {
                 modifier = Modifier.weight(1f)
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         if (loading) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -248,14 +248,18 @@ fun VerifyUserScreen() {
                                 reviewedBy = "Admin"
                             ) { success, message ->
                                 if (success) {
-                                    // Notify user about approval
-                                    userViewModel.createNotificationForUser(
+                                    // FIXED: Use userRepo.createNotification with callback
+                                    userRepo.createNotification(
                                         userId = kyc.userId,
                                         title = "✅ KYC Approved",
                                         message = "Congratulations! Your KYC verification has been approved. You can now access all features.",
-                                        type = "system"
-                                    ) { _, _ -> }
-                                    
+                                        type = "system",
+                                        imageUrl = "",
+                                        actionData = ""
+                                    ) { notifSuccess, notifMsg ->
+                                        // Notification callback (optional handling)
+                                    }
+
                                     Toast.makeText(context, "KYC approved", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
@@ -343,9 +347,9 @@ fun KycCard(
                 }
                 StatusChip(kyc.status)
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Document Info
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -374,9 +378,9 @@ fun KycCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Document Images
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -395,7 +399,7 @@ fun KycCard(
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             if (kyc.status == "Rejected" && kyc.rejectionReason.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -408,7 +412,7 @@ fun KycCard(
                         .padding(8.dp)
                 )
             }
-            
+
             // Action Buttons
             if (kyc.status == "Pending") {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -456,7 +460,7 @@ fun StatusChip(status: String) {
         "Rejected" -> Color(0xFFD32F2F) to Color.White
         else -> Color(0xFFFFA000) to Color.White
     }
-    
+
     Box(
         modifier = Modifier
             .background(backgroundColor, RoundedCornerShape(12.dp))

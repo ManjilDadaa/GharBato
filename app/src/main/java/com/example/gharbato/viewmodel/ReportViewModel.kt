@@ -57,8 +57,7 @@ class ReportViewModel(
 
     fun submitReport(report: ReportedProperty) {
         viewModelScope.launch {
-            _uiState.value =
-                _uiState.value.copy(isLoading = true, error = null, reportSubmitted = false)
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null, reportSubmitted = false)
             try {
                 val result = repository.reportProperty(report)
 
@@ -85,18 +84,14 @@ class ReportViewModel(
         }
     }
 
-    fun deleteReportedProperty(
-        reportId: String,
-        propertyId: Int,
-        ownerId: String,
-        propertyTitle: String
-    ) {
+    fun deleteReportedProperty(reportId: String, propertyId: Int, ownerId: String, propertyTitle: String) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val result = repository.deleteReportedProperty(reportId, propertyId)
 
                 if (result.isSuccess) {
+                    // Notify the property owner that their property was removed
                     userRepo.createNotification(
                         userId = ownerId,
                         title = "⚠️ Property Removed",

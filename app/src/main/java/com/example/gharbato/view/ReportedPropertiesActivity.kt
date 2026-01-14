@@ -49,30 +49,33 @@ class ReportedPropertiesActivity : ComponentActivity() {
 
             ReportedPropertiesScreen(
                 uiState = uiState,
-                onDeleteProperty = { reportId, propertyId ->
-                    reportViewModel.deleteReportedProperty(reportId, propertyId)
+                onDeleteProperty = { reportId, propertyId, ownerId, title ->
+                    reportViewModel.deleteReportedProperty(
+                        reportId = reportId,
+                        propertyId = propertyId,
+                        ownerId = ownerId,
+                        propertyTitle = title
+                    )
                 },
                 onKeepProperty = { reportId ->
                     reportViewModel.keepProperty(reportId)
                 },
                 onBack = {
-                    val intent = Intent(this, AdminActivity::class.java)
-                    startActivity(intent)
+                    startActivity(Intent(this, AdminActivity::class.java))
                     finish()
                 }
             )
 
-            // Show success/error messages
             LaunchedEffect(uiState.successMessage) {
-                uiState.successMessage?.let { message ->
-                    Toast.makeText(this@ReportedPropertiesActivity, message, Toast.LENGTH_SHORT).show()
+                uiState.successMessage?.let {
+                    Toast.makeText(this@ReportedPropertiesActivity, it, Toast.LENGTH_SHORT).show()
                     reportViewModel.clearMessages()
                 }
             }
 
             LaunchedEffect(uiState.error) {
-                uiState.error?.let { error ->
-                    Toast.makeText(this@ReportedPropertiesActivity, error, Toast.LENGTH_SHORT).show()
+                uiState.error?.let {
+                    Toast.makeText(this@ReportedPropertiesActivity, it, Toast.LENGTH_SHORT).show()
                     reportViewModel.clearMessages()
                 }
             }
@@ -84,7 +87,7 @@ class ReportedPropertiesActivity : ComponentActivity() {
 @Composable
 fun ReportedPropertiesScreen(
     uiState: com.example.gharbato.viewmodel.ReportUiState,
-    onDeleteProperty: (String, Int) -> Unit,
+    onDeleteProperty: (String, Int, String, String) -> Unit,
     onKeepProperty: (String) -> Unit,
     onBack: () -> Unit
 ) {
@@ -110,92 +113,48 @@ fun ReportedPropertiesScreen(
                 .padding(padding)
         ) {
             if (uiState.isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                CircularProgressIndicator(Modifier.align(Alignment.Center))
             } else if (uiState.reportedProperties.isEmpty()) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxSize().padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "No Reports",
+                        contentDescription = null,
                         modifier = Modifier.size(80.dp),
                         tint = Color(0xFF4CAF50)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No Reported Properties",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "All listings are in good standing",
-                        fontSize = 14.sp,
-                        color = Gray
-                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text("No Reported Properties", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("All listings are in good standing", fontSize = 14.sp, color = Gray)
                 }
             } else {
                 LazyColumn(
-                    Modifier
-                        .fillMaxSize()
-                        .background(Color(0xFFF5F5F5)),
+                    modifier = Modifier.fillMaxSize().background(Color(0xFFF5F5F5)),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(
-                                containerColor = Color(0xFFFFF3E0)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Report,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFF9800),
-                                    modifier = Modifier.size(32.dp)
-                                )
-
-                                Spacer(Modifier.width(12.dp))
-
-                                Column {
-                                    Text(
-                                        text = "Reported Properties",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = "${uiState.reportedProperties.size} properties flagged",
-                                        fontSize = 13.sp,
-                                        color = Gray
-                                    )
-                                }
-                            }
-                        }
-                    }
-
                     items(uiState.reportedProperties) { report ->
                         ReportedPropertyCard(
                             report = report,
-                            onDelete = { onDeleteProperty(report.reportId, report.propertyId) },
+                            onDelete = {
+                                onDeleteProperty(
+                                    report.reportId,
+                                    report.propertyId,
+                                    report.ownerId,
+                                    report.propertyTitle
+                                )
+                            },
                             onKeep = { onKeepProperty(report.reportId) },
                             onViewDetails = {
-                                // Navigate to property details
-                                val intent = Intent(context, PropertyDetailActivity::class.java).apply {
-                                    putExtra("propertyId", report.propertyId)
-                                }
-                                context.startActivity(intent)
+                                context.startActivity(
+                                    Intent(context, PropertyDetailActivity::class.java).apply {
+                                        putExtra("propertyId", report.propertyId)
+                                    }
+                                )
                             }
                         )
                     }
@@ -215,13 +174,12 @@ fun ReportedPropertyCard(
     var showConfirmDialog by remember { mutableStateOf(false) }
     var actionType by remember { mutableStateOf("") }
 
-    // Confirmation Dialog
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showConfirmDialog = false },
             title = {
                 Text(
-                    text = if (actionType == "delete") "Delete Property?" else "Keep Property?",
+                    if (actionType == "delete") "Delete Property?" else "Keep Property?",
                     fontWeight = FontWeight.Bold
                 )
             },
@@ -257,228 +215,53 @@ fun ReportedPropertyCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column {
-            // Property Image
             AsyncImage(
                 model = report.propertyImage.ifEmpty { "https://via.placeholder.com/600x400?text=No+Image" },
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
+                modifier = Modifier.fillMaxWidth().height(180.dp),
                 contentScale = ContentScale.Crop
             )
 
-            Column(modifier = Modifier.padding(16.dp)) {
-                // Property Info
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = report.propertyTitle,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = Gray
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "By ${report.ownerName}",
-                                fontSize = 13.sp,
-                                color = Gray
-                            )
-                        }
-                    }
+            Column(Modifier.padding(16.dp)) {
+                Text(report.propertyTitle, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(4.dp))
+                Text("By ${report.ownerName}", fontSize = 13.sp, color = Gray)
 
-                    Surface(
-                        color = Color(0xFFFF9800).copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(8.dp)
+                Spacer(Modifier.height(16.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = {
+                            actionType = "keep"
+                            showConfirmDialog = true
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(
-                                horizontal = 12.dp,
-                                vertical = 6.dp
-                            ),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Warning,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = Color(0xFFFF9800)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Reported",
-                                color = Color(0xFFFF9800),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text("Keep")
                     }
-                }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Report Details
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFFFF3E0),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "Reason:",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE65100)
-                            )
-                            Text(
-                                text = formatDate(report.reportedAt),
-                                fontSize = 11.sp,
-                                color = Gray
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = report.reportReason,
-                            fontSize = 14.sp,
-                            color = Color.Black,
-                            fontWeight = FontWeight.Medium
-                        )
-
-                        if (report.reportDetails.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Details:",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE65100)
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = report.reportDetails,
-                                fontSize = 13.sp,
-                                color = Gray
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Reported by: ${report.reportedByName}",
-                            fontSize = 11.sp,
-                            color = Gray
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Action Buttons - Professional Layout
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // View Details Button (Full Width)
-                    OutlinedButton(
-                        onClick = onViewDetails,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = LightBlue
-                        )
+                    Button(
+                        onClick = {
+                            actionType = "delete"
+                            showConfirmDialog = true
+                        },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Visibility,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "View Property Details",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    // Keep and Remove Buttons (Equal Width)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Button(
-                            onClick = {
-                                actionType = "keep"
-                                showConfirmDialog = true
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4CAF50)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Keep",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        Button(
-                            onClick = {
-                                actionType = "delete"
-                                showConfirmDialog = true
-                            },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFD32F2F)
-                            ),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Remove",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        Text("Remove")
                     }
                 }
             }
         }
     }
+}
+
+fun Long.formatDate(): String {
+    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+    return sdf.format(Date(this))
 }

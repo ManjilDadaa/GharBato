@@ -17,12 +17,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import com.example.gharbato.model.ReportUser
+import com.example.gharbato.model.UserModel
 import coil.request.ImageRequest
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,12 +36,11 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.ReportedRed
+
 import android.widget.Toast
 import androidx.compose.foundation.clickable
-import com.example.gharbato.repository.ReportUserRepoImpl
-import com.example.gharbato.repository.UserRepoImpl
-import com.example.gharbato.viewmodel.ReportedUser
-import com.example.gharbato.viewmodel.ReportedUsersViewModel
+import androidx.compose.foundation.selection.selectable
+import com.example.gharbato.repository.UserRepoImpl // ADD THIS IMPORT
 
 class ReportedUsersActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,30 +52,156 @@ class ReportedUsersActivity : ComponentActivity() {
     }
 }
 
+data class ReportedUser(
+    val userId: String,
+    val userName: String,
+    val userEmail: String,
+    val userImage: String,
+    val reportCount: Int,
+    val reportReason: String,
+    val accountStatus: String
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportedUsersScreen() {
+    var users by remember { mutableStateOf<List<ReportedUser>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var userToSuspend by remember { mutableStateOf<ReportedUser?>(null) }
+
     val context = LocalContext.current
     val activity = context as Activity
-    val viewModel = remember { ReportedUsersViewModel(ReportUserRepoImpl(), UserRepoImpl()) }
-    
-    val users by viewModel.reportedUsers.observeAsState(emptyList())
-    val isLoading by viewModel.isLoading.observeAsState(true)
-    var userToSuspend by remember { mutableStateOf<ReportedUser?>(null) }
-    
+
+    // ADD THIS: Initialize UserRepo for notifications
+    val userRepo = remember { UserRepoImpl() }
+
     LaunchedEffect(Unit) {
-        viewModel.loadReportedUsers()
+        val database = FirebaseDatabase.getInstance()
+        val reportsRef = database.getReference("user_reports")
+        val usersRef = database.getReference("Users")
+
+        reportsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val reportsMap = mutableMapOf<String, MutableList<ReportUser>>()
+
+                for (child in snapshot.children) {
+                    val report = child.getValue(ReportUser::class.java)
+                    if (report != null && report.reportedUserId.isNotEmpty()) {
+                        if (!reportsMap.containsKey(report.reportedUserId)) {
+                            reportsMap[report.reportedUserId] = mutableListOf()
+                        }
+                        reportsMap[report.reportedUserId]?.add(report)
+                    }
+                }
+
+                val reportedUsersList = mutableListOf<ReportedUser>()
+                var processedCount = 0
+                val totalUsersToFetch = reportsMap.size
+
+                if (totalUsersToFetch == 0) {
+                    users = emptyList()
+                    isLoading = false
+                    return
+                }
+
+                for ((userId, userReports) in reportsMap) {
+                    usersRef.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(userSnapshot: DataSnapshot) {
+                            val userModel = userSnapshot.getValue(UserModel::class.java)
+                            val userName = userModel?.fullName ?: "Unknown User"
+                            val userEmail = userModel?.email ?: "No Email"
+                            val userImage = userModel?.profileImageUrl ?: ""
+
+                            val latestReport = userReports.maxByOrNull { it.timestamp }
+                            val reason = latestReport?.reason ?: "No reason provided"
+
+                            val isSuspended = userModel?.isSuspended ?: false
+                            val accountStatus = if (isSuspended) "Suspended" else "Active"
+
+                            reportedUsersList.add(
+                                ReportedUser(
+                                    userId = userId,
+                                    userName = userName,
+                                    userEmail = userEmail,
+                                    userImage = userImage,
+                                    reportCount = userReports.size,
+                                    reportReason = reason,
+                                    accountStatus = accountStatus
+                                )
+                            )
+
+                            processedCount++
+                            if (processedCount == totalUsersToFetch) {
+                                users = reportedUsersList
+                                isLoading = false
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            processedCount++
+                            if (processedCount == totalUsersToFetch) {
+                                users = reportedUsersList
+                                isLoading = false
+                            }
+                        }
+                    })
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                isLoading = false
+            }
+        })
     }
 
+    // UPDATED SUSPEND DIALOG WITH NOTIFICATION
     if (userToSuspend != null) {
         SuspendUserDialog(
             user = userToSuspend!!,
             onDismiss = { userToSuspend = null },
             onSuspend = { duration, reason ->
-                viewModel.suspendUser(userToSuspend!!.userId, duration, reason) { success, message ->
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    if (success) userToSuspend = null
-                }
+                val userId = userToSuspend!!.userId
+                val userName = userToSuspend!!.userName
+                val suspendedUntil = System.currentTimeMillis() + duration
+
+                val updates = mapOf(
+                    "isSuspended" to true,
+                    "suspendedUntil" to suspendedUntil,
+                    "suspensionReason" to reason
+                )
+
+                FirebaseDatabase.getInstance().getReference("Users").child(userId)
+                    .updateChildren(updates)
+                    .addOnSuccessListener {
+                        // ADD THIS: Send notification to suspended user
+                        val durationText = when {
+                            duration >= 36500L * 24 * 60 * 60 * 1000 -> "permanently"
+                            duration >= 30L * 24 * 60 * 60 * 1000 -> "for 1 month"
+                            duration >= 7L * 24 * 60 * 60 * 1000 -> "for 1 week"
+                            duration >= 3L * 24 * 60 * 60 * 1000 -> "for 3 days"
+                            else -> "for 24 hours"
+                        }
+
+                        userRepo.createNotification(
+                            userId = userId,
+                            title = "⛔ Account Suspended",
+                            message = "Your account has been suspended $durationText. Reason: $reason. Please contact support if you believe this is a mistake.",
+                            type = "system",
+                            imageUrl = "",
+                            actionData = ""
+                        ) { success, msg ->
+                            if (success) {
+                                Toast.makeText(context, "User suspended and notified", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "User suspended (notification failed)", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        userToSuspend = null
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(context, "Failed to suspend user", Toast.LENGTH_SHORT).show()
+                    }
             }
         )
     }
@@ -258,9 +388,9 @@ fun ReportedUsersScreen() {
                             }
 
                             Button(
-                                onClick = { 
+                                onClick = {
                                     if (user.accountStatus != "Suspended") {
-                                        userToSuspend = user 
+                                        userToSuspend = user
                                     }
                                 },
                                 modifier = Modifier.weight(1f),
@@ -285,8 +415,8 @@ fun SuspendUserDialog(
     onDismiss: () -> Unit,
     onSuspend: (Long, String) -> Unit
 ) {
-    var selectedDuration by remember { mutableStateOf(1) } // Default 1 day
-    
+    var selectedDuration by remember { mutableStateOf(1) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Suspend ${user.userName}") },
@@ -294,15 +424,15 @@ fun SuspendUserDialog(
             Column {
                 Text("Select suspension duration:")
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 val options = listOf(
                     "24 Hours" to 1,
                     "3 Days" to 3,
                     "1 Week" to 7,
                     "1 Month" to 30,
-                    "Permanent" to 36500 // ~100 years
+                    "Permanent" to 36500
                 )
-                
+
                 options.forEach { (label, days) ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
