@@ -75,8 +75,9 @@ fun TrustAndVerificationScreen() {
     var submittedFrontUrl by remember { mutableStateOf<String?>(null) }
     var submittedBackUrl by remember { mutableStateOf<String?>(null) }
     var submittedDocType by remember { mutableStateOf<String?>(null) }
+    var rejectionReason by remember { mutableStateOf<String?>(null) } // NEW: Store rejection reason
 
-    // Load KYC data on start - FIXED TO USE getUserKycStatus
+    // Load KYC data on start
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
         val userId = userViewModel.getCurrentUserId()
@@ -90,9 +91,10 @@ fun TrustAndVerificationScreen() {
                     submittedDocType = kycModel.documentType
                     submittedFrontUrl = kycModel.frontImageUrl
                     submittedBackUrl = kycModel.backImageUrl
+                    rejectionReason = kycModel.rejectionReason // NEW: Get rejection reason
 
                     trustScore = when (kycModel.status) {
-                        "Verified" -> 70
+                        "Approved" -> 70  // FIXED: Changed from "Verified" to "Approved"
                         "Pending" -> 50
                         "Rejected" -> 30
                         else -> 30
@@ -210,20 +212,45 @@ fun TrustAndVerificationScreen() {
                 TrustSectionHeader("KYC Verification")
                 KycStatusCard(kycStatus)
 
-                if (hasSubmittedKyc) {
-                    // Show submitted documents (read-only)
+                // UPDATED LOGIC: Show upload form if never submitted OR if rejected
+                if (!hasSubmittedKyc || kycStatus == "Rejected") {
+                    // Show upload form
                     Spacer(modifier = Modifier.height(16.dp))
-                    TrustSectionHeader("Submitted Documents")
-                    SubmittedDocumentsCard(
-                        documentType = submittedDocType ?: "Unknown",
-                        frontImageUrl = submittedFrontUrl,
-                        backImageUrl = submittedBackUrl,
-                        status = kycStatus
-                    )
-                } else {
-                    // Show upload form only if user has never submitted KYC
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TrustSectionHeader("Verify your KYC")
+
+                    // NEW: Show rejection reason if rejected
+                    if (kycStatus == "Rejected" && rejectionReason != null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 8.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFFFF3CD))
+                                .padding(16.dp)
+                        ) {
+                            Column {
+                                Text(
+                                    "⚠️ Previous KYC was rejected",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color(0xFF856404)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Reason: $rejectionReason",
+                                    fontSize = 13.sp,
+                                    color = Color(0xFF856404)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Please review the reason and resubmit your documents.",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF856404)
+                                )
+                            }
+                        }
+                    }
+
+                    TrustSectionHeader(if (kycStatus == "Rejected") "Resubmit KYC Verification" else "Verify your KYC")
                     KycUploadCard(
                         selectedDoc = selectedDoc,
                         onDocChange = { selectedDoc = it },
@@ -249,6 +276,7 @@ fun TrustAndVerificationScreen() {
                                                 submittedDocType = kycModel.documentType
                                                 submittedFrontUrl = kycModel.frontImageUrl
                                                 submittedBackUrl = kycModel.backImageUrl
+                                                rejectionReason = null // Clear rejection reason
                                                 trustScore = 50
                                                 showSuccessDialog = true
                                             }
@@ -272,6 +300,16 @@ fun TrustAndVerificationScreen() {
                         backImageUri = backImageUri,
                         onFrontClick = { frontPicker.launch("image/*") },
                         onBackClick = { backPicker.launch("image/*") }
+                    )
+                } else {
+                    // Show submitted documents (read-only for Pending or Approved status)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TrustSectionHeader("Submitted Documents")
+                    SubmittedDocumentsCard(
+                        documentType = submittedDocType ?: "Unknown",
+                        frontImageUrl = submittedFrontUrl,
+                        backImageUrl = submittedBackUrl,
+                        status = kycStatus
                     )
                 }
 
@@ -321,7 +359,7 @@ fun KycStatusCard(status: String) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = when (status) {
-                        "Verified" -> Color(0xFF4CAF50)
+                        "Approved" -> Color(0xFF4CAF50)
                         "Pending" -> Color(0xFFFF9800)
                         "Rejected" -> Color(0xFFD32F2F)
                         else -> Color(0xFFD32F2F)
@@ -343,7 +381,7 @@ fun KycStatusCard(status: String) {
                     .clip(CircleShape)
                     .background(
                         when (status) {
-                            "Verified" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
+                            "Approved" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
                             "Pending" -> Color(0xFFFF9800).copy(alpha = 0.1f)
                             else -> Color(0xFFD32F2F).copy(alpha = 0.1f)
                         }
@@ -352,13 +390,13 @@ fun KycStatusCard(status: String) {
             ) {
                 Text(
                     when (status) {
-                        "Verified" -> "✓"
+                        "Approved" -> "✓"
                         "Pending" -> "⏱"
                         else -> "✗"
                     },
                     fontSize = 24.sp,
                     color = when (status) {
-                        "Verified" -> Color(0xFF4CAF50)
+                        "Approved" -> Color(0xFF4CAF50)
                         "Pending" -> Color(0xFFFF9800)
                         else -> Color(0xFFD32F2F)
                     }
@@ -415,7 +453,7 @@ fun SubmittedDocumentsCard(
                     .background(
                         when (status) {
                             "Pending" -> Color(0xFFFFF3CD)
-                            "Verified" -> Color(0xFFD4EDDA)
+                            "Approved" -> Color(0xFFD4EDDA)
                             "Rejected" -> Color(0xFFF8D7DA)
                             else -> Color(0xFFF8F9FB)
                         }
@@ -425,14 +463,14 @@ fun SubmittedDocumentsCard(
                 Text(
                     when (status) {
                         "Pending" -> "ℹ️ Your documents are under review. You'll be notified once verification is complete."
-                        "Verified" -> "✅ Your KYC has been verified successfully!"
+                        "Approved" -> "✅ Your KYC has been verified successfully!"
                         "Rejected" -> "❌ Your KYC was rejected. Please contact support for more information."
                         else -> "ℹ️ Document status unknown."
                     },
                     fontSize = 12.sp,
                     color = when (status) {
                         "Pending" -> Color(0xFF856404)
-                        "Verified" -> Color(0xFF155724)
+                        "Approved" -> Color(0xFF155724)
                         "Rejected" -> Color(0xFF721C24)
                         else -> Color.Gray
                     },
@@ -695,7 +733,7 @@ fun TrustMeterCard(score: Int, kycStatus: String) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TrustItem("KYC Verified", 40, kycStatus == "Verified")
+            TrustItem("KYC Verified", 40, kycStatus == "Approved")
             TrustItem("No Reports", 20, true)
             TrustItem("Email Verified", 10, false)
             TrustItem("Profile Photo", 15, false)
