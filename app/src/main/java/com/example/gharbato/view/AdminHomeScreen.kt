@@ -4,20 +4,39 @@ import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,18 +55,18 @@ import com.example.gharbato.viewmodel.ReportViewModelFactory
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.viewmodel.PendingPropertiesViewModel
 import com.example.gharbato.viewmodel.PendingPropertiesViewModelFactory
-import androidx.compose.runtime.livedata.observeAsState
 import com.example.gharbato.repository.ReportUserRepoImpl
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.viewmodel.ReportedUsersViewModel
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.LaunchedEffect
+import com.google.firebase.auth.FirebaseAuth
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminHomeScreen() {
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
-    // ViewModels for real-time data
+    // ViewModels for real-time data - optimized initialization
     val reportViewModel: ReportViewModel = viewModel(
         factory = ReportViewModelFactory()
     )
@@ -56,18 +75,84 @@ fun AdminHomeScreen() {
         factory = PendingPropertiesViewModelFactory()
     )
 
-    val reportedUsersViewModel = remember { ReportedUsersViewModel(ReportUserRepoImpl(), UserRepoImpl()) }
-    
+    val reportedUsersViewModel: ReportedUsersViewModel = viewModel(
+        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                @Suppress("UNCHECKED_CAST")
+                return ReportedUsersViewModel(ReportUserRepoImpl(), UserRepoImpl()) as T
+            }
+        }
+    )
+
     val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
     val pendingUiState by pendingViewModel.uiState.collectAsStateWithLifecycle()
     val reportedUsers by reportedUsersViewModel.reportedUsers.observeAsState(emptyList())
     val reportedUsersLoading by reportedUsersViewModel.isLoading.observeAsState(true)
 
+    // Load reported users only once
     LaunchedEffect(Unit) {
         reportedUsersViewModel.loadReportedUsers()
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        "Admin Dashboard",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    IconButton(onClick = { showMenu = !showMenu }) {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = "Menu",
+                            tint = Color.White
+                        )
+                    }
+
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Outlined.ExitToApp,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(22.dp),
+                                        tint = Color.Red
+                                    )
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(
+                                        "Logout",
+                                        color = Color.Red,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 15.sp
+                                    )
+                                }
+                            },
+                            onClick = {
+                                showMenu = false
+                                FirebaseAuth.getInstance().signOut()
+                                val intent = Intent(context, LoginActivity::class.java)
+                                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = LightBlue,
+                    titleContentColor = Color.White
+                )
+            )
+        },
         containerColor = Color.White
     ) { padding ->
         Column(
@@ -215,7 +300,7 @@ fun AdminHomeScreen() {
                             fontSize = 18.sp
                         )
                     )
-                    
+
                     if (reportedUsersLoading) {
                         CircularProgressIndicator(
                             color = Color.White,
@@ -230,7 +315,7 @@ fun AdminHomeScreen() {
                             )
                         )
                     }
-                    
+
                     Text(
                         "Tap to review",
                         style = TextStyle(
