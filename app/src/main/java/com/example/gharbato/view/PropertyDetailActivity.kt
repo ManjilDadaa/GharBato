@@ -241,10 +241,9 @@ fun PropertyDetailScreen(
         }
     }
 
-
-
-
-    Scaffold { paddingValues ->
+    Scaffold (
+        containerColor = Color.White
+    ){ paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
