@@ -1,5 +1,7 @@
 package com.example.gharbato.model
 
+import com.google.firebase.database.PropertyName
+
 data class ChatMessage(
     val id: String = "",
     val senderId: String = "",
@@ -7,7 +9,8 @@ data class ChatMessage(
     val text: String = "",
     val imageUrl: String = "",
     val timestamp: Long = 0L,
-    val isRead: Boolean = false,
+    @get:PropertyName("isRead") @set:PropertyName("isRead")
+    var isRead: Boolean = false,
 
     // Property card data
     val propertyId: Int = 0,
