@@ -1,131 +1,250 @@
 package com.example.gharbato.repository
 
+import android.util.Log
 import com.example.gharbato.model.NearbyPlace
 import com.example.gharbato.data.model.PlaceType
 import com.example.gharbato.data.repository.NearbyPlacesRepository
 import com.google.android.gms.maps.model.LatLng
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
 import kotlin.math.*
+
 
 class NearbyPlacesRepositoryImpl : NearbyPlacesRepository {
 
-    override suspend fun getNearbyPlaces(location: LatLng): Map<PlaceType, List<NearbyPlace>> {
-        delay(300) // Simulate API call
-
-        return mapOf(
-            PlaceType.SCHOOL to generateSchools(location),
-            PlaceType.HOSPITAL to generateHospitals(location),
-            PlaceType.STORE to generateStores(location),
-            PlaceType.PARK to generateParks(location),
-            PlaceType.RESTAURANT to generateRestaurants(location),
-            PlaceType.TRANSPORT to generateTransport(location)
-        )
+    companion object {
+        private const val TAG = "NearbyPlacesRepo"
+        private const val OVERPASS_API_URL = "https://overpass-api.de/api/interpreter"
+        private const val SEARCH_RADIUS = 2000
+        private const val CACHE_DURATION_MS = 24 * 60 * 60 * 1000L
+        private const val REQUEST_TIMEOUT_MS = 8000L // 8 second timeout
     }
 
-    override suspend fun getPlacesByType(location: LatLng, type: PlaceType): List<NearbyPlace> {
-        delay(200)
-        return when (type) {
-            PlaceType.SCHOOL -> generateSchools(location)
-            PlaceType.HOSPITAL -> generateHospitals(location)
-            PlaceType.STORE -> generateStores(location)
-            PlaceType.PARK -> generateParks(location)
-            PlaceType.RESTAURANT -> generateRestaurants(location)
-            PlaceType.TRANSPORT -> generateTransport(location)
+    private val cache = mutableMapOf<String, CachedResult>()
+
+    data class CachedResult(
+        val data: List<NearbyPlace>,
+        val timestamp: Long,
+        val isRealData: Boolean
+    )
+
+    override suspend fun getNearbyPlaces(location: LatLng): Map<PlaceType, List<NearbyPlace>> {
+        return withContext(Dispatchers.IO) {
+            try {
+                val essentialTypes = listOf(
+                    PlaceType.SCHOOL,
+                    PlaceType.HOSPITAL,
+                    PlaceType.STORE
+                )
+
+                val deferredResults = essentialTypes.map { type ->
+                    async {
+                        type to getPlacesByType(location, type)
+                    }
+                }
+
+                deferredResults.awaitAll().toMap()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error fetching nearby places", e)
+                // Return fallback data
+                generateFallbackPlaces(location)
+            }
         }
     }
 
-    private fun generateSchools(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("school_1", "Sunrise Primary School", location, 0.003, 0.004, PlaceType.SCHOOL),
-            createPlace("school_2", "International Academy", location, -0.005, 0.003, PlaceType.SCHOOL),
-            createPlace("school_3", "City High School", location, 0.007, -0.002, PlaceType.SCHOOL)
-        )
+    override suspend fun getPlacesByType(location: LatLng, type: PlaceType): List<NearbyPlace> {
+        return withContext(Dispatchers.IO) {
+            val cacheKey = "${location.latitude},${location.longitude}_$type"
+
+            // Check cache
+            cache[cacheKey]?.let { cached ->
+                val age = System.currentTimeMillis() - cached.timestamp
+                if (age < CACHE_DURATION_MS) {
+                    Log.d(TAG, "Cache hit for $type (${if(cached.isRealData) "REAL" else "FALLBACK"})")
+                    return@withContext cached.data
+                }
+            }
+
+            // Try to fetch from OSM with timeout
+            val places = withTimeoutOrNull(REQUEST_TIMEOUT_MS) {
+                try {
+                    fetchPlacesFromOSM(location, type)
+                } catch (e: Exception) {
+                    Log.e(TAG, "OSM fetch failed for $type", e)
+                    null
+                }
+            }
+
+            if (!places.isNullOrEmpty()) {
+                // Success! Cache real data
+                cache[cacheKey] = CachedResult(places, System.currentTimeMillis(), true)
+                Log.d(TAG, "✓ Fetched ${places.size} REAL ${type.getDisplayName()} from OSM")
+                places
+            } else {
+                // OSM failed or timed out, use fallback
+                Log.w(TAG, "⚠ OSM unavailable for $type, using fallback")
+                val fallback = generateFallbackForType(location, type)
+                cache[cacheKey] = CachedResult(fallback, System.currentTimeMillis(), false)
+                fallback
+            }
+        }
     }
 
-    private fun generateHospitals(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("hospital_1", "City Hospital", location, 0.008, -0.004, PlaceType.HOSPITAL),
-            createPlace("hospital_2", "Medical Clinic", location, -0.004, 0.006, PlaceType.HOSPITAL),
-            createPlace("hospital_3", "Health Center", location, 0.006, 0.005, PlaceType.HOSPITAL)
-        )
+    private fun fetchPlacesFromOSM(location: LatLng, type: PlaceType): List<NearbyPlace> {
+        var connection: HttpURLConnection? = null
+
+        try {
+            val query = buildOverpassQuery(location, type)
+            val url = URL(OVERPASS_API_URL)
+
+            connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "POST"
+            connection.connectTimeout = 6000
+            connection.readTimeout = 6000
+            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+            connection.setRequestProperty("User-Agent", "GharbatoPropertyApp/1.0")
+            connection.doOutput = true
+
+            connection.outputStream.use { os ->
+                os.write("data=${URLEncoder.encode(query, "UTF-8")}".toByteArray())
+            }
+
+            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                return parseOverpassResponse(response, location, type)
+            }
+
+            return emptyList()
+        } finally {
+            connection?.disconnect()
+        }
     }
 
-    private fun generateStores(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("store_1", "Metro Supermarket", location, -0.002, -0.003, PlaceType.STORE),
-            createPlace("store_2", "Shopping Mall", location, 0.005, -0.005, PlaceType.STORE),
-            createPlace("store_3", "Corner Store", location, 0.001, 0.002, PlaceType.STORE),
-            createPlace("store_4", "Grocery Market", location, -0.003, 0.004, PlaceType.STORE)
-        )
+    private fun buildOverpassQuery(location: LatLng, type: PlaceType): String {
+        val osmTags = getOSMTags(type)
+        return """
+            [out:json][timeout:5];
+            (
+              ${osmTags.joinToString("\n              ") { tag ->
+            "node[\"$tag\"](around:$SEARCH_RADIUS,${location.latitude},${location.longitude});"
+        }}
+            );
+            out body;
+        """.trimIndent()
     }
 
-    private fun generateParks(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("park_1", "Central Park", location, -0.006, 0.004, PlaceType.PARK),
-            createPlace("park_2", "Community Garden", location, 0.004, 0.003, PlaceType.PARK)
-        )
+    private fun getOSMTags(type: PlaceType): List<String> {
+        return when (type) {
+            PlaceType.SCHOOL -> listOf("amenity=school", "amenity=college")
+            PlaceType.HOSPITAL -> listOf("amenity=hospital", "amenity=clinic")
+            PlaceType.STORE -> listOf("shop=supermarket", "shop=convenience")
+            PlaceType.PARK -> listOf("leisure=park")
+            PlaceType.RESTAURANT -> listOf("amenity=restaurant", "amenity=cafe")
+            PlaceType.TRANSPORT -> listOf("highway=bus_stop")
+        }
     }
 
-    private fun generateRestaurants(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("restaurant_1", "The Golden Spoon", location, 0.002, -0.002, PlaceType.RESTAURANT),
-            createPlace("restaurant_2", "Pizza Corner", location, -0.003, -0.004, PlaceType.RESTAURANT),
-            createPlace("restaurant_3", "Cafe Delight", location, 0.001, 0.003, PlaceType.RESTAURANT),
-            createPlace("restaurant_4", "Local Diner", location, 0.004, -0.003, PlaceType.RESTAURANT)
-        )
-    }
-
-    private fun generateTransport(location: LatLng): List<NearbyPlace> {
-        return listOf(
-            createPlace("transport_1", "Bus Station", location, -0.005, -0.002, PlaceType.TRANSPORT),
-            createPlace("transport_2", "Metro Station", location, 0.006, 0.005, PlaceType.TRANSPORT),
-            createPlace("transport_3", "Taxi Stand", location, 0.002, 0.004, PlaceType.TRANSPORT)
-        )
-    }
-
-    private fun createPlace(
-        id: String,
-        name: String,
+    private fun parseOverpassResponse(
+        jsonResponse: String,
         baseLocation: LatLng,
-        latOffset: Double,
-        lngOffset: Double,
         type: PlaceType
-    ): NearbyPlace {
-        val location = LatLng(
-            baseLocation.latitude + latOffset,
-            baseLocation.longitude + lngOffset
-        )
-        val distance = calculateDistance(baseLocation, location)
+    ): List<NearbyPlace> {
+        try {
+            val jsonObject = JSONObject(jsonResponse)
+            val elements = jsonObject.getJSONArray("elements")
+            val places = mutableListOf<NearbyPlace>()
 
-        return NearbyPlace(
-            id = id,
-            name = name,
-            location = location,
-            type = type,
-            distance = distance,
-            formattedDistance = formatDistance(distance)
+            for (i in 0 until elements.length()) {
+                val element = elements.getJSONObject(i)
+                val lat = element.optDouble("lat", 0.0)
+                val lon = element.optDouble("lon", 0.0)
+
+                if (lat == 0.0 || lon == 0.0) continue
+
+                val location = LatLng(lat, lon)
+                val tags = element.optJSONObject("tags") ?: continue
+                val name = tags.optString("name", null) ?: continue
+
+                places.add(
+                    NearbyPlace(
+                        id = element.optLong("id", 0).toString(),
+                        name = name,
+                        location = location,
+                        type = type,
+                        distance = calculateDistance(baseLocation, location),
+                        formattedDistance = formatDistance(calculateDistance(baseLocation, location))
+                    )
+                )
+            }
+
+            return places.sortedBy { it.distance }.take(5)
+        } catch (e: Exception) {
+            Log.e(TAG, "Parse error", e)
+            return emptyList()
+        }
+    }
+
+    // Fallback: Generate reasonable estimates based on location
+    private fun generateFallbackPlaces(location: LatLng): Map<PlaceType, List<NearbyPlace>> {
+        return mapOf(
+            PlaceType.SCHOOL to generateFallbackForType(location, PlaceType.SCHOOL),
+            PlaceType.HOSPITAL to generateFallbackForType(location, PlaceType.HOSPITAL),
+            PlaceType.STORE to generateFallbackForType(location, PlaceType.STORE)
         )
+    }
+
+    private fun generateFallbackForType(location: LatLng, type: PlaceType): List<NearbyPlace> {
+        val names = when (type) {
+            PlaceType.SCHOOL -> listOf("Local School", "Community School", "Public School")
+            PlaceType.HOSPITAL -> listOf("Medical Center", "Health Clinic", "Community Hospital")
+            PlaceType.STORE -> listOf("Local Store", "Supermarket", "Convenience Store")
+            else -> listOf("Nearby ${type.getDisplayName()}")
+        }
+
+        // Generate 3 reasonable nearby places
+        return names.take(3).mapIndexed { index, name ->
+            val offsetLat = (0.01 + index * 0.005) * if (index % 2 == 0) 1 else -1
+            val offsetLng = (0.01 + index * 0.003) * if (index % 3 == 0) 1 else -1
+            val placeLocation = LatLng(location.latitude + offsetLat, location.longitude + offsetLng)
+            val distance = calculateDistance(location, placeLocation)
+
+            NearbyPlace(
+                id = "fallback_${type}_$index",
+                name = name,
+                location = placeLocation,
+                type = type,
+                distance = distance,
+                formattedDistance = formatDistance(distance)
+            )
+        }.sortedBy { it.distance }
     }
 
     private fun calculateDistance(start: LatLng, end: LatLng): Double {
-        val earthRadius = 6371000.0 // meters
-
+        val earthRadius = 6371000.0
         val dLat = Math.toRadians(end.latitude - start.latitude)
         val dLng = Math.toRadians(end.longitude - start.longitude)
-
         val a = sin(dLat / 2) * sin(dLat / 2) +
                 cos(Math.toRadians(start.latitude)) * cos(Math.toRadians(end.latitude)) *
                 sin(dLng / 2) * sin(dLng / 2)
-
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
         return earthRadius * c
     }
 
     private fun formatDistance(distanceInMeters: Double): String {
         return when {
-            distanceInMeters < 1000 -> "${distanceInMeters.toInt()}m"
-            else -> String.format("%.1fkm", distanceInMeters / 1000)
+            distanceInMeters < 1000 -> "${distanceInMeters.toInt()} m"
+            else -> String.format("%.1f km", distanceInMeters / 1000)
         }
+    }
+
+    fun clearCache() {
+        cache.clear()
     }
 }
