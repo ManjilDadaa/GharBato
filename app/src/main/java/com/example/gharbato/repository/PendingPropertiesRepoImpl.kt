@@ -11,11 +11,16 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 class PendingPropertiesRepoImpl : PendingPropertiesRepo {
     private val TAG = "PendingPropertiesRepo"
 
-    private val ref = FirebaseDatabase.getInstance().getReference("Property")
+    private val propertyRef = FirebaseDatabase.getInstance().getReference("Property")
+    private val usersRef = FirebaseDatabase.getInstance().getReference("Users")
 
     override fun getPendingProperties(): Flow<List<PropertyModel>> = callbackFlow {
         val listener = object : ValueEventListener {
@@ -23,7 +28,19 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
                 val properties = snapshot.children.mapNotNull {
                     it.getValue(PropertyModel::class.java)
                 }.filter { it.status == PropertyStatus.PENDING }
-                trySend(properties)
+
+                Log.d(TAG, "Found ${properties.size} pending properties")
+
+                // Launch coroutine to fetch owner names
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    try {
+                        val propertiesWithOwners = fetchOwnerNamesForProperties(properties)
+                        trySend(propertiesWithOwners)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching owner names: ${e.message}")
+                        trySend(properties) // Send properties anyway
+                    }
+                }
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -32,13 +49,60 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
             }
         }
 
-        ref.addValueEventListener(listener)
-        awaitClose { ref.removeEventListener(listener) }
+        propertyRef.addValueEventListener(listener)
+        awaitClose { propertyRef.removeEventListener(listener) }
+    }
+
+    private suspend fun fetchOwnerNamesForProperties(
+        properties: List<PropertyModel>
+    ): List<PropertyModel> = coroutineScope {
+        if (properties.isEmpty()) {
+            return@coroutineScope emptyList()
+        }
+
+        properties.map { property ->
+            async {
+                if (property.ownerId.isNotEmpty()) {
+                    try {
+                        val userSnapshot = usersRef.child(property.ownerId).get().await()
+
+                        if (userSnapshot.exists()) {
+                            val ownerName = userSnapshot.child("name").getValue(String::class.java)
+                                ?: userSnapshot.child("userName").getValue(String::class.java)
+                                ?: userSnapshot.child("fullName").getValue(String::class.java)
+                                ?: "Unknown User"
+
+                            val ownerEmail = userSnapshot.child("email").getValue(String::class.java) ?: ""
+                            val ownerImageUrl = userSnapshot.child("imageUrl").getValue(String::class.java)
+                                ?: userSnapshot.child("profileImage").getValue(String::class.java)
+                                ?: ""
+
+                            Log.d(TAG, "Fetched owner name: $ownerName for property ${property.id}")
+
+                            property.copy(
+                                ownerName = ownerName,
+                                ownerEmail = ownerEmail,
+                                ownerImageUrl = ownerImageUrl
+                            )
+                        } else {
+                            Log.w(TAG, "User not found for ownerId: ${property.ownerId}")
+                            property.copy(ownerName = "Unknown User")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error fetching owner for property ${property.id}: ${e.message}")
+                        property.copy(ownerName = "Unknown User")
+                    }
+                } else {
+                    Log.w(TAG, "Property ${property.id} has empty ownerId")
+                    property.copy(ownerName = "No Owner ID")
+                }
+            }
+        }.awaitAll()
     }
 
     override suspend fun approveProperty(propertyId: Int): Result<Boolean> {
         return try {
-            val propertyQuery = ref.orderByChild("id").equalTo(propertyId.toDouble())
+            val propertyQuery = propertyRef.orderByChild("id").equalTo(propertyId.toDouble())
             val snapshot = propertyQuery.get().await()
 
             if (snapshot.exists()) {
@@ -57,7 +121,7 @@ class PendingPropertiesRepoImpl : PendingPropertiesRepo {
 
     override suspend fun rejectProperty(propertyId: Int): Result<Boolean> {
         return try {
-            val propertyQuery = ref.orderByChild("id").equalTo(propertyId.toDouble())
+            val propertyQuery = propertyRef.orderByChild("id").equalTo(propertyId.toDouble())
             val snapshot = propertyQuery.get().await()
 
             if (snapshot.exists()) {
