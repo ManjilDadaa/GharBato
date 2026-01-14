@@ -673,7 +673,6 @@ class MessageRepositoryImpl : MessageRepository {
         val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
         val currentUserName = auth.currentUser?.email ?: "Me"
 
-        // Create chat session
         val session = createChatSession(context, otherUserId)
 
         val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
@@ -681,7 +680,8 @@ class MessageRepositoryImpl : MessageRepository {
         val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
 
-        val chatMessage = hashMapOf(
+        // IMPORTANT: Use HashMap to ensure all fields are saved to Firebase
+        val chatMessage = hashMapOf<String, Any>(
             "id" to messageId,
             "senderId" to session.myUserId,
             "senderName" to session.myUserName,
@@ -689,7 +689,6 @@ class MessageRepositoryImpl : MessageRepository {
             "timestamp" to System.currentTimeMillis(),
             "isRead" to false,
             "imageUrl" to "",
-            // Property card data
             "propertyId" to property.id,
             "propertyTitle" to property.developer,
             "propertyPrice" to property.price,
@@ -699,17 +698,8 @@ class MessageRepositoryImpl : MessageRepository {
             "propertyBathrooms" to property.bathrooms
         )
 
-        Log.d(TAG, "Sending message with property card and navigating:")
-        Log.d(TAG, "Chat ID: ${session.chatId}")
-        Log.d(TAG, "Property ID: ${property.id}")
-        Log.d(TAG, "Property Title: ${property.developer}")
-        Log.d(TAG, "Property Image: $propertyImageUrl")
-
-        // Send message first
         messagesRef.child(messageId).setValue(chatMessage)
             .addOnSuccessListener {
-                Log.d(TAG, "Property card message sent successfully, navigating to chat")
-                // Small delay to ensure Firebase has processed the write
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     val intent = MessageDetailsActivity.newIntent(
                         activity = activity,
@@ -720,11 +710,11 @@ class MessageRepositoryImpl : MessageRepository {
                     activity.startActivity(intent)
                 }, 300)
             }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "Failed to send property card message", e)
+            .addOnFailureListener {
                 Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
             }
     }
+
 
 
 

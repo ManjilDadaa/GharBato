@@ -12,7 +12,6 @@ data class ChatMessage(
     @get:PropertyName("isRead") @set:PropertyName("isRead")
     var isRead: Boolean = false,
 
-    // Property card data
     val propertyId: Int = 0,
     val propertyTitle: String = "",
     val propertyPrice: String = "",
@@ -21,7 +20,6 @@ data class ChatMessage(
     val propertyBedrooms: Int = 0,
     val propertyBathrooms: Int = 0
 ) {
-    // This property checks if the message contains property card data
     val hasPropertyCard: Boolean
         get() = propertyId > 0 && propertyTitle.isNotEmpty()
 }

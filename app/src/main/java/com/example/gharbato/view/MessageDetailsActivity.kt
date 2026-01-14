@@ -516,12 +516,11 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Property Card (if exists) - Check with hasPropertyCard
+                // Property Card - CRITICAL: Check hasPropertyCard
                 if (message.hasPropertyCard) {
                     PropertyCardInMessage(
                         message = message,
                         onClick = {
-                            // Navigate to property details
                             val intent = Intent(context, PropertyDetailActivity::class.java).apply {
                                 putExtra("propertyId", message.propertyId)
                             }
@@ -534,10 +533,10 @@ fun MessageBubble(
                     }
                 }
 
-                // Image (if exists)
+                // Image
                 if (message.imageUrl.isNotEmpty()) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
+                        model = ImageRequest.Builder(context)
                             .data(message.imageUrl)
                             .crossfade(true)
                             .build(),
@@ -554,7 +553,7 @@ fun MessageBubble(
                     }
                 }
 
-                // Text message
+                // Text
                 if (message.text.isNotEmpty()) {
                     Text(
                         text = message.text,
@@ -590,7 +589,6 @@ fun PropertyCardInMessage(
         shadowElevation = 2.dp
     ) {
         Column {
-            // Property Image
             if (message.propertyImage.isNotEmpty()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -606,7 +604,6 @@ fun PropertyCardInMessage(
                     placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
                 )
             } else {
-                // Placeholder image if no image URL
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -623,10 +620,7 @@ fun PropertyCardInMessage(
                 }
             }
 
-            // Property Details
-            Column(
-                modifier = Modifier.padding(12.dp)
-            ) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = message.propertyTitle,
                     fontSize = 14.sp,
@@ -646,9 +640,7 @@ fun PropertyCardInMessage(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
@@ -666,9 +658,7 @@ fun PropertyCardInMessage(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Bed,
@@ -724,6 +714,8 @@ fun PropertyCardInMessage(
         }
     }
 }
+
+
 @Composable
 fun MessageInput(
     messageText: String,

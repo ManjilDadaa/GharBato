@@ -18,8 +18,8 @@ data class PropertyModel(
     val images: Map<String, List<String>> = emptyMap(),
     val location: String = "",
     val marketType: String = "",
-    val latitude: Double = 27.7172,
-    val longitude: Double = 85.3240,
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
     val propertyType: String = "Apartment",
     val floor: String = "3rd Floor",
     val furnishing: String = "Fully Furnished",
@@ -48,7 +48,8 @@ data class PropertyModel(
     val todayViews: Int = 0,
     val uniqueViewers: Int = 0,
     val lastViewedAt: Long = 0,
-    val viewerIds: Map<String, Long> = emptyMap()
+    val viewerIds: Map<String, Long> = emptyMap(),
+
 ) {
     @get:Exclude
     val latLng: LatLng
