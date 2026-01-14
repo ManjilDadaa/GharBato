@@ -193,7 +193,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                         val preview = chatPreviews[user.userId]
                         val lastMessage = preview?.lastMessageText ?: ""
                         val timeText = preview?.let { formatChatTime(it.lastMessageTime) } ?: ""
-                        val statusText = preview?.let { getChatStatus(it.lastMessageTime) } ?: ""
+                        val statusText = ""
                         ChatListItem(
                             name = displayName,
                             message = if (lastMessage.isNotEmpty()) lastMessage else "Tap to start chatting",
@@ -305,7 +305,7 @@ private fun formatChatTime(timestamp: Long): String {
     return sdf.format(Date(timestamp))
 }
 
-private fun getChatStatus(lastMessageTime: Long): String {
+fun getChatStatus(lastMessageTime: Long): String {
     if (lastMessageTime <= 0L) return ""
     val diff = System.currentTimeMillis() - lastMessageTime
     return if (diff < 2 * 60 * 1000) {

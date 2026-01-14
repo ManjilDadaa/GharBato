@@ -225,11 +225,15 @@ fun MessageDetailsScreen(
         }
     }
 
+    val lastMessageTime = messages.lastOrNull()?.timestamp ?: 0L
+    val statusText = if (lastMessageTime > 0L) getChatStatus(lastMessageTime) else ""
+
     Scaffold(
         topBar = {
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
+                statusText = statusText,
                 onMarkReadClick = {
                     viewModel.markAllMessagesAsRead()
                 },
@@ -340,6 +344,7 @@ fun ReportUserDialog(
 fun ChatTopBar(
     userName: String,
     userImage: String,
+    statusText: String,
     isBlockedByMe: Boolean,
     onBackClick: () -> Unit,
     onMarkReadClick: () -> Unit,
@@ -389,11 +394,14 @@ fun ChatTopBar(
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
-                    Text(
-                        text = "Online",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
+                    if (statusText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = statusText,
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
         },
