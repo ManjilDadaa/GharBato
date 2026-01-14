@@ -1143,7 +1143,6 @@ private fun sendQuickMessage(
 
     Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
 
-    // Use the new method that sends message AND navigates
     repository.sendQuickMessageWithPropertyAndNavigate(
         context = context,
         activity = context as Activity,
