@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.ChatSession
 import com.example.gharbato.model.MessageUser
@@ -18,6 +19,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ServerValue
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
+import com.example.gharbato.model.PropertyModel
 import java.io.InputStream
 import java.util.concurrent.Executors
 
@@ -51,6 +53,31 @@ interface MessageRepository {
 
     fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
+    fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    )
+    fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    )
+
+    fun sendQuickMessageWithPropertyAndNavigate(
+        context: Context,
+        activity: Activity,
+        otherUserId: String,
+        otherUserName: String,
+        otherUserImage: String,
+        message: String,
+        property: PropertyModel
+    )
+
+
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -520,4 +547,149 @@ class MessageRepositoryImpl : MessageRepository {
             }
         })
     }
+    override fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Send the message immediately
+        sendTextMessage(
+            chatId = session.chatId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            text = message
+        )
+
+        // Callback to notify completion
+        onComplete()
+    }
+
+
+    override fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Get the first image from the property
+        val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
+
+        // Create message with property data
+        val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+
+        val chatMessage = hashMapOf(
+            "id" to messageId,
+            "senderId" to session.myUserId,
+            "senderName" to session.myUserName,
+            "text" to message,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            // Property card data
+            "propertyId" to property.id,
+            "propertyTitle" to property.developer,
+            "propertyPrice" to property.price,
+            "propertyImage" to propertyImageUrl,
+            "propertyLocation" to property.location,
+            "propertyBedrooms" to property.bedrooms,
+            "propertyBathrooms" to property.bathrooms
+        )
+
+        Log.d(TAG, "Sending message with property card:")
+        Log.d(TAG, "Property ID: ${property.id}")
+        Log.d(TAG, "Property Title: ${property.developer}")
+        Log.d(TAG, "Property Image: $propertyImageUrl")
+
+        messagesRef.child(messageId).setValue(chatMessage)
+            .addOnSuccessListener {
+                Log.d(TAG, "Property card message sent successfully")
+                onComplete()
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to send property card message", e)
+            }
+    }
+
+    override fun sendQuickMessageWithPropertyAndNavigate(
+        context: Context,
+        activity: Activity,
+        otherUserId: String,
+        otherUserName: String,
+        otherUserImage: String,
+        message: String,
+        property: PropertyModel
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
+
+        val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+
+        val chatMessage = hashMapOf(
+            "id" to messageId,
+            "senderId" to session.myUserId,
+            "senderName" to session.myUserName,
+            "text" to message,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            // Property card data
+            "propertyId" to property.id,
+            "propertyTitle" to property.developer,
+            "propertyPrice" to property.price,
+            "propertyImage" to propertyImageUrl,
+            "propertyLocation" to property.location,
+            "propertyBedrooms" to property.bedrooms,
+            "propertyBathrooms" to property.bathrooms
+        )
+
+        Log.d(TAG, "Sending message with property card and navigating:")
+        Log.d(TAG, "Chat ID: ${session.chatId}")
+        Log.d(TAG, "Property ID: ${property.id}")
+        Log.d(TAG, "Property Title: ${property.developer}")
+        Log.d(TAG, "Property Image: $propertyImageUrl")
+
+        // Send message first
+        messagesRef.child(messageId).setValue(chatMessage)
+            .addOnSuccessListener {
+                Log.d(TAG, "Property card message sent successfully, navigating to chat")
+                // Small delay to ensure Firebase has processed the write
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val intent = MessageDetailsActivity.newIntent(
+                        activity = activity,
+                        otherUserId = otherUserId,
+                        otherUserName = otherUserName,
+                        otherUserImage = otherUserImage
+                    )
+                    activity.startActivity(intent)
+                }, 300)
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to send property card message", e)
+                Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+
 }
