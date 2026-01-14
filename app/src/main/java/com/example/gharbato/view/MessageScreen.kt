@@ -58,6 +58,9 @@ import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.MessageViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +81,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
     val chatNavigation by messageViewModel.chatNavigation
+    val chatPreviews by messageViewModel.chatPreviews
     val context = LocalContext.current
     val activity = context as Activity
 
@@ -186,11 +190,16 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                         val displayName = user.fullName.ifBlank { 
                             if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
                         }
+                        val preview = chatPreviews[user.userId]
+                        val lastMessage = preview?.lastMessageText ?: ""
+                        val timeText = preview?.let { formatChatTime(it.lastMessageTime) } ?: ""
+                        val statusText = ""
                         ChatListItem(
                             name = displayName,
-                            message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
-                            time = "Now", // Placeholder
+                            message = if (lastMessage.isNotEmpty()) lastMessage else "Tap to start chatting",
+                            time = if (timeText.isNotEmpty()) timeText else "",
                             imageUrl = user.profileImageUrl,
+                            status = statusText,
                             onClick = {
                                 messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
                             }
@@ -208,6 +217,7 @@ fun ChatListItem(
     message: String,
     time: String,
     imageUrl: String,
+    status: String = "",
     onClick: () -> Unit
 ) {
     Row(
@@ -245,7 +255,6 @@ fun ChatListItem(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Name and Message
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -255,17 +264,22 @@ fun ChatListItem(
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // We can add an icon here if needed, e.g., for "Video call"
+            if (status.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = message,
-                    fontSize = 14.sp,
-                    color = Blue,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    text = status,
+                    fontSize = 12.sp,
+                    color = Color.Gray
                 )
             }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = message,
+                fontSize = 14.sp,
+                color = Blue,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            )
         }
 
         // Time
@@ -283,5 +297,21 @@ fun ChatListItem(
 @Composable
 fun PreviewMessageScreen() {
     MessageScreen()
+}
+
+private fun formatChatTime(timestamp: Long): String {
+    if (timestamp <= 0L) return ""
+    val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestamp))
+}
+
+fun getChatStatus(lastMessageTime: Long): String {
+    if (lastMessageTime <= 0L) return ""
+    val diff = System.currentTimeMillis() - lastMessageTime
+    return if (diff < 2 * 60 * 1000) {
+        "Online"
+    } else {
+        "Last online ${getTimeAgo(lastMessageTime)}"
+    }
 }
 
