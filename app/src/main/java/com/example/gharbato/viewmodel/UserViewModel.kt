@@ -33,6 +33,10 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         repo.login(email, password, callback)
     }
 
+    fun logout(callback: (Boolean, String) -> Unit) {
+        repo.logout(callback)
+    }
+
     fun signUp(
         email: String,
         password: String,
@@ -115,6 +119,20 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     fun checkEmailVerified(callback: (Boolean) -> Unit) {
         repo.checkEmailVerified(callback)
+    }
+
+    fun checkIsSuspended(callback: (Boolean, String?, Long?) -> Unit) {
+        val userId = repo.getCurrentUserId() ?: run {
+            callback(false, null, null)
+            return
+        }
+        repo.getUser(userId) { user ->
+            if (user?.isSuspended == true) {
+                callback(true, user.suspensionReason, user.suspendedUntil)
+            } else {
+                callback(false, null, null)
+            }
+        }
     }
 
     // ==================== USER SEARCH ====================

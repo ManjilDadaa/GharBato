@@ -14,6 +14,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -34,8 +35,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.repository.UserRepoImpl
+import com.example.gharbato.repository.KycRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.UserViewModel
+import com.example.gharbato.viewmodel.KycViewModel
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +53,7 @@ class TrustAndVerificationActivity : ComponentActivity() {
 fun TrustAndVerificationScreen() {
     val context = LocalContext.current
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
+    val kycViewModel = remember { KycViewModel(KycRepoImpl()) }
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
@@ -58,6 +62,11 @@ fun TrustAndVerificationScreen() {
 
     var frontImageUri by remember { mutableStateOf<Uri?>(null) }
     var backImageUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // Load user profile on start
+    LaunchedEffect(Unit) {
+        userViewModel.loadUserProfile()
+    }
 
     val frontPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -157,32 +166,35 @@ fun TrustAndVerificationScreen() {
                     selectedDoc = selectedDoc,
                     onDocChange = { selectedDoc = it },
                     onSubmit = {
-                        // Update UI state FIRST
-                        kycStatus = "Pending"
-                        trustScore = 70
-
-                        // Create notification for the user
-                        userViewModel.createNotification(
-                            title = "✅ KYC Submitted Successfully",
-                            message = "Your KYC verification request has been submitted. We'll notify you once it's reviewed (typically within 24-48 hours).",
-                            type = "system",
-                            imageUrl = "",
-                            actionData = ""
-                        ) { success, message ->
-                            if (success) {
-                                showSuccessDialog = true
-                                Toast.makeText(
-                                    context,
-                                    "KYC submitted successfully!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Notification error: $message",
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                        val userId = userViewModel.getCurrentUserId()
+                        val userData = userViewModel.userData.value
+                        
+                        if (userId != null && userData != null && frontImageUri != null && backImageUri != null && selectedDoc != null) {
+                            kycViewModel.submitKyc(
+                                userId = userId,
+                                userEmail = userData.email,
+                                userName = userData.fullName,
+                                documentType = selectedDoc!!,
+                                frontImageUri = frontImageUri!!,
+                                backImageUri = backImageUri!!,
+                                context = context
+                            ) { success, message ->
+                                if (success) {
+                                    kycStatus = "Pending"
+                                    trustScore = 70
+                                    showSuccessDialog = true
+                                    userViewModel.createNotification(
+                                        title = "✅ KYC Submitted Successfully",
+                                        message = "Your KYC verification request has been submitted. We'll notify you once it's reviewed (typically within 24-48 hours).",
+                                        type = "system"
+                                    ) { _, _ -> }
+                                    Toast.makeText(context, "KYC submitted successfully!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, "Failed to submit KYC: $message", Toast.LENGTH_SHORT).show()
+                                }
                             }
+                        } else {
+                            Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
                         }
                     },
                     frontImageUri = frontImageUri,

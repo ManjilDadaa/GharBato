@@ -9,6 +9,8 @@ import com.example.gharbato.model.UserModel
 interface UserRepo {
     fun login(email: String, password: String, callback: (Boolean, String) -> Unit)
 
+    fun logout(callback: (Boolean, String) -> Unit)
+
     fun signUp(
         email: String,
         password: String,

@@ -12,7 +12,20 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,19 +33,52 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Bathroom
+import androidx.compose.material.icons.filled.Bed
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.VideoCall
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -40,10 +86,11 @@ import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
-import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -52,17 +99,22 @@ class MessageDetailsActivity : ComponentActivity() {
         private const val EXTRA_OTHER_USER_ID = "other_user_id"
         private const val EXTRA_OTHER_USER_NAME = "other_user_name"
         private const val EXTRA_OTHER_USER_IMAGE = "other_user_image"
+        private const val EXTRA_INITIAL_MESSAGE = "initial_message"
 
         fun newIntent(
             activity: Activity,
             otherUserId: String,
             otherUserName: String,
-            otherUserImage: String = ""
+            otherUserImage: String = "",
+            initialMessage: String = ""
         ): Intent {
             return Intent(activity, MessageDetailsActivity::class.java).apply {
                 putExtra(EXTRA_OTHER_USER_ID, otherUserId)
                 putExtra(EXTRA_OTHER_USER_NAME, otherUserName)
                 putExtra(EXTRA_OTHER_USER_IMAGE, otherUserImage)
+                if (initialMessage.isNotEmpty()) {
+                    putExtra(EXTRA_INITIAL_MESSAGE, initialMessage)
+                }
             }
         }
     }
@@ -76,6 +128,7 @@ class MessageDetailsActivity : ComponentActivity() {
         val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
         val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: ""
         val otherUserImage = intent.getStringExtra(EXTRA_OTHER_USER_IMAGE) ?: ""
+        val initialMessage = intent.getStringExtra(EXTRA_INITIAL_MESSAGE) ?: ""
 
         val currentUserId = auth.currentUser?.uid ?: ""
 
@@ -91,6 +144,7 @@ class MessageDetailsActivity : ComponentActivity() {
                 otherUserId = otherUserId,
                 otherUserName = otherUserName,
                 otherUserImage = otherUserImage,
+                initialMessage = initialMessage,
                 onBackClick = { finish() }
             )
         }
@@ -104,6 +158,7 @@ fun MessageDetailsScreen(
     otherUserId: String,
     otherUserName: String,
     otherUserImage: String,
+    initialMessage: String = "",
     onBackClick: () -> Unit,
     viewModel: MessageDetailsViewModel = viewModel()
 ) {
@@ -150,8 +205,17 @@ fun MessageDetailsScreen(
         cameraLauncher.launch(uri)
     }
 
+    // Initialize chat session
     LaunchedEffect(otherUserId) {
         viewModel.startChat(context, otherUserId)
+    }
+
+    // Handle initial message - this was missing the proper check
+    LaunchedEffect(initialMessage) {
+        if (initialMessage.isNotBlank()) {
+            kotlinx.coroutines.delay(300) // Give time for chat to initialize
+            viewModel.setInitialMessage(initialMessage)
+        }
     }
 
     // Auto-scroll to bottom when new messages arrive
@@ -165,19 +229,28 @@ fun MessageDetailsScreen(
         ReportUserDialog(
             onDismiss = { showReportDialog = false },
             onReport = { reason ->
-                viewModel.reportUser(reason) { success, msg ->
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                viewModel.reportUser(reason) { success, message ->
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        showReportDialog = false
+                    }
                 }
-                showReportDialog = false
             }
         )
     }
+
+    val lastMessageTime = messages.lastOrNull()?.timestamp ?: 0L
+    val statusText = if (lastMessageTime > 0L) getChatStatus(lastMessageTime) else ""
 
     Scaffold(
         topBar = {
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
+                statusText = statusText,
+                onMarkReadClick = {
+                    viewModel.markAllMessagesAsRead()
+                },
                 isBlockedByMe = isBlockedByMe,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
@@ -238,6 +311,10 @@ fun MessageDetailsScreen(
     }
 }
 
+
+
+
+
 @Composable
 fun ReportUserDialog(
     onDismiss: () -> Unit,
@@ -281,8 +358,10 @@ fun ReportUserDialog(
 fun ChatTopBar(
     userName: String,
     userImage: String,
+    statusText: String,
     isBlockedByMe: Boolean,
     onBackClick: () -> Unit,
+    onMarkReadClick: () -> Unit,
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onReportClick: () -> Unit,
@@ -329,11 +408,14 @@ fun ChatTopBar(
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
-                    Text(
-                        text = "Online",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
+                    if (statusText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = statusText,
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
                 }
             }
         },
@@ -369,6 +451,14 @@ fun ChatTopBar(
                 onDismissRequest = { menuExpanded = false }
             ) {
                 DropdownMenuItem(
+                    text = { Text("Mark as read") },
+                    onClick = {
+                        menuExpanded = false
+                        onMarkReadClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Call, null) }
+                )
+                DropdownMenuItem(
                     text = { Text("Report User") },
                     onClick = {
                         menuExpanded = false
@@ -400,11 +490,14 @@ fun ChatTopBar(
     )
 }
 
+
 @Composable
 fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean
 ) {
+    val context = LocalContext.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
@@ -423,9 +516,27 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
+                // Property Card - CRITICAL: Check hasPropertyCard
+                if (message.hasPropertyCard) {
+                    PropertyCardInMessage(
+                        message = message,
+                        onClick = {
+                            val intent = Intent(context, PropertyDetailActivity::class.java).apply {
+                                putExtra("propertyId", message.propertyId)
+                            }
+                            context.startActivity(intent)
+                        }
+                    )
+
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                }
+
+                // Image
                 if (message.imageUrl.isNotEmpty()) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
+                        model = ImageRequest.Builder(context)
                             .data(message.imageUrl)
                             .crossfade(true)
                             .build(),
@@ -435,14 +546,14 @@ fun MessageBubble(
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.LightGray),
-                        contentScale = ContentScale.Crop,
-                        error = androidx.compose.ui.res.painterResource(id = android.R.drawable.ic_menu_report_image)
+                        contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
+                // Text
                 if (message.text.isNotEmpty()) {
                     Text(
                         text = message.text,
@@ -462,6 +573,148 @@ fun MessageBubble(
         }
     }
 }
+
+
+@Composable
+fun PropertyCardInMessage(
+    message: ChatMessage,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        color = Color(0xFFF5F5F5),
+        shadowElevation = 2.dp
+    ) {
+        Column {
+            if (message.propertyImage.isNotEmpty()) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(message.propertyImage)
+                        .crossfade(true)
+                        .build(),
+                    contentDescription = "Property",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(id = android.R.drawable.ic_menu_gallery),
+                    placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .background(Color(0xFFE0E0E0)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = "Property",
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.padding(12.dp)) {
+                Text(
+                    text = message.propertyTitle,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black,
+                    maxLines = 2
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = message.propertyPrice,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = message.propertyLocation,
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        maxLines = 1
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bed,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${message.propertyBedrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bathroom,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${message.propertyBathrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Tap to view details",
+                        fontSize = 11.sp,
+                        color = Color(0xFF2196F3),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF2196F3)
+                    )
+                }
+            }
+        }
+    }
+}
+
 
 @Composable
 fun MessageInput(

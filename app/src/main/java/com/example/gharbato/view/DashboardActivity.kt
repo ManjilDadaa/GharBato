@@ -31,6 +31,13 @@ import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.gharbato.viewmodel.DashboardViewModel
+import com.example.gharbato.viewmodel.DashboardViewModelFactory
+import androidx.compose.material3.ExperimentalMaterial3Api
 
 class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,10 +55,14 @@ class NoRippleInteractionSource : MutableInteractionSource {
     override fun tryEmit(interaction: Interaction) = true
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardBody() {
     val context = LocalContext.current
     val activity = context as Activity
+    
+    val viewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory())
+    val unreadCount by viewModel.unreadMessageCount.collectAsState()
 
     // Bottom NavigationBar data class and its requirements
     data class NavItem(val label: String, val icon: Int)
@@ -75,10 +86,23 @@ fun DashboardBody() {
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
                         icon = {
-                            Icon(
-                                painter = painterResource(item.icon),
-                                contentDescription = item.label
-                            )
+                            if (item.label == "Messages" && unreadCount > 0) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge { Text(text = unreadCount.toString()) }
+                                    }
+                                ) {
+                                    Icon(
+                                        painter = painterResource(item.icon),
+                                        contentDescription = item.label
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    painter = painterResource(item.icon),
+                                    contentDescription = item.label
+                                )
+                            }
                         },
                         label = {
                             Text(item.label)
