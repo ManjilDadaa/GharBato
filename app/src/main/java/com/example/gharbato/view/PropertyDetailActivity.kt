@@ -75,6 +75,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Theaters
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Videocam
@@ -110,14 +111,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.data.model.PlaceType
+import com.example.gharbato.model.NearbyPlace
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.ReportStatus
 import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.repository.MessageRepositoryImpl
+import com.example.gharbato.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.util.PropertyViewTracker
@@ -133,6 +138,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.collections.emptyMap
 
 
 private fun getCurrentUserId(): String {
@@ -708,8 +714,19 @@ fun PropertyDetailItem(label: String, value: String) {
     }
 }
 
+
 @Composable
 fun BuildingInfoSection(property: PropertyModel) {
+    val repository = remember { NearbyPlacesRepositoryImpl() }
+    var nearbyPlaces by remember { mutableStateOf<Map<PlaceType, List<NearbyPlace>>>(emptyMap()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(property.latLng) {
+        isLoading = true
+        nearbyPlaces = repository.getNearbyPlaces(property.latLng)
+        isLoading = false
+    }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             text = property.developer,
@@ -717,7 +734,9 @@ fun BuildingInfoSection(property: PropertyModel) {
             fontWeight = FontWeight.Bold,
             color = Color(0xFF2196F3)
         )
+
         Spacer(modifier = Modifier.height(4.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
@@ -733,42 +752,159 @@ fun BuildingInfoSection(property: PropertyModel) {
             )
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Section header with subtitle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Nearby Places",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+
+            if (!isLoading) {
+                Text(
+                    text = "from OpenStreetMap",
+                    fontSize = 11.sp,
+                    color = Color.Gray.copy(alpha = 0.7f)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
-        NearbyPlace("City Center", "2.5 km", Icons.Default.LocationCity)
-        NearbyPlace("School", "500 m", Icons.Default.School)
-        NearbyPlace("Hospital", "1.2 km", Icons.Default.LocalHospital)
+        if (isLoading) {
+            LoadingNearbyPlaces()
+        } else {
+            DisplayNearbyPlaces(nearbyPlaces)
+        }
     }
 }
 
 @Composable
-fun NearbyPlace(name: String, distance: String, icon: ImageVector) {
+private fun LoadingNearbyPlaces() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = name,
-            tint = Color(0xFF4CAF50),
-            modifier = Modifier.size(20.dp)
+        CircularProgressIndicator(
+            modifier = Modifier.size(20.dp),
+            strokeWidth = 2.dp,
+            color = Color(0xFF4CAF50)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = name,
-            fontSize = 14.sp,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = distance,
-            fontSize = 14.sp,
+            text = "Finding nearby places...",
+            fontSize = 13.sp,
             color = Color.Gray
         )
     }
 }
 
+@Composable
+private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>) {
+    val hasAnyPlaces = nearbyPlaces.values.any { it.isNotEmpty() }
+
+    if (!hasAnyPlaces) {
+        Text(
+            text = "No nearby places found in this area",
+            fontSize = 13.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // School
+        nearbyPlaces[PlaceType.SCHOOL]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.School,
+                iconTint = Color(0xFFFF9800) // Orange
+            )
+        }
+
+        // Hospital
+        nearbyPlaces[PlaceType.HOSPITAL]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.LocalHospital,
+                iconTint = Color(0xFFF44336) // Red
+            )
+        }
+
+        // Store
+        nearbyPlaces[PlaceType.STORE]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.Store,
+                iconTint = Color(0xFF4CAF50) // Green
+            )
+        }
+    }
+}
+
+@Composable
+private fun NearbyPlaceItem(
+    name: String,
+    distance: String,
+    icon: ImageVector,
+    iconTint: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(32.dp),
+            color = iconTint.copy(alpha = 0.1f),
+            shape = CircleShape
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = name,
+                tint = iconTint,
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Text(
+            text = distance,
+            fontSize = 13.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
 @Composable
 fun MapPreviewSection(
     property: PropertyModel,
