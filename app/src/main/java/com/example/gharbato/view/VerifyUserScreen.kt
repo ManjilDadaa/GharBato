@@ -157,120 +157,128 @@ fun VerifyUserScreen() {
             }
         )
     }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FB))
-            .padding(16.dp)
-    ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+
+    Scaffold { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFF8F9FB))
+                .padding(top = padding.calculateTopPadding())
+                .padding(horizontal = 16.dp)
         ) {
-            Text(
-                "KYC Verifications",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF2C2C2C)
-            )
-            IconButton(
-                onClick = { kycViewModel.loadAllKycSubmissions() }
-            ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Refresh",
-                    tint = Blue
-                )
-            }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Stats Cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                title = "Total",
-                count = kycSubmissions.size,
-                color = Blue,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Pending",
-                count = kycSubmissions.count { it.status == "Pending" },
-                color = Color(0xFFFFA000),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Approved",
-                count = kycSubmissions.count { it.status == "Approved" },
-                color = Color(0xFF4CAF50),
-                modifier = Modifier.weight(1f)
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        if (loading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = Blue)
-            }
-        } else if (kycSubmissions.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "No KYC submissions found",
-                    fontSize = 16.sp,
-                    color = Color.Gray
+                    "KYC Verifications",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF2C2C2C)
+                )
+                IconButton(
+                    onClick = { kycViewModel.loadAllKycSubmissions() }
+                ) {
+                    Icon(
+                        Icons.Default.Refresh,
+                        contentDescription = "Refresh",
+                        tint = Blue
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Stats Cards
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                StatCard(
+                    title = "Total",
+                    count = kycSubmissions.size,
+                    color = Blue,
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "Pending",
+                    count = kycSubmissions.count { it.status == "Pending" },
+                    color = Color(0xFFFFA000),
+                    modifier = Modifier.weight(1f)
+                )
+                StatCard(
+                    title = "Approved",
+                    count = kycSubmissions.count { it.status == "Approved" },
+                    color = Color(0xFF4CAF50),
+                    modifier = Modifier.weight(1f)
                 )
             }
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(kycSubmissions) { kyc ->
-                    KycCard(
-                        kyc = kyc,
-                        onApprove = {
-                            kycViewModel.updateKycStatus(
-                                kycId = kyc.kycId,
-                                status = "Approved",
-                                reviewedBy = "Admin"
-                            ) { success, message ->
-                                if (success) {
-                                    // Notify user about approval
-                                    userViewModel.createNotificationForUser(
-                                        userId = kyc.userId,
-                                        title = "✅ KYC Approved",
-                                        message = "Congratulations! Your KYC verification has been approved. You can now access all features.",
-                                        type = "system"
-                                    ) { _, _ -> }
-                                    
-                                    Toast.makeText(context, "KYC approved", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        },
-                        onReject = {
-                            selectedKyc = kyc
-                            showRejectDialog = true
-                        },
-                        onViewImage = { imageUrl ->
-                            selectedImageUrl = imageUrl
-                            showImageDialog = true
-                        }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (loading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = Blue)
+                }
+            } else if (kycSubmissions.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No KYC submissions found",
+                        fontSize = 16.sp,
+                        color = Color.Gray
                     )
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(kycSubmissions) { kyc ->
+                        KycCard(
+                            kyc = kyc,
+                            onApprove = {
+                                kycViewModel.updateKycStatus(
+                                    kycId = kyc.kycId,
+                                    status = "Approved",
+                                    reviewedBy = "Admin"
+                                ) { success, message ->
+                                    if (success) {
+                                        // Notify user about approval
+                                        userViewModel.createNotificationForUser(
+                                            userId = kyc.userId,
+                                            title = "✅ KYC Approved",
+                                            message = "Congratulations! Your KYC verification has been approved. You can now access all features.",
+                                            type = "system"
+                                        ) { _, _ -> }
+
+                                        Toast.makeText(context, "KYC approved", Toast.LENGTH_SHORT)
+                                            .show()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            "Failed: $message",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                    }
+                                }
+                            },
+                            onReject = {
+                                selectedKyc = kyc
+                                showRejectDialog = true
+                            },
+                            onViewImage = { imageUrl ->
+                                selectedImageUrl = imageUrl
+                                showImageDialog = true
+                            }
+                        )
+                    }
                 }
             }
         }
