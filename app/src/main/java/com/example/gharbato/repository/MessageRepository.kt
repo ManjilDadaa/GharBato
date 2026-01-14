@@ -36,6 +36,7 @@ interface MessageRepository {
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
     fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun getLastMessageForChat(currentUserId: String, otherUserId: String, callback: (ChatMessage?) -> Unit)
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
@@ -383,6 +384,41 @@ class MessageRepositoryImpl : MessageRepository {
         return {
             messagesRef.removeEventListener(listener)
         }
+    }
+
+    override fun getLastMessageForChat(
+        currentUserId: String,
+        otherUserId: String,
+        callback: (ChatMessage?) -> Unit
+    ) {
+        val sortedIds = listOf(currentUserId, otherUserId).sorted()
+        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+
+        messagesRef
+            .orderByChild("timestamp")
+            .limitToLast(1)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    var lastMessage: ChatMessage? = null
+                    for (msgSnapshot in snapshot.children) {
+                        try {
+                            val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                            if (msg != null) {
+                                lastMessage = msg
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing last message", e)
+                        }
+                    }
+                    callback(lastMessage)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Failed to load last message: ${error.message}")
+                    callback(null)
+                }
+            })
     }
 
     override fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String) {

@@ -230,6 +230,9 @@ fun MessageDetailsScreen(
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
+                onMarkReadClick = {
+                    viewModel.markAllMessagesAsRead()
+                },
                 isBlockedByMe = isBlockedByMe,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
@@ -339,6 +342,7 @@ fun ChatTopBar(
     userImage: String,
     isBlockedByMe: Boolean,
     onBackClick: () -> Unit,
+    onMarkReadClick: () -> Unit,
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onReportClick: () -> Unit,
@@ -424,6 +428,14 @@ fun ChatTopBar(
                 expanded = menuExpanded,
                 onDismissRequest = { menuExpanded = false }
             ) {
+                DropdownMenuItem(
+                    text = { Text("Mark as read") },
+                    onClick = {
+                        menuExpanded = false
+                        onMarkReadClick()
+                    },
+                    leadingIcon = { Icon(Icons.Default.Call, null) }
+                )
                 DropdownMenuItem(
                     text = { Text("Report User") },
                     onClick = {

@@ -18,6 +18,11 @@ data class ChatNavigation(
     val targetUserImage: String
 )
 
+data class ChatPreview(
+    val lastMessageText: String = "",
+    val lastMessageTime: Long = 0L
+)
+
 class MessageViewModel(
     private val repository: MessageRepository = MessageRepositoryImpl()
 ) : ViewModel() {
@@ -44,6 +49,9 @@ class MessageViewModel(
     private val _chatNavigation = mutableStateOf<ChatNavigation?>(null)
     val chatNavigation: State<ChatNavigation?> = _chatNavigation
 
+    private val _chatPreviews = mutableStateOf<Map<String, ChatPreview>>(emptyMap())
+    val chatPreviews: State<Map<String, ChatPreview>> = _chatPreviews
+
     init {
         loadCurrentUser()
         loadUsers()
@@ -66,6 +74,7 @@ class MessageViewModel(
                 } else {
                     _errorMessage.value = ""
                 }
+                loadChatPreviews(userList)
             } else {
                 _errorMessage.value = message ?: "Failed to load chat partners"
             }
@@ -142,6 +151,32 @@ class MessageViewModel(
     fun getLocalUserId(context: android.content.Context): String {
         return repository.getOrCreateLocalUserId(context)
     }
+
+    private fun loadChatPreviews(chatPartners: List<UserModel>) {
+        val currentUserId = _currentUser.value?.userId ?: return
+        if (chatPartners.isEmpty()) return
+
+        chatPartners.forEach { user ->
+            if (user.userId.isBlank()) return@forEach
+
+            repository.getLastMessageForChat(currentUserId, user.userId) { message ->
+                val text = when {
+                    message == null -> ""
+                    message.text.isNotBlank() -> message.text
+                    message.imageUrl.isNotBlank() -> "Photo"
+                    message.hasPropertyCard -> message.propertyTitle.ifBlank { "Property details" }
+                    else -> ""
+                }
+                val preview = ChatPreview(
+                    lastMessageText = text,
+                    lastMessageTime = message?.timestamp ?: 0L
+                )
+                val currentMap = _chatPreviews.value.toMutableMap()
+                currentMap[user.userId] = preview
+                _chatPreviews.value = currentMap
+            }
+        }
+    }
 }
 
 class MessageDetailsViewModel(
@@ -166,6 +201,11 @@ class MessageDetailsViewModel(
 
     private var stopListening: (() -> Unit)? = null
     private var stopBlockListening: (() -> Unit)? = null
+
+    fun markAllMessagesAsRead() {
+        val session = _chatSession.value ?: return
+        repository.markMessagesAsRead(session.chatId, session.myUserId)
+    }
 
     fun initiateCall(
         activity: android.app.Activity,
