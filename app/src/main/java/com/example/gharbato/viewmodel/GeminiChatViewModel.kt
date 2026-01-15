@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.GeminiChatMessage
 import com.example.gharbato.repository.GeminiRepository
-import com.example.gharbato.repository.GeminiRepoImpl
+import com.example.gharbato.repository.GeminiRepositoryImpl
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -16,7 +16,7 @@ class GeminiChatViewModel(
     private val userId: String
 ) : ViewModel() {
 
-    private val repository: GeminiRepository = GeminiRepoImpl(context)
+    private val repository: GeminiRepository = GeminiRepositoryImpl(context)
 
     private val _messages = mutableStateOf<List<GeminiChatMessage>>(emptyList())
     val messages: State<List<GeminiChatMessage>> = _messages

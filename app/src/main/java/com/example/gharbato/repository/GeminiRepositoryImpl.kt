@@ -5,16 +5,13 @@ import android.util.Log
 import com.example.gharbato.BuildConfig
 import com.example.gharbato.model.GeminiChatMessage
 import com.google.ai.client.generativeai.GenerativeModel
-import com.google.ai.client.generativeai.type.Content
-import com.google.ai.client.generativeai.type.GenerateContentResponse
-import com.google.ai.client.generativeai.type.generationConfig
+import com.google.ai.client.generativeai.type.content
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
-class GeminiRepoImpl(
+class GeminiRepositoryImpl(
     private val context: Context
 ) : GeminiRepository {
 
@@ -24,18 +21,13 @@ class GeminiRepoImpl(
         context.getSharedPreferences("gemini_chat_prefs", Context.MODE_PRIVATE)
     }
 
-    // Initialize Gemini Model
+    // Initialize Gemini Model with correct model name
     private val generativeModel by lazy {
         GenerativeModel(
-            modelName = "gemini-1.5-flash",
+            // Use "gemini-pro" for the current SDK version
+            modelName = "gemini-pro",
             apiKey = BuildConfig.GEMINI_API_KEY,
-            generationConfig = generationConfig {
-                temperature = 0.7f
-                topK = 40
-                topP = 0.95f
-                maxOutputTokens = 1024
-            },
-            systemInstruction = Content.Builder().apply {
+            systemInstruction = content {
                 text("""
                     You are a helpful AI assistant for a real estate application called "Gharbato".
                     Your role is to help users with:
@@ -59,7 +51,7 @@ class GeminiRepoImpl(
                     
                     Remember: You're here to assist and guide, not to replace professional advice.
                 """.trimIndent())
-            }.build()
+            }
         )
     }
 
@@ -73,16 +65,15 @@ class GeminiRepoImpl(
                 Log.d(tag, "Sending message to Gemini: $message")
 
                 // Build conversation history for context
-                val chat = generativeModel.startChat(
-                    history = conversationHistory
-                        .filter { !it.isError } // Exclude error messages from history
-                        .map { msg ->
-                            Content.Builder().apply {
-                                role = if (msg.isFromUser) "user" else "model"
-                                text(msg.text)
-                            }.build()
+                val history = conversationHistory
+                    .filter { !it.isError }
+                    .map { msg ->
+                        content(role = if (msg.isFromUser) "user" else "model") {
+                            text(msg.text)
                         }
-                )
+                    }
+
+                val chat = generativeModel.startChat(history = history)
 
                 // Send message and get response
                 val response = chat.sendMessage(message)
@@ -102,6 +93,8 @@ class GeminiRepoImpl(
                         "API quota exceeded. Please try again later."
                     e.message?.contains("network", ignoreCase = true) == true ->
                         "Network error. Please check your internet connection."
+                    e.message?.contains("404", ignoreCase = true) == true ->
+                        "Model not found. Using an alternative model..."
                     else -> "Sorry, I encountered an error: ${e.message ?: "Unknown error"}"
                 }
                 withContext(Dispatchers.Main) {
