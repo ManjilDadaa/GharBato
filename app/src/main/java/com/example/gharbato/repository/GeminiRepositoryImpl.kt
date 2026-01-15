@@ -24,25 +24,7 @@ class GeminiRepositoryImpl(
     // Initialize Gemini Model with correct model name
     private val generativeModel by lazy {
         GenerativeModel(
-            // Use "gemini-pro" for the current SDK version
-
-            // Option 1: Latest stable (RECOMMENDED)
-//            modelName = "gemini-1.5-flash-latest",
-//
-//// Option 2: Specific version
-//                    modelName = "gemini-1.5-flash",
-//
-//// Option 3: Pro model (slower but more capable)
-//                    modelName = "gemini-1.5-pro-latest",
-//
-//// Option 4: Legacy model (most compatible)
-//                    modelName = "gemini-pro",
-//
-//// Option 5: Experimental (if you have early access)
             modelName = "gemini-3-flash-preview",
-//
-//
-//            modelName = "gemini-pro",
             apiKey = BuildConfig.GEMINI_API_KEY,
             systemInstruction = content {
                 text("""
