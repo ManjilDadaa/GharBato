@@ -204,10 +204,6 @@
             android:exported="true"
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
-<!--        <activity-->
-<!--            android:name=".view.ProfileScreen"-->
-<!--            android:exported="true"-->
-<!--            android:theme="@style/Theme.GharBato" />-->
         <activity
             android:name=".view.TrustAndVerificationActivity"
             android:exported="true"
@@ -216,6 +212,8 @@
             android:name=".view.NotificationActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+
+        <activity android:name=".view.GeminiChatActivity" />
 
         <activity
             android:name=".view.EditProfileActivity"

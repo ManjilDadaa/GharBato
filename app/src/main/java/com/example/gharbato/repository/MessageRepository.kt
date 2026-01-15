@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.ChatSession
 import com.example.gharbato.model.MessageUser
@@ -18,6 +19,7 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ServerValue
 import com.cloudinary.Cloudinary
 import com.cloudinary.utils.ObjectUtils
+import com.example.gharbato.model.PropertyModel
 import java.io.InputStream
 import java.util.concurrent.Executors
 
@@ -34,11 +36,49 @@ interface MessageRepository {
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
     fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun getLastMessageForChat(currentUserId: String, otherUserId: String, callback: (ChatMessage?) -> Unit)
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+
+    fun navigateToChatWithMessage(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        targetUserImage: String = "",
+        initialMessage: String = ""
+    )
+
+
+    fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
+    fun markMessagesAsRead(chatId: String, currentUserId: String)
+    fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    )
+    fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    )
+
+    fun sendQuickMessageWithPropertyAndNavigate(
+        context: Context,
+        activity: Activity,
+        otherUserId: String,
+        otherUserName: String,
+        otherUserImage: String,
+        message: String,
+        property: PropertyModel
+    )
+
+
 }
 
 class MessageRepositoryImpl : MessageRepository {
@@ -346,6 +386,41 @@ class MessageRepositoryImpl : MessageRepository {
         }
     }
 
+    override fun getLastMessageForChat(
+        currentUserId: String,
+        otherUserId: String,
+        callback: (ChatMessage?) -> Unit
+    ) {
+        val sortedIds = listOf(currentUserId, otherUserId).sorted()
+        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+
+        messagesRef
+            .orderByChild("timestamp")
+            .limitToLast(1)
+            .addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    var lastMessage: ChatMessage? = null
+                    for (msgSnapshot in snapshot.children) {
+                        try {
+                            val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                            if (msg != null) {
+                                lastMessage = msg
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing last message", e)
+                        }
+                    }
+                    callback(lastMessage)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Failed to load last message: ${error.message}")
+                    callback(null)
+                }
+            })
+    }
+
     override fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String) {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
@@ -422,4 +497,225 @@ class MessageRepositoryImpl : MessageRepository {
         val chatRef = database.getReference("chats").child(chatId)
         chatRef.removeValue()
     }
+
+
+
+    override fun navigateToChatWithMessage(
+        activity: Activity,
+        targetUserId: String,
+        targetUserName: String,
+        targetUserImage: String,
+        initialMessage: String
+    ) {
+        Log.d(TAG, "=== Navigating to Chat with Message ===")
+        Log.d(TAG, "Target User ID: $targetUserId")
+        Log.d(TAG, "Target User Name: $targetUserName")
+        Log.d(TAG, "Initial Message: $initialMessage")
+
+        val intent = MessageDetailsActivity.newIntent(
+            activity = activity,
+            otherUserId = targetUserId,
+            otherUserName = targetUserName,
+            otherUserImage = targetUserImage
+        ).apply {
+            putExtra("INITIAL_MESSAGE", initialMessage)
+        }
+        activity.startActivity(intent)
+    }
+
+
+
+    override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
+        val chatsRef = database.getReference("chats")
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                var totalUnread = 0
+                for (chatSnapshot in snapshot.children) {
+                    val chatId = chatSnapshot.key ?: continue
+                    if (chatId.contains(userId)) {
+                        val messagesSnapshot = chatSnapshot.child("messages")
+                        for (msgSnapshot in messagesSnapshot.children) {
+                            try {
+                                val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                                if (msg != null && msg.senderId != userId && !msg.isRead) {
+                                    totalUnread++
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error parsing message for unread count", e)
+                            }
+                        }
+                    }
+                }
+                onCountChange(totalUnread)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Failed to listen to unread count: ${error.message}")
+            }
+        }
+
+        chatsRef.addValueEventListener(listener)
+
+        return {
+            chatsRef.removeEventListener(listener)
+        }
+    }
+
+    override fun markMessagesAsRead(chatId: String, currentUserId: String) {
+        val messagesRef = database.getReference("chats").child(chatId).child("messages")
+        messagesRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                for (msgSnapshot in snapshot.children) {
+                    try {
+                        val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                        if (msg != null && msg.senderId != currentUserId && !msg.isRead) {
+                            msgSnapshot.ref.child("isRead").setValue(true)
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error marking message as read", e)
+                    }
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, "Failed to mark messages as read: ${error.message}")
+            }
+        })
+    }
+    override fun sendQuickMessage(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Send the message immediately
+        sendTextMessage(
+            chatId = session.chatId,
+            senderId = session.myUserId,
+            senderName = session.myUserName,
+            text = message
+        )
+
+        // Callback to notify completion
+        onComplete()
+    }
+
+
+    override fun sendQuickMessageWithProperty(
+        context: Context,
+        otherUserId: String,
+        message: String,
+        property: PropertyModel,
+        onComplete: () -> Unit
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        // Create chat session
+        val session = createChatSession(context, otherUserId)
+
+        // Get the first image from the property
+        val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
+
+        // Create message with property data
+        val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+
+        val chatMessage = hashMapOf(
+            "id" to messageId,
+            "senderId" to session.myUserId,
+            "senderName" to session.myUserName,
+            "text" to message,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            // Property card data
+            "propertyId" to property.id,
+            "propertyTitle" to property.developer,
+            "propertyPrice" to property.price,
+            "propertyImage" to propertyImageUrl,
+            "propertyLocation" to property.location,
+            "propertyBedrooms" to property.bedrooms,
+            "propertyBathrooms" to property.bathrooms
+        )
+
+        Log.d(TAG, "Sending message with property card:")
+        Log.d(TAG, "Property ID: ${property.id}")
+        Log.d(TAG, "Property Title: ${property.developer}")
+        Log.d(TAG, "Property Image: $propertyImageUrl")
+
+        messagesRef.child(messageId).setValue(chatMessage)
+            .addOnSuccessListener {
+                Log.d(TAG, "Property card message sent successfully")
+                onComplete()
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to send property card message", e)
+            }
+    }
+
+    override fun sendQuickMessageWithPropertyAndNavigate(
+        context: Context,
+        activity: Activity,
+        otherUserId: String,
+        otherUserName: String,
+        otherUserImage: String,
+        message: String,
+        property: PropertyModel
+    ) {
+        val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
+        val currentUserName = auth.currentUser?.email ?: "Me"
+
+        val session = createChatSession(context, otherUserId)
+
+        val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
+
+        val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
+        val messageId = messagesRef.push().key ?: return
+
+        // IMPORTANT: Use HashMap to ensure all fields are saved to Firebase
+        val chatMessage = hashMapOf<String, Any>(
+            "id" to messageId,
+            "senderId" to session.myUserId,
+            "senderName" to session.myUserName,
+            "text" to message,
+            "timestamp" to System.currentTimeMillis(),
+            "isRead" to false,
+            "imageUrl" to "",
+            "propertyId" to property.id,
+            "propertyTitle" to property.developer,
+            "propertyPrice" to property.price,
+            "propertyImage" to propertyImageUrl,
+            "propertyLocation" to property.location,
+            "propertyBedrooms" to property.bedrooms,
+            "propertyBathrooms" to property.bathrooms
+        )
+
+        messagesRef.child(messageId).setValue(chatMessage)
+            .addOnSuccessListener {
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    val intent = MessageDetailsActivity.newIntent(
+                        activity = activity,
+                        otherUserId = otherUserId,
+                        otherUserName = otherUserName,
+                        otherUserImage = otherUserImage
+                    )
+                    activity.startActivity(intent)
+                }, 300)
+            }
+            .addOnFailureListener {
+                Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+
+
 }

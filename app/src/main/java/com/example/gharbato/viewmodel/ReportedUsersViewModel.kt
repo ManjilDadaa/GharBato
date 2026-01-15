@@ -24,13 +24,13 @@ class ReportedUsersViewModel(
     private val reportRepo: ReportUserRepo,
     private val userRepo: UserRepo
 ) : ViewModel() {
-
+    
     private val _reportedUsers = MutableLiveData<List<ReportedUser>>()
     val reportedUsers: LiveData<List<ReportedUser>> get() = _reportedUsers
-
+    
     private val _isLoading = MutableLiveData<Boolean>()
     val isLoading: LiveData<Boolean> get() = _isLoading
-
+    
     fun loadReportedUsers() {
         _isLoading.value = true
         reportRepo.getReportedUsers { reports ->
@@ -38,13 +38,13 @@ class ReportedUsersViewModel(
             val reportedUsersList = mutableListOf<ReportedUser>()
             var processedCount = 0
             val totalUsersToFetch = reportsMap.size
-
+            
             if (totalUsersToFetch == 0) {
                 _reportedUsers.value = emptyList()
                 _isLoading.value = false
                 return@getReportedUsers
             }
-
+            
             reportsMap.forEach { (userId, userReports) ->
                 userRepo.getUser(userId) { userModel ->
                     val userName = userModel?.fullName ?: "Unknown User"
@@ -54,7 +54,7 @@ class ReportedUsersViewModel(
                     val reason = latestReport?.reason ?: "No reason provided"
                     val isSuspended = userModel?.isSuspended ?: false
                     val accountStatus = if (isSuspended) "Suspended" else "Active"
-
+                    
                     reportedUsersList.add(
                         ReportedUser(
                             userId = userId,
@@ -66,7 +66,7 @@ class ReportedUsersViewModel(
                             accountStatus = accountStatus
                         )
                     )
-
+                    
                     processedCount++
                     if (processedCount == totalUsersToFetch) {
                         _reportedUsers.value = reportedUsersList
@@ -76,7 +76,7 @@ class ReportedUsersViewModel(
             }
         }
     }
-
+    
     fun suspendUser(userId: String, duration: Long, reason: String, callback: (Boolean, String) -> Unit) {
         reportRepo.suspendUser(userId, duration, reason) { success, message ->
             if (success) loadReportedUsers()
@@ -84,6 +84,20 @@ class ReportedUsersViewModel(
         }
     }
 
+    fun activateUser(userId: String, callback: (Boolean, String) -> Unit) {
+        reportRepo.activateUser(userId) { success, message ->
+            if (success) loadReportedUsers()
+            callback(success, message)
+        }
+    }
+
+    fun resolveUser(userId: String, callback: (Boolean, String) -> Unit) {
+        reportRepo.resolveUser(userId) { success, message ->
+            if (success) loadReportedUsers()
+            callback(success, message)
+        }
+    }
+    
     fun formatDate(timestamp: Long): String {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
         return sdf.format(Date(timestamp))

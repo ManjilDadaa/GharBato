@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -74,6 +75,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SportsSoccer
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material.icons.filled.Theaters
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Videocam
@@ -109,15 +111,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
+import com.example.gharbato.data.model.PlaceType
+import com.example.gharbato.model.NearbyPlace
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.ReportStatus
 import com.example.gharbato.model.ReportedProperty
+import com.example.gharbato.repository.MessageRepositoryImpl
+import com.example.gharbato.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.view.FullMapActivity
+import com.example.gharbato.util.PropertyViewTracker
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -130,6 +138,7 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import kotlin.collections.emptyMap
 
 
 private fun getCurrentUserId(): String {
@@ -137,12 +146,12 @@ private fun getCurrentUserId(): String {
 }
 
 
+
 class PropertyDetailActivity : ComponentActivity() {
 
     private val viewModel: PropertyViewModel by viewModels {
         PropertyViewModelFactory(this@PropertyDetailActivity)
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -152,6 +161,8 @@ class PropertyDetailActivity : ComponentActivity() {
 
         if (propertyId != -1) {
             viewModel.getPropertyById(propertyId)
+
+            PropertyViewTracker.trackPropertyViewById(propertyId)
         }
 
         setContent {
@@ -166,7 +177,6 @@ class PropertyDetailActivity : ComponentActivity() {
                     }
                 )
             } ?: run {
-                // Loading or Error State
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -231,10 +241,9 @@ fun PropertyDetailScreen(
         }
     }
 
-
-
-
-    Scaffold { paddingValues ->
+    Scaffold (
+        containerColor = Color.White
+    ){ paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -576,8 +585,12 @@ fun StatusChip(
     }
 }
 
+
 @Composable
 fun PriceSection(property: PropertyModel) {
+    val context = LocalContext.current
+    var offerPrice by remember { mutableStateOf("") }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -610,25 +623,64 @@ fun PriceSection(property: PropertyModel) {
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = offerPrice,
+                    onValueChange = { offerPrice = it },
                     placeholder = { Text("e.g., NPR 12,000/month") },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
                         unfocusedContainerColor = Color.White
                     ),
                     trailingIcon = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                            tint = Color.Gray
-                        )
+                        IconButton(
+                            onClick = {
+                                if (offerPrice.isNotBlank()) {
+                                    sendOfferMessage(context, property, offerPrice)
+                                    offerPrice = ""
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter an offer price",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Send,
+                                contentDescription = "Send Offer",
+                                tint = if (offerPrice.isNotBlank()) Color(0xFF2196F3) else Color.Gray
+                            )
+                        }
                     }
                 )
             }
         }
     }
 }
+
+private fun sendOfferMessage(
+    context: Context,
+    property: PropertyModel,
+    offerPrice: String
+) {
+    val repository = MessageRepositoryImpl()
+
+    val message = "Hi, I'm interested in ${property.developer}. I'd like to make an offer of $offerPrice."
+
+    Toast.makeText(context, "Sending offer...", Toast.LENGTH_SHORT).show()
+
+    repository.sendQuickMessageWithPropertyAndNavigate(
+        context = context,
+        activity = context as Activity,
+        otherUserId = property.ownerId,
+        otherUserName = property.ownerName.ifBlank { property.developer },
+        otherUserImage = property.ownerImageUrl,
+        message = message,
+        property = property
+    )
+}
+
+
 
 @Composable
 fun PropertyDetailsSection(property: PropertyModel) {
@@ -661,8 +713,19 @@ fun PropertyDetailItem(label: String, value: String) {
     }
 }
 
+
 @Composable
 fun BuildingInfoSection(property: PropertyModel) {
+    val repository = remember { NearbyPlacesRepositoryImpl() }
+    var nearbyPlaces by remember { mutableStateOf<Map<PlaceType, List<NearbyPlace>>>(emptyMap()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(property.latLng) {
+        isLoading = true
+        nearbyPlaces = repository.getNearbyPlaces(property.latLng)
+        isLoading = false
+    }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             text = property.developer,
@@ -670,7 +733,9 @@ fun BuildingInfoSection(property: PropertyModel) {
             fontWeight = FontWeight.Bold,
             color = Color(0xFF2196F3)
         )
+
         Spacer(modifier = Modifier.height(4.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
@@ -686,42 +751,159 @@ fun BuildingInfoSection(property: PropertyModel) {
             )
         }
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Section header with subtitle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Nearby Places",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            )
+
+            if (!isLoading) {
+                Text(
+                    text = "from OpenStreetMap",
+                    fontSize = 11.sp,
+                    color = Color.Gray.copy(alpha = 0.7f)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
-        NearbyPlace("City Center", "2.5 km", Icons.Default.LocationCity)
-        NearbyPlace("School", "500 m", Icons.Default.School)
-        NearbyPlace("Hospital", "1.2 km", Icons.Default.LocalHospital)
+        if (isLoading) {
+            LoadingNearbyPlaces()
+        } else {
+            DisplayNearbyPlaces(nearbyPlaces)
+        }
     }
 }
 
 @Composable
-fun NearbyPlace(name: String, distance: String, icon: ImageVector) {
+private fun LoadingNearbyPlaces() {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(vertical = 16.dp),
+        horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = name,
-            tint = Color(0xFF4CAF50),
-            modifier = Modifier.size(20.dp)
+        CircularProgressIndicator(
+            modifier = Modifier.size(20.dp),
+            strokeWidth = 2.dp,
+            color = Color(0xFF4CAF50)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
-            text = name,
-            fontSize = 14.sp,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = distance,
-            fontSize = 14.sp,
+            text = "Finding nearby places...",
+            fontSize = 13.sp,
             color = Color.Gray
         )
     }
 }
 
+@Composable
+private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>) {
+    val hasAnyPlaces = nearbyPlaces.values.any { it.isNotEmpty() }
+
+    if (!hasAnyPlaces) {
+        Text(
+            text = "No nearby places found in this area",
+            fontSize = 13.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(vertical = 12.dp)
+        )
+        return
+    }
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // School
+        nearbyPlaces[PlaceType.SCHOOL]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.School,
+                iconTint = Color(0xFFFF9800) // Orange
+            )
+        }
+
+        // Hospital
+        nearbyPlaces[PlaceType.HOSPITAL]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.LocalHospital,
+                iconTint = Color(0xFFF44336) // Red
+            )
+        }
+
+        // Store
+        nearbyPlaces[PlaceType.STORE]?.firstOrNull()?.let { place ->
+            NearbyPlaceItem(
+                name = place.name,
+                distance = place.formattedDistance,
+                icon = Icons.Default.Store,
+                iconTint = Color(0xFF4CAF50) // Green
+            )
+        }
+    }
+}
+
+@Composable
+private fun NearbyPlaceItem(
+    name: String,
+    distance: String,
+    icon: ImageVector,
+    iconTint: Color
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Surface(
+            modifier = Modifier.size(32.dp),
+            color = iconTint.copy(alpha = 0.1f),
+            shape = CircleShape
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = name,
+                tint = iconTint,
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(20.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = name,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Text(
+            text = distance,
+            fontSize = 13.sp,
+            color = Color.Gray,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
 @Composable
 fun MapPreviewSection(
     property: PropertyModel,
@@ -789,8 +971,13 @@ fun MapPreviewSection(
     }
 }
 
+
+
+
 @Composable
 fun ContactOwnerSection(property: PropertyModel) {
+    val context = LocalContext.current
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -813,24 +1000,36 @@ fun ContactOwnerSection(property: PropertyModel) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(50.dp),
-                        color = Color(0xFFE0E0E0),
-                        shape = CircleShape
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
+                    // Owner Image
+                    if (property.ownerImageUrl.isNotEmpty()) {
+                        Image(
+                            painter = rememberAsyncImagePainter(property.ownerImageUrl),
                             contentDescription = "Owner",
-                            modifier = Modifier.padding(12.dp),
-                            tint = Color.Gray
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+                    } else {
+                        Surface(
+                            modifier = Modifier.size(50.dp),
+                            color = Color(0xFFE0E0E0),
+                            shape = CircleShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = "Owner",
+                                modifier = Modifier.padding(12.dp),
+                                tint = Color.Gray
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(12.dp))
 
                     Column {
                         Text(
-                            text = property.developer,
+                            text = property.ownerName.ifBlank { property.developer },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -843,7 +1042,15 @@ fun ContactOwnerSection(property: PropertyModel) {
                 }
 
                 IconButton(
-                    onClick = { /* Handle call */ },
+                    onClick = {
+                        val messageViewModel = MessageViewModel()
+                        messageViewModel.initiateCall(
+                            targetUserId = property.ownerId,
+                            targetUserName = property.ownerName.ifBlank { property.developer },
+                            isVideoCall = false,
+                            activity = context as Activity
+                        )
+                    },
                     modifier = Modifier
                         .size(48.dp)
                         .background(Color(0xFF4CAF50), CircleShape)
@@ -866,27 +1073,95 @@ fun ContactOwnerSection(property: PropertyModel) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                QuickMessageButton("Call me back", Modifier.weight(1f))
-                QuickMessageButton("Still available?", Modifier.weight(1f))
+                QuickMessageButton(
+                    text = "Call me back",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        sendQuickMessage(
+                            context = context,
+                            property = property,
+                            message = "Hi, I'm interested in ${property.developer}. Could you please call me back?"
+                        )
+                    }
+                )
+                QuickMessageButton(
+                    text = "Still available?",
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        sendQuickMessage(
+                            context = context,
+                            property = property,
+                            message = "Hello! Is this property still available for ${property.marketType.lowercase()}?"
+                        )
+                    }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            QuickMessageButton("Schedule a visit", Modifier.fillMaxWidth())
+            QuickMessageButton(
+                text = "Schedule a visit",
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    sendQuickMessage(
+                        context = context,
+                        property = property,
+                        message = "Hi, I'd like to schedule a visit to view ${property.developer}. When would be a good time?"
+                    )
+                }
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Updated: Today, 5:30 PM", fontSize = 12.sp, color = Color.Gray)
-            Text("156 views, 12 today", fontSize = 12.sp, color = Color.Gray)
-            Text("98 unique visitors", fontSize = 12.sp, color = Color.Gray)
+            Text(
+                text = "Updated: ${property.formattedUpdatedTime}",
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.viewsText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
+            Text(
+                text = property.uniqueViewersText,
+                fontSize = 12.sp,
+                color = Color.Gray
+            )
         }
     }
 }
 
+
+private fun sendQuickMessage(
+    context: Context,
+    property: PropertyModel,
+    message: String
+) {
+    val repository = MessageRepositoryImpl()
+
+    Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
+
+    repository.sendQuickMessageWithPropertyAndNavigate(
+        context = context,
+        activity = context as Activity,
+        otherUserId = property.ownerId,
+        otherUserName = property.ownerName.ifBlank { property.developer },
+        otherUserImage = property.ownerImageUrl,
+        message = message,
+        property = property
+    )
+}
+
+
 @Composable
-fun QuickMessageButton(text: String, modifier: Modifier = Modifier) {
+fun QuickMessageButton(
+    text: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Surface(
-        modifier = modifier.clickable { /* Handle message */ },
+        modifier = modifier.clickable(onClick = onClick),
         color = Color(0xFFE3F2FD),
         shape = RoundedCornerShape(8.dp)
     ) {
