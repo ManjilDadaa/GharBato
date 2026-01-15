@@ -447,7 +447,8 @@ fun GeminiMessageBubble(
                     Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                Text(
+                // Format the message text with markdown-style formatting
+                FormattedText(
                     text = message.text,
                     color = when {
                         message.isError -> Color(0xFFD32F2F)
@@ -471,6 +472,145 @@ fun GeminiMessageBubble(
             }
         }
     }
+}
+
+@Composable
+fun FormattedText(
+    text: String,
+    color: Color,
+    fontSize: androidx.compose.ui.unit.TextUnit
+) {
+    // Parse and format the text
+    val parts = parseMarkdown(text)
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        parts.forEach { part ->
+            when (part) {
+                is TextPart.Normal -> {
+                    if (part.text.isNotBlank()) {
+                        Text(
+                            text = part.text,
+                            color = color,
+                            fontSize = fontSize,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+                is TextPart.Bold -> {
+                    Text(
+                        text = part.text,
+                        color = color,
+                        fontSize = fontSize,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 20.sp
+                    )
+                }
+                is TextPart.BulletPoint -> {
+                    Row(
+                        modifier = Modifier.padding(start = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "•",
+                            color = color,
+                            fontSize = fontSize
+                        )
+                        Text(
+                            text = part.text,
+                            color = color,
+                            fontSize = fontSize,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+                is TextPart.NumberedPoint -> {
+                    Row(
+                        modifier = Modifier.padding(start = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "${part.number}.",
+                            color = color,
+                            fontSize = fontSize,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = part.text,
+                            color = color,
+                            fontSize = fontSize,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+sealed class TextPart {
+    data class Normal(val text: String) : TextPart()
+    data class Bold(val text: String) : TextPart()
+    data class BulletPoint(val text: String) : TextPart()
+    data class NumberedPoint(val number: Int, val text: String) : TextPart()
+}
+
+fun parseMarkdown(text: String): List<TextPart> {
+    val parts = mutableListOf<TextPart>()
+    val lines = text.split("\n")
+
+    for (line in lines) {
+        val trimmed = line.trim()
+
+        when {
+            // Numbered list: "1. Text" or "1.  Text"
+            trimmed.matches(Regex("^\\d+\\.\\s+.*")) -> {
+                val number = trimmed.substringBefore(".").toIntOrNull() ?: 1
+                val content = trimmed.substringAfter(".").trim()
+                val cleanContent = content.replace(Regex("\\*\\*(.*?)\\*\\*"), "$1") // Remove bold markers
+                parts.add(TextPart.NumberedPoint(number, cleanContent))
+            }
+            // Bullet point: "* Text" or "- Text"
+            trimmed.startsWith("*") && !trimmed.startsWith("**") -> {
+                val content = trimmed.substring(1).trim()
+                val cleanContent = content.replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")
+                parts.add(TextPart.BulletPoint(cleanContent))
+            }
+            trimmed.startsWith("-") && trimmed.length > 1 -> {
+                val content = trimmed.substring(1).trim()
+                val cleanContent = content.replace(Regex("\\*\\*(.*?)\\*\\*"), "$1")
+                parts.add(TextPart.BulletPoint(cleanContent))
+            }
+            // Bold text: **Text**
+            trimmed.contains(Regex("\\*\\*(.*?)\\*\\*")) -> {
+                // Extract bold parts and normal parts
+                var remaining = trimmed
+                while (remaining.contains("**")) {
+                    val beforeBold = remaining.substringBefore("**")
+                    if (beforeBold.isNotBlank()) {
+                        parts.add(TextPart.Normal(beforeBold))
+                    }
+
+                    remaining = remaining.substringAfter("**")
+                    if (remaining.contains("**")) {
+                        val boldText = remaining.substringBefore("**")
+                        if (boldText.isNotBlank()) {
+                            parts.add(TextPart.Bold(boldText))
+                        }
+                        remaining = remaining.substringAfter("**")
+                    }
+                }
+                if (remaining.isNotBlank()) {
+                    parts.add(TextPart.Normal(remaining))
+                }
+            }
+            // Normal text
+            trimmed.isNotBlank() -> {
+                parts.add(TextPart.Normal(trimmed))
+            }
+        }
+    }
+
+    return parts
 }
 
 @Composable
