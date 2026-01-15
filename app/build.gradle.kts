@@ -6,13 +6,12 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
     id("kotlin-parcelize")
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
     namespace = "com.example.gharbato"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.gharbato"
@@ -34,27 +33,36 @@ android {
         }
 
         val zegoAppId = (
-            project.findProperty("ZEGO_APP_ID")
-                ?: localProps.getProperty("ZEGO_APP_ID")
-                ?: System.getenv("ZEGO_APP_ID")
-                ?: System.getProperty("ZEGO_APP_ID")
-                ?: "554967872"
-            ).toString().trim()
+                project.findProperty("ZEGO_APP_ID")
+                    ?: localProps.getProperty("ZEGO_APP_ID")
+                    ?: System.getenv("ZEGO_APP_ID")
+                    ?: System.getProperty("ZEGO_APP_ID")
+                    ?: "554967872"
+                ).toString().trim()
 
         val zegoAppSign = (
-            project.findProperty("ZEGO_APP_SIGN")
-                ?: localProps.getProperty("ZEGO_APP_SIGN")
-                ?: System.getenv("ZEGO_APP_SIGN")
-                ?: System.getProperty("ZEGO_APP_SIGN")
-                ?: "d244d75c0f12cb4eb2c41d74adb071467ba16e82eb9ef2625e06453bd4347873"
-            ).toString().trim()
+                project.findProperty("ZEGO_APP_SIGN")
+                    ?: localProps.getProperty("ZEGO_APP_SIGN")
+                    ?: System.getenv("ZEGO_APP_SIGN")
+                    ?: System.getProperty("ZEGO_APP_SIGN")
+                    ?: "d244d75c0f12cb4eb2c41d74adb071467ba16e82eb9ef2625e06453bd4347873"
+                ).toString().trim()
 
         val zegoAppSignEscaped = zegoAppSign
             .replace("\\\\", "\\\\\\\\")
             .replace("\"", "\\\\\"")
+//      Gemini API Key
+        val geminiApiKey = (
+                project.findProperty("GEMINI_API_KEY")
+                    ?: localProps.getProperty("GEMINI_API_KEY")
+                    ?: System.getenv("GEMINI_API_KEY")
+                    ?: System.getProperty("GEMINI_API_KEY")
+                    ?: ""
+                ).toString().trim()
 
         buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
         buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey}\"")  // ADD THIS LINE
     }
 
     buildTypes {
@@ -158,4 +166,10 @@ dependencies {
 
     implementation("com.cloudinary:cloudinary-android:2.1.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+
+    // Gemini AI
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+
+    // Gson for JSON (needed for Gemini local storage)
+    implementation("com.google.code.gson:gson:2.10.1")
 }

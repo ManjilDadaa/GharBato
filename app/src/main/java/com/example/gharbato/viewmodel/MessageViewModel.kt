@@ -15,7 +15,8 @@ import com.example.gharbato.repository.MessageRepositoryImpl
 data class ChatNavigation(
     val targetUserId: String,
     val targetUserName: String,
-    val targetUserImage: String
+    val targetUserImage: String,
+    val isAiChat: Boolean = false
 )
 
 data class ChatPreview(
@@ -33,6 +34,10 @@ class MessageViewModel(
 
     private val _users = mutableStateOf<List<UserModel>>(emptyList())
     val users: State<List<UserModel>> = _users
+
+    // AI Assistant as a virtual user
+    private val _aiAssistant = mutableStateOf(createAiAssistant())
+    val aiAssistant: State<UserModel> = _aiAssistant
 
     // Store all chat partners locally for filtering
     private val _allChatPartners = mutableStateOf<List<UserModel>>(emptyList())
@@ -55,6 +60,18 @@ class MessageViewModel(
     init {
         loadCurrentUser()
         loadUsers()
+    }
+
+    private fun createAiAssistant(): UserModel {
+        return UserModel(
+            userId = "ai_assistant",
+            email = "ai@gharbato.com",
+            fullName = "AI Assistant",
+            phoneNo = "",
+            selectedCountry = "",
+            profileImageUrl = "", // We'll use an icon instead
+            isSuspended = false
+        )
     }
 
     private fun loadCurrentUser() {
@@ -141,7 +158,12 @@ class MessageViewModel(
     }
 
     fun requestChatNavigation(targetUserId: String, targetUserName: String, targetUserImage: String) {
-        _chatNavigation.value = ChatNavigation(targetUserId, targetUserName, targetUserImage)
+        _chatNavigation.value = ChatNavigation(
+            targetUserId = targetUserId,
+            targetUserName = targetUserName,
+            targetUserImage = targetUserImage,
+            isAiChat = targetUserId == "ai_assistant"
+        )
     }
 
     fun onChatNavigationHandled() {
@@ -175,6 +197,25 @@ class MessageViewModel(
                 currentMap[user.userId] = preview
                 _chatPreviews.value = currentMap
             }
+        }
+    }
+
+    fun getAiChatPreview(context: Context): ChatPreview {
+        val prefs = context.getSharedPreferences("gemini_chat_prefs", Context.MODE_PRIVATE)
+        val currentUserId = _currentUser.value?.userId ?: "guest"
+        val conversationJson = prefs.getString("conversation_$currentUserId", null)
+
+        return if (conversationJson.isNullOrEmpty()) {
+            ChatPreview(
+                lastMessageText = "Start a conversation with AI",
+                lastMessageTime = 0L
+            )
+        } else {
+            // Parse to get last message (simplified - you could use Gson for better parsing)
+            ChatPreview(
+                lastMessageText = "Tap to continue chatting",
+                lastMessageTime = System.currentTimeMillis()
+            )
         }
     }
 }
