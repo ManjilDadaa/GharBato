@@ -46,6 +46,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.VideoCall
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -225,29 +227,11 @@ fun MessageDetailsScreen(
         }
     }
 
-    if (showReportDialog) {
-        ReportUserDialog(
-            onDismiss = { showReportDialog = false },
-            onReport = { reason ->
-                viewModel.reportUser(reason) { success, message ->
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                    if (success) {
-                        showReportDialog = false
-                    }
-                }
-            }
-        )
-    }
-
-    val lastMessageTime = messages.lastOrNull()?.timestamp ?: 0L
-    val statusText = if (lastMessageTime > 0L) getChatStatus(lastMessageTime) else ""
-
     Scaffold(
         topBar = {
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
-                statusText = statusText,
                 isBlockedByMe = isBlockedByMe,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
@@ -355,7 +339,6 @@ fun ReportUserDialog(
 fun ChatTopBar(
     userName: String,
     userImage: String,
-    statusText: String,
     isBlockedByMe: Boolean,
     onBackClick: () -> Unit,
     onBlockClick: () -> Unit,
@@ -404,14 +387,11 @@ fun ChatTopBar(
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
                     )
-                    if (statusText.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = statusText,
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
+                    Text(
+                        text = "Online",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
                 }
             }
         },
@@ -504,11 +484,12 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Property Card - CRITICAL: Check hasPropertyCard
+                // Property Card (if exists) - Check with hasPropertyCard
                 if (message.hasPropertyCard) {
                     PropertyCardInMessage(
                         message = message,
                         onClick = {
+                            // Navigate to property details
                             val intent = Intent(context, PropertyDetailActivity::class.java).apply {
                                 putExtra("propertyId", message.propertyId)
                             }
@@ -521,10 +502,10 @@ fun MessageBubble(
                     }
                 }
 
-                // Image
+                // Image (if exists)
                 if (message.imageUrl.isNotEmpty()) {
                     AsyncImage(
-                        model = ImageRequest.Builder(context)
+                        model = ImageRequest.Builder(LocalContext.current)
                             .data(message.imageUrl)
                             .crossfade(true)
                             .build(),
@@ -541,7 +522,7 @@ fun MessageBubble(
                     }
                 }
 
-                // Text
+                // Text message
                 if (message.text.isNotEmpty()) {
                     Text(
                         text = message.text,
@@ -552,11 +533,26 @@ fun MessageBubble(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
-                    fontSize = 11.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = formatTimestamp(message.timestamp),
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                        fontSize = 11.sp
+                    )
+
+                    if (isCurrentUser) {
+                        Icon(
+                            imageVector = if (message.isRead) Icons.Filled.DoneAll else Icons.Filled.Done,
+                            contentDescription = if (message.isRead) "Seen" else "Sent",
+                            tint = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -577,6 +573,7 @@ fun PropertyCardInMessage(
         shadowElevation = 2.dp
     ) {
         Column {
+            // Property Image
             if (message.propertyImage.isNotEmpty()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -592,6 +589,7 @@ fun PropertyCardInMessage(
                     placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
                 )
             } else {
+                // Placeholder image if no image URL
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -608,7 +606,10 @@ fun PropertyCardInMessage(
                 }
             }
 
-            Column(modifier = Modifier.padding(12.dp)) {
+            // Property Details
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
                 Text(
                     text = message.propertyTitle,
                     fontSize = 14.sp,
@@ -628,7 +629,9 @@ fun PropertyCardInMessage(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
@@ -646,7 +649,9 @@ fun PropertyCardInMessage(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = Icons.Default.Bed,
@@ -702,8 +707,6 @@ fun PropertyCardInMessage(
         }
     }
 }
-
-
 @Composable
 fun MessageInput(
     messageText: String,
