@@ -202,9 +202,10 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                         val displayName = user.fullName.ifBlank { 
                             if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
                         }
+                        val lastMessage = user.lastMessage.ifBlank { "Tap to start chatting" }
                         ChatListItem(
                             name = displayName,
-                            message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
+                            message = lastMessage,
                             time = "Now", // Placeholder
                             imageUrl = user.profileImageUrl,
                             onClick = {
