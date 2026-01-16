@@ -1,6 +1,7 @@
 package com.example.gharbato.view
 
 import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -78,6 +79,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
     val chatNavigation by messageViewModel.chatNavigation
+    val navigateToAiChat by messageViewModel.navigateToAiChat
     val context = LocalContext.current
     val activity = context as Activity
 
@@ -102,6 +104,13 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             )
         )
         messageViewModel.onChatNavigationHandled()
+    }
+
+    LaunchedEffect(navigateToAiChat) {
+        if (navigateToAiChat) {
+            activity.startActivity(Intent(activity, GeminiChatActivity::class.java))
+            messageViewModel.onAiChatNavigationHandled()
+        }
     }
 
     Scaffold(
@@ -182,6 +191,16 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    item {
+                        ChatListItem(
+                            name = "AI Assistant",
+                            message = "Ask anything with AI (Gemini)",
+                            time = "",
+                            imageUrl = "",
+                            onClick = { messageViewModel.requestAiChatNavigation() }
+                        )
+                    }
+
                     items(users) { user ->
                         val displayName = user.fullName.ifBlank { 
                             if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
