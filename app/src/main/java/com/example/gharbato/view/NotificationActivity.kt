@@ -125,6 +125,7 @@ fun NotificationScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = {
