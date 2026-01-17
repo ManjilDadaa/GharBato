@@ -2,8 +2,8 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.ChatSession
@@ -15,13 +15,7 @@ import com.example.gharbato.repository.MessageRepositoryImpl
 data class ChatNavigation(
     val targetUserId: String,
     val targetUserName: String,
-    val targetUserImage: String,
-    val isAiChat: Boolean = false
-)
-
-data class ChatPreview(
-    val lastMessageText: String = "",
-    val lastMessageTime: Long = 0L
+    val targetUserImage: String
 )
 
 class MessageViewModel(
@@ -34,10 +28,6 @@ class MessageViewModel(
 
     private val _users = mutableStateOf<List<UserModel>>(emptyList())
     val users: State<List<UserModel>> = _users
-
-    // AI Assistant as a virtual user
-    private val _aiAssistant = mutableStateOf(createAiAssistant())
-    val aiAssistant: State<UserModel> = _aiAssistant
 
     // Store all chat partners locally for filtering
     private val _allChatPartners = mutableStateOf<List<UserModel>>(emptyList())
@@ -54,24 +44,12 @@ class MessageViewModel(
     private val _chatNavigation = mutableStateOf<ChatNavigation?>(null)
     val chatNavigation: State<ChatNavigation?> = _chatNavigation
 
-    private val _chatPreviews = mutableStateOf<Map<String, ChatPreview>>(emptyMap())
-    val chatPreviews: State<Map<String, ChatPreview>> = _chatPreviews
+    private val _navigateToAiChat = mutableStateOf(false)
+    val navigateToAiChat: State<Boolean> = _navigateToAiChat
 
     init {
         loadCurrentUser()
         loadUsers()
-    }
-
-    private fun createAiAssistant(): UserModel {
-        return UserModel(
-            userId = "ai_assistant",
-            email = "ai@gharbato.com",
-            fullName = "AI Assistant",
-            phoneNo = "",
-            selectedCountry = "",
-            profileImageUrl = "", // We'll use an icon instead
-            isSuspended = false
-        )
     }
 
     private fun loadCurrentUser() {
@@ -91,7 +69,6 @@ class MessageViewModel(
                 } else {
                     _errorMessage.value = ""
                 }
-                loadChatPreviews(userList)
             } else {
                 _errorMessage.value = message ?: "Failed to load chat partners"
             }
@@ -158,65 +135,23 @@ class MessageViewModel(
     }
 
     fun requestChatNavigation(targetUserId: String, targetUserName: String, targetUserImage: String) {
-        _chatNavigation.value = ChatNavigation(
-            targetUserId = targetUserId,
-            targetUserName = targetUserName,
-            targetUserImage = targetUserImage,
-            isAiChat = targetUserId == "ai_assistant"
-        )
+        _chatNavigation.value = ChatNavigation(targetUserId, targetUserName, targetUserImage)
     }
 
     fun onChatNavigationHandled() {
         _chatNavigation.value = null
     }
 
+    fun requestAiChatNavigation() {
+        _navigateToAiChat.value = true
+    }
+
+    fun onAiChatNavigationHandled() {
+        _navigateToAiChat.value = false
+    }
+
     fun getLocalUserId(context: android.content.Context): String {
         return repository.getOrCreateLocalUserId(context)
-    }
-
-    private fun loadChatPreviews(chatPartners: List<UserModel>) {
-        val currentUserId = _currentUser.value?.userId ?: return
-        if (chatPartners.isEmpty()) return
-
-        chatPartners.forEach { user ->
-            if (user.userId.isBlank()) return@forEach
-
-            repository.getLastMessageForChat(currentUserId, user.userId) { message ->
-                val text = when {
-                    message == null -> ""
-                    message.text.isNotBlank() -> message.text
-                    message.imageUrl.isNotBlank() -> "Photo"
-                    message.hasPropertyCard -> message.propertyTitle.ifBlank { "Property details" }
-                    else -> ""
-                }
-                val preview = ChatPreview(
-                    lastMessageText = text,
-                    lastMessageTime = message?.timestamp ?: 0L
-                )
-                val currentMap = _chatPreviews.value.toMutableMap()
-                currentMap[user.userId] = preview
-                _chatPreviews.value = currentMap
-            }
-        }
-    }
-
-    fun getAiChatPreview(context: Context): ChatPreview {
-        val prefs = context.getSharedPreferences("gemini_chat_prefs", Context.MODE_PRIVATE)
-        val currentUserId = _currentUser.value?.userId ?: "guest"
-        val conversationJson = prefs.getString("conversation_$currentUserId", null)
-
-        return if (conversationJson.isNullOrEmpty()) {
-            ChatPreview(
-                lastMessageText = "Start a conversation with AI",
-                lastMessageTime = 0L
-            )
-        } else {
-            // Parse to get last message (simplified - you could use Gson for better parsing)
-            ChatPreview(
-                lastMessageText = "Tap to continue chatting",
-                lastMessageTime = System.currentTimeMillis()
-            )
-        }
     }
 }
 
@@ -242,11 +177,6 @@ class MessageDetailsViewModel(
 
     private var stopListening: (() -> Unit)? = null
     private var stopBlockListening: (() -> Unit)? = null
-
-    fun markAllMessagesAsRead() {
-        val session = _chatSession.value ?: return
-        repository.markMessagesAsRead(session.chatId, session.myUserId)
-    }
 
     fun initiateCall(
         activity: android.app.Activity,
