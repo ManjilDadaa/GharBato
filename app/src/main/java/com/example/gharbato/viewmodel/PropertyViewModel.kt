@@ -30,14 +30,15 @@ data class PropertyUiState(
     val isLoadingSimilar: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedMarketType: String = "Buy",
+    val selectedMarketType: String = "",
     val selectedPropertyType: String = "All",
     val minPrice: Int = 0,
     val showMap: Boolean = true,
     val searchLocation: SearchLocation? = null,
-    val currentFilters: PropertyFilters = PropertyFilters(marketType = "Buy"),
+    val currentFilters: PropertyFilters = PropertyFilters(),
     val currentSort: SortOption = SortOption.DATE_NEWEST
 )
+
 
 
 data class SearchLocation(
@@ -379,56 +380,44 @@ class PropertyViewModel(
         val filters = _uiState.value.currentFilters
         var filtered = properties
 
-        Log.d(TAG, "Applying filters to ${properties.size} properties")
-        Log.d(TAG, "Active filters: $filters")
-
-        // Market Type Filter (always apply if set)
-        if (filters.marketType.isNotBlank()) {
-            val beforeCount = filtered.size
+        // FIXED: Market Type Filter (only apply if explicitly set and not empty)
+        if (filters.marketType.isNotBlank() && filters.marketType != "All") {
             filtered = filtered.filter { property ->
                 property.marketType.trim().equals(filters.marketType.trim(), ignoreCase = true)
             }
-            Log.d(TAG, "Market type '${filters.marketType}' filter: $beforeCount -> ${filtered.size}")
         }
 
         // Property Types Filter
         if (filters.propertyTypes.isNotEmpty()) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 filters.propertyTypes.any { type ->
                     property.propertyType.trim().equals(type.trim(), ignoreCase = true)
                 }
             }
-            Log.d(TAG, "Property types ${filters.propertyTypes} filter: $beforeCount -> ${filtered.size}")
         }
 
         // Price Range Filter
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 val price = extractPriceValue(property.price)
                 val min = filters.minPrice * 1000
                 val max = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
                 price in min..max
             }
-            Log.d(TAG, "Price range filter: $beforeCount -> ${filtered.size}")
         }
 
         // Area Range Filter
         if (filters.minArea > 0 || filters.maxArea > 0) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 val area = extractAreaValue(property.sqft)
                 val min = filters.minArea
                 val max = if (filters.maxArea > 0) filters.maxArea else Int.MAX_VALUE
                 area in min..max
             }
-            Log.d(TAG, "Area range filter: $beforeCount -> ${filtered.size}")
         }
 
         // Bedrooms Filter
         if (filters.bedrooms.isNotEmpty()) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 when (filters.bedrooms) {
                     "Studio" -> property.bedrooms == 0
@@ -436,54 +425,63 @@ class PropertyViewModel(
                     else -> property.bedrooms == filters.bedrooms.toIntOrNull()
                 }
             }
-            Log.d(TAG, "Bedrooms filter: $beforeCount -> ${filtered.size}")
         }
 
         // Furnishing Filter
         if (filters.furnishing.isNotEmpty()) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 property.furnishing.trim().equals(filters.furnishing.trim(), ignoreCase = true)
             }
-            Log.d(TAG, "Furnishing filter: $beforeCount -> ${filtered.size}")
         }
 
         // Parking Filter
         filters.parking?.let { required ->
-            val beforeCount = filtered.size
             filtered = filtered.filter { it.parking == required }
-            Log.d(TAG, "Parking filter: $beforeCount -> ${filtered.size}")
         }
 
         // Pets Filter
         filters.petsAllowed?.let { required ->
-            val beforeCount = filtered.size
             filtered = filtered.filter { it.petsAllowed == required }
-            Log.d(TAG, "Pets filter: $beforeCount -> ${filtered.size}")
         }
 
         // Amenities Filter (must have all selected amenities)
         if (filters.amenities.isNotEmpty()) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 filters.amenities.all { amenity ->
                     property.amenities.any { it.trim().equals(amenity.trim(), ignoreCase = true) }
                 }
             }
-            Log.d(TAG, "Amenities filter: $beforeCount -> ${filtered.size}")
         }
 
-        // Floor Filter
         if (filters.floor.isNotEmpty()) {
-            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 property.floor.trim().equals(filters.floor.trim(), ignoreCase = true)
             }
-            Log.d(TAG, "Floor filter: $beforeCount -> ${filtered.size}")
         }
 
         return filtered
     }
+
+    fun getAllPropertiesWithoutFilters(): List<PropertyModel> {
+        return _uiState.value.allLoadedProperties
+    }
+
+    fun resetFilters() {
+        _uiState.value = _uiState.value.copy(
+            currentFilters = PropertyFilters(),
+            selectedMarketType = "",
+            selectedPropertyType = "All",
+            minPrice = 0,
+            searchQuery = "",
+            searchLocation = null
+        )
+        applyCurrentFiltersAndSort()
+    }
+
+
+
+
+
 
 
     private fun extractPriceValue(priceString: String): Int {
