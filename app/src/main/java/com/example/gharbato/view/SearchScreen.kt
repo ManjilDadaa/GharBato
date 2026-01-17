@@ -53,11 +53,12 @@ import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen() {
-    val context = LocalContext.current
-    val viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(context)
+fun SearchScreen(
+    viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(LocalContext.current)
     )
+) {
+    val context = LocalContext.current
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

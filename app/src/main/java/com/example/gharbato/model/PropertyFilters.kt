@@ -1,7 +1,7 @@
 package com.example.gharbato.model
 
 data class PropertyFilters(
-    val marketType: String = "Buy",
+    val marketType: String = "", // Empty = show all properties
     val rentalPeriod: String = "Long-term",
     val propertyTypes: Set<String> = emptySet(),
     val minPrice: Int = 0,

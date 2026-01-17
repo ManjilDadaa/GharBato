@@ -28,12 +28,12 @@ data class PropertyUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedMarketType: String = "Buy",
+    val selectedMarketType: String = "", // Empty = show all
     val selectedPropertyType: String = "All",
     val minPrice: Int = 0,
     val showMap: Boolean = true,
     val searchLocation: SearchLocation? = null,
-    val currentFilters: PropertyFilters = PropertyFilters(marketType = "Buy"),
+    val currentFilters: PropertyFilters = PropertyFilters(marketType = ""), // Empty = show all
     val currentSort: SortOption = SortOption.DATE_NEWEST
 )
 
@@ -77,13 +77,16 @@ class PropertyViewModel(
                 Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties")
 
                 _uiState.value = _uiState.value.copy(
-                    allLoadedProperties = propertiesWithFavorites,
-                    isLoading = false
+                    allLoadedProperties = propertiesWithFavorites
+                    // Keep isLoading = true until filtering is done
                 )
 
                 // Apply initial filters (defaults to "Buy" market type)
                 // This will filter the properties and update the properties list
                 applyCurrentFiltersAndSort()
+
+                // Now set loading to false
+                _uiState.value = _uiState.value.copy(isLoading = false)
 
             } catch (e: Exception) {
                 Log.e(TAG, "Error loading properties", e)
@@ -165,7 +168,9 @@ class PropertyViewModel(
 
         // If query is empty, clear search immediately
         if (query.isEmpty()) {
-            applyCurrentFiltersAndSort()
+            viewModelScope.launch {
+                applyCurrentFiltersAndSort()
+            }
             return
         }
 
@@ -291,7 +296,10 @@ class PropertyViewModel(
             searchQuery = "",
             searchLocation = null
         )
-        applyCurrentFiltersAndSort()
+
+        viewModelScope.launch {
+            applyCurrentFiltersAndSort()
+        }
     }
 
     /**
@@ -358,30 +366,29 @@ class PropertyViewModel(
     /**
      * Applies current filters and sorting to all loaded properties
      * This is the core filtering logic that respects all active filters
+     * NOTE: This should be called from within a coroutine context
      */
     private fun applyCurrentFiltersAndSort() {
-        viewModelScope.launch {
-            Log.d(TAG, "Applying current filters and sort")
+        Log.d(TAG, "Applying current filters and sort")
 
-            var result = _uiState.value.allLoadedProperties
-            Log.d(TAG, "Starting with ${result.size} properties")
+        var result = _uiState.value.allLoadedProperties
+        Log.d(TAG, "Starting with ${result.size} properties")
 
-            // Apply filters
-            result = applyFiltersToList(result)
-            Log.d(TAG, "After filters: ${result.size} properties")
+        // Apply filters
+        result = applyFiltersToList(result)
+        Log.d(TAG, "After filters: ${result.size} properties")
 
-            // Apply sorting
-            result = applySortToProperties(result, _uiState.value.currentSort)
+        // Apply sorting
+        result = applySortToProperties(result, _uiState.value.currentSort)
 
-            _uiState.value = _uiState.value.copy(
-                properties = result,
-                error = if (result.isEmpty() && _uiState.value.allLoadedProperties.isNotEmpty())
-                    "No properties match your filters"
-                else null
-            )
+        _uiState.value = _uiState.value.copy(
+            properties = result,
+            error = if (result.isEmpty() && _uiState.value.allLoadedProperties.isNotEmpty())
+                "No properties match your filters"
+            else null
+        )
 
-            Log.d(TAG, "Filter and sort completed: ${result.size} results")
-        }
+        Log.d(TAG, "Filter and sort completed: ${result.size} results")
     }
 
     /**
@@ -581,6 +588,9 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Extracts numeric area value from area string
+     */
     private fun extractAreaValue(areaString: String): Int {
         return areaString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
