@@ -6,7 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SortOption
 import com.example.gharbato.repository.SavedPropertiesRepository
@@ -25,17 +25,20 @@ data class PropertyUiState(
     val properties: List<PropertyModel> = emptyList(),
     val allLoadedProperties: List<PropertyModel> = emptyList(),
     val selectedProperty: PropertyModel? = null,
+    val similarProperties: List<PropertyModel> = emptyList(),
     val isLoading: Boolean = false,
+    val isLoadingSimilar: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
-    val selectedMarketType: String = "", // Empty = show all
+    val selectedMarketType: String = "Buy",
     val selectedPropertyType: String = "All",
     val minPrice: Int = 0,
     val showMap: Boolean = true,
     val searchLocation: SearchLocation? = null,
-    val currentFilters: PropertyFilters = PropertyFilters(marketType = ""), // Empty = show all
+    val currentFilters: PropertyFilters = PropertyFilters(marketType = "Buy"),
     val currentSort: SortOption = SortOption.DATE_NEWEST
 )
+
 
 data class SearchLocation(
     val latitude: Double,
@@ -59,10 +62,6 @@ class PropertyViewModel(
         observeSavedProperties()
     }
 
-    /**
-     * Loads all approved properties from repository
-     * This is called once on initialization
-     */
     fun loadProperties() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -78,14 +77,11 @@ class PropertyViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     allLoadedProperties = propertiesWithFavorites
-                    // Keep isLoading = true until filtering is done
+
                 )
 
-                // Apply initial filters (defaults to "Buy" market type)
-                // This will filter the properties and update the properties list
                 applyCurrentFiltersAndSort()
 
-                // Now set loading to false
                 _uiState.value = _uiState.value.copy(isLoading = false)
 
             } catch (e: Exception) {
@@ -98,9 +94,7 @@ class PropertyViewModel(
         }
     }
 
-    /**
-     * Observes saved properties flow and updates favorite status
-     */
+
     private fun observeSavedProperties() {
         viewModelScope.launch {
             savedPropertiesRepository.getSavedPropertiesFlow().collect { savedProperties ->
@@ -286,9 +280,7 @@ class PropertyViewModel(
         }
     }
 
-    /**
-     * Clears all search criteria and returns to filtered view
-     */
+
     fun clearSearch() {
         Log.d(TAG, "Clearing search")
 
@@ -302,17 +294,12 @@ class PropertyViewModel(
         }
     }
 
-    /**
-     * Gets current active filters
-     */
+
     fun getCurrentFilters(): PropertyFilters {
         return _uiState.value.currentFilters
     }
 
-    /**
-     * Applies new filters to properties
-     * Maintains any active search
-     */
+
     fun applyFilters(filters: PropertyFilters) {
         Log.d(TAG, "Applying filters: $filters")
 
@@ -363,11 +350,7 @@ class PropertyViewModel(
         applyFilters(updatedFilters)
     }
 
-    /**
-     * Applies current filters and sorting to all loaded properties
-     * This is the core filtering logic that respects all active filters
-     * NOTE: This should be called from within a coroutine context
-     */
+
     private fun applyCurrentFiltersAndSort() {
         Log.d(TAG, "Applying current filters and sort")
 
@@ -391,10 +374,7 @@ class PropertyViewModel(
         Log.d(TAG, "Filter and sort completed: ${result.size} results")
     }
 
-    /**
-     * Applies all active filters to a list of properties
-     * This method is called by search and filter operations
-     */
+
     private fun applyFiltersToList(properties: List<PropertyModel>): List<PropertyModel> {
         val filters = _uiState.value.currentFilters
         var filtered = properties
@@ -505,9 +485,7 @@ class PropertyViewModel(
         return filtered
     }
 
-    /**
-     * Extracts numeric price value from price string
-     */
+
     private fun extractPriceValue(priceString: String): Int {
         return priceString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
@@ -526,23 +504,16 @@ class PropertyViewModel(
         return (R * c).toFloat()
     }
 
-    /**
-     * Selects a property for detail view
-     */
     fun selectProperty(property: PropertyModel) {
         _uiState.value = _uiState.value.copy(selectedProperty = property)
     }
 
-    /**
-     * Clears selected property
-     */
+
     fun clearSelectedProperty() {
         _uiState.value = _uiState.value.copy(selectedProperty = null)
     }
 
-    /**
-     * Toggles favorite status of a property
-     */
+
     fun toggleFavorite(property: PropertyModel) {
         viewModelScope.launch {
             try {
@@ -558,9 +529,7 @@ class PropertyViewModel(
         }
     }
 
-    /**
-     * Updates sort option and re-sorts properties
-     */
+
     fun updateSort(sortOption: SortOption) {
         Log.d(TAG, "Updating sort to: $sortOption")
         val sorted = applySortToProperties(_uiState.value.properties, sortOption)
@@ -570,9 +539,9 @@ class PropertyViewModel(
         )
     }
 
-    /**
-     * Applies sorting to properties list
-     */
+
+     //Applies sorting to properties list
+
     private fun applySortToProperties(
         properties: List<PropertyModel>,
         sortOption: SortOption
@@ -588,23 +557,54 @@ class PropertyViewModel(
         }
     }
 
-    /**
-     * Extracts numeric area value from area string
-     */
+    fun loadSimilarProperties(property: PropertyModel) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoadingSimilar = true)
+
+            try {
+                val similar = repository.getSimilarProperties(
+                    currentProperty = property,
+                    limit = 10
+                )
+
+                // Update favorite status for similar properties
+                val similarWithFavorites = similar.map { prop ->
+                    prop.copy(isFavorite = savedPropertiesRepository.isPropertySaved(prop.id))
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    similarProperties = similarWithFavorites,
+                    isLoadingSimilar = false
+                )
+
+                Log.d("PropertyViewModel", "Loaded ${similarWithFavorites.size} similar properties")
+            } catch (e: Exception) {
+                Log.e("PropertyViewModel", "Error loading similar properties: ${e.message}")
+                _uiState.value = _uiState.value.copy(
+                    similarProperties = emptyList(),
+                    isLoadingSimilar = false
+                )
+            }
+        }
+    }
+
+    fun clearSimilarProperties() {
+        _uiState.value = _uiState.value.copy(
+            similarProperties = emptyList(),
+            isLoadingSimilar = false
+        )
+    }
+
+
     private fun extractAreaValue(areaString: String): Int {
         return areaString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
 
-    /**
-     * Toggles map visibility
-     */
+
     fun toggleMapVisibility() {
         _uiState.value = _uiState.value.copy(showMap = !_uiState.value.showMap)
     }
 
-    /**
-     * Uploads an image to storage
-     */
     fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
         repository.uploadImage(context, imageUri, callback)
     }
