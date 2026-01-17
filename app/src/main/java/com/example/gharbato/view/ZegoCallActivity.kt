@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
 import com.example.gharbato.utils.ZegoCloudConstants
+import com.example.gharbato.utils.NotificationHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallConfig
@@ -367,33 +368,25 @@ object CallInvitationManager {
         // Store invitation first before removing
         pendingInvitation = invitation
         
-        // Show notification and start call activity
-        showCallNotification(context, callerName, isVideoCall) {
-            startIncomingCall(context, callId, currentUserId, callerId, isVideoCall)
-            FirebaseDatabase.getInstance().getReference("call_invitations").child(currentUserId).removeValue()
-            FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
-        }
+        showCallNotification(context, callerName, isVideoCall, callId, currentUserId, callerId)
     }
 
     private fun showCallNotification(
         context: android.content.Context,
         callerName: String,
         isVideoCall: Boolean,
-        onAccept: () -> Unit
+        callId: String,
+        currentUserId: String,
+        callerId: String
     ) {
-        try {
-            // For now, directly start the call activity with a small delay
-            // In a real app, you'd show a system notification here
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    onAccept()
-                } catch (e: Exception) {
-                    android.util.Log.e("CallInvitation", "Failed to accept call", e)
-                }
-            }, 1000) // 1 second delay
-        } catch (e: Exception) {
-            android.util.Log.e("CallInvitation", "Failed to show notification", e)
-        }
+        NotificationHelper.showIncomingCallFloatingUI(
+            context = context,
+            callerName = callerName,
+            isVideoCall = isVideoCall,
+            callId = callId,
+            currentUserId = currentUserId,
+            callerId = callerId
+        )
     }
 
     private fun startIncomingCall(

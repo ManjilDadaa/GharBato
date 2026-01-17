@@ -158,6 +158,10 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.FloatingCallActivity"
+            android:exported="false"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".view.MapLocationPickerActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato"
