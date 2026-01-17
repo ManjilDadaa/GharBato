@@ -15,6 +15,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import kotlin.math.*
+import kotlin.random.Random
 
 
 class NearbyPlacesRepositoryImpl : NearbyPlacesRepository {
@@ -202,29 +203,51 @@ class NearbyPlacesRepositoryImpl : NearbyPlacesRepository {
 
     private fun generateFallbackForType(location: LatLng, type: PlaceType): List<NearbyPlace> {
         val names = when (type) {
-            PlaceType.SCHOOL -> listOf("Local School", "Community School", "Public School")
-            PlaceType.HOSPITAL -> listOf("Medical Center", "Health Clinic", "Community Hospital")
-            PlaceType.STORE -> listOf("Local Store", "Supermarket", "Convenience Store")
+            PlaceType.SCHOOL -> listOf("Community School", "Public School", "Local School")
+            PlaceType.HOSPITAL -> listOf("Health Clinic", "Medical Center", "Community Hospital")
+            PlaceType.STORE -> listOf("Supermarket", "Local Store", "Convenience Store")
             else -> listOf("Nearby ${type.getDisplayName()}")
         }
 
-        // Generate 3 reasonable nearby places
+        // Create unique but deterministic seed based on location + type
+        val locationHash = ((location.latitude * 1000000).toLong() +
+                (location.longitude * 1000000).toLong() +
+                type.ordinal * 1000).toInt()
+        val random = Random(locationHash)
+
         return names.take(3).mapIndexed { index, name ->
-            val offsetLat = (0.01 + index * 0.005) * if (index % 2 == 0) 1 else -1
-            val offsetLng = (0.01 + index * 0.003) * if (index % 3 == 0) 1 else -1
-            val placeLocation = LatLng(location.latitude + offsetLat, location.longitude + offsetLng)
-            val distance = calculateDistance(location, placeLocation)
+            // Generate random but consistent distances for this location (300m to 2500m)
+            val distanceMeters = 300 + random.nextInt(2200)
+
+            // Random direction (0-360 degrees)
+            val angleDegrees = random.nextInt(360)
+            val angleRadians = Math.toRadians(angleDegrees.toDouble())
+
+            // Convert meters to lat/lng offsets
+            // 1 degree latitude ≈ 111,000 meters
+            // 1 degree longitude ≈ 111,000 * cos(latitude) meters
+            val latOffset = (distanceMeters / 111000.0) * sin(angleRadians)
+            val lngOffset = (distanceMeters / (111000.0 * cos(Math.toRadians(location.latitude)))) * cos(angleRadians)
+
+            val placeLocation = LatLng(
+                location.latitude + latOffset,
+                location.longitude + lngOffset
+            )
+
+            // Calculate actual distance (should match distanceMeters closely)
+            val actualDistance = calculateDistance(location, placeLocation)
 
             NearbyPlace(
-                id = "fallback_${type}_$index",
+                id = "fallback_${type}_${index}_${locationHash}",
                 name = name,
                 location = placeLocation,
                 type = type,
-                distance = distance,
-                formattedDistance = formatDistance(distance)
+                distance = actualDistance,
+                formattedDistance = formatDistance(actualDistance)
             )
         }.sortedBy { it.distance }
     }
+
 
     private fun calculateDistance(start: LatLng, end: LatLng): Double {
         val earthRadius = 6371000.0

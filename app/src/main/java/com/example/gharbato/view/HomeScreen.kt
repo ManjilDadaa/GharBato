@@ -2,11 +2,15 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -22,7 +26,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,9 +35,8 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -52,13 +56,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.R
+import com.example.gharbato.model.SortOption
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Purple
 import com.example.gharbato.viewmodel.PropertyViewModel
@@ -70,7 +74,8 @@ import com.example.gharbato.viewmodel.UserViewModelProvider
 fun HomeScreen(
     viewModel: PropertyViewModel = viewModel(
         factory = PropertyViewModelFactory(LocalContext.current)
-    )
+    ),
+    onNavigateToSearch: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -79,20 +84,30 @@ fun HomeScreen(
     val userViewModel = remember { UserViewModelProvider.getInstance() }
     val unreadCount by userViewModel.unreadCount.observeAsState(0)
 
-    var search by remember { mutableStateOf("") }
-
     // Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Filter chips state
-    var selectedFilters by remember { mutableStateOf(setOf<String>()) }
-    val filters = mapOf(
-        "Trending" to R.drawable.baseline_trending_up_24,
-        "Nearby" to R.drawable.outline_location_on_24,
-        "Price Range" to R.drawable.baseline_currency_rupee_24,
-        "New" to R.drawable.baseline_star_border_purple500_24
-    )
+    // Active quick filter
+    var activeQuickFilter by remember { mutableStateOf<QuickFilter?>(null) }
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    // Location picker launcher for "Nearby" filter
+    val locationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val latitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0) ?: 0.0
+            val longitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0) ?: 0.0
+            val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
+            val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
+
+            // Apply location-based filtering
+            viewModel.searchByLocation(latitude, longitude, address, radius)
+            activeQuickFilter = QuickFilter.NEARBY
+        }
+    }
 
     // Start observing notifications
     LaunchedEffect(Unit) {
@@ -181,7 +196,7 @@ fun HomeScreen(
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = Blue)
             }
         } else {
             LazyColumn(
@@ -190,82 +205,92 @@ fun HomeScreen(
                     .background(Color(0xFFF8F9FB))
                     .padding(top = padding.calculateTopPadding()),
             ) {
+                // Search Button Card (navigates to SearchScreen)
                 item {
-                    OutlinedTextField(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 5.dp, horizontal = 5.dp)
-                            .height(48.dp),
-                        value = search,
-                        onValueChange = { data ->
-                            search = data
-                            // Optional: trigger search
-                            // viewModel.updateSearchQuery(data)
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.Gray.copy(0.2f),
-                            unfocusedContainerColor = Color.Gray.copy(0.2f),
-                            unfocusedBorderColor = Color.Gray.copy(0.1f),
-                            focusedBorderColor = Blue,
-                        ),
-                        placeholder = {
-                            Text(
-                                "Search Properties...",
-                                style = TextStyle(
-                                    fontSize = 14.sp
-                                )
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(R.drawable.outline_search_24),
-                                contentDescription = null
-                            )
-                        },
-                        shape = RoundedCornerShape(10.dp),
+                    SearchButtonCard(
+                        onClick = onNavigateToSearch,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
 
+                // Quick Filter Chips
                 item {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .padding(horizontal = 5.dp, vertical = 8.dp)
-                            .horizontalScroll(rememberScrollState())
-                    ) {
-                        for ((filter, icon) in filters) {
-                            FilterChip(
-                                selected = selectedFilters.contains(filter),
-                                onClick = {
-                                    selectedFilters = if (filter in selectedFilters)
-                                        selectedFilters - filter
-                                    else selectedFilters + filter
-                                },
-                                label = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(icon),
-                                            contentDescription = null,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(3.dp))
-                                        Text(filter)
+                    QuickFiltersRow(
+                        activeFilter = activeQuickFilter,
+                        onFilterClick = { filter ->
+                            if (activeQuickFilter == filter) {
+                                // Deselect and show all (clear search/filters)
+                                activeQuickFilter = null
+                                viewModel.clearSearch()
+                            } else {
+                                // Apply quick filter
+                                activeQuickFilter = filter
+                                when (filter) {
+                                    QuickFilter.TRENDING -> {
+                                        // Sort by most viewed properties
+                                        viewModel.updateSort(SortOption.POPULARITY)
                                     }
-                                },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Purple.copy(0.3f)
-                                )
+                                    QuickFilter.NEWEST -> {
+                                        // Sort by newest properties
+                                        viewModel.updateSort(SortOption.DATE_NEWEST)
+                                    }
+                                    QuickFilter.NEARBY -> {
+                                        // Open location picker to find nearby properties
+                                        val intent = Intent(context, LocationPickerActivity::class.java)
+                                        locationPickerLauncher.launch(intent)
+                                    }
+                                    QuickFilter.PRICE_RANGE -> {
+                                        // Navigate to SearchScreen with filters open
+                                        onNavigateToSearch()
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                }
+
+                // Properties count and current filter indicator
+                if (uiState.properties.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${uiState.properties.size} Properties",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
                             )
+
+                            if (activeQuickFilter != null) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = Purple.copy(0.1f)
+                                ) {
+                                    Text(
+                                        text = when (activeQuickFilter) {
+                                            QuickFilter.TRENDING -> "Trending"
+                                            QuickFilter.NEWEST -> "Newest"
+                                            QuickFilter.NEARBY -> "Nearby"
+                                            QuickFilter.PRICE_RANGE -> "Price Range"
+                                            null -> ""
+                                        },
+                                        fontSize = 12.sp,
+                                        color = Purple,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
-                // Use properties from ViewModel's state
+                // Property Cards
                 items(uiState.properties) { property ->
                     PropertyCard(
                         property = property,
@@ -280,27 +305,149 @@ fun HomeScreen(
                     )
                 }
 
-                // Show empty state if no properties
+                // Empty state
                 if (uiState.properties.isEmpty() && !uiState.isLoading) {
                     item {
-                        Box(
+                        EmptyStateView(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No properties available.\nAdd some properties to get started!",
-                                style = TextStyle(
-                                    fontSize = 16.sp,
-                                    color = Color.Gray
-                                )
-                            )
-                        }
+                                .padding(32.dp)
+                        )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SearchButtonCard(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(56.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFFF5F5F5),
+        shadowElevation = 0.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color.Gray,
+                modifier = Modifier.size(24.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Text(
+                text = "Search for properties...",
+                fontSize = 15.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
+enum class QuickFilter {
+    TRENDING, NEWEST, NEARBY, PRICE_RANGE
+}
+
+@Composable
+fun QuickFiltersRow(
+    activeFilter: QuickFilter?,
+    onFilterClick: (QuickFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val filters = listOf(
+        QuickFilter.TRENDING to R.drawable.baseline_trending_up_24,
+        QuickFilter.NEWEST to R.drawable.baseline_star_border_purple500_24,
+        QuickFilter.NEARBY to R.drawable.outline_location_on_24,
+        QuickFilter.PRICE_RANGE to R.drawable.baseline_currency_rupee_24
+    )
+
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.horizontalScroll(rememberScrollState())
+    ) {
+        filters.forEach { (filter, icon) ->
+            FilterChip(
+                selected = activeFilter == filter,
+                onClick = { onFilterClick(filter) },
+                label = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(icon),
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = when (filter) {
+                                QuickFilter.TRENDING -> "Trending"
+                                QuickFilter.NEWEST -> "New"
+                                QuickFilter.NEARBY -> "Nearby"
+                                QuickFilter.PRICE_RANGE -> "Price"
+                            },
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = Blue,
+                    selectedLabelColor = Color.White,
+                    containerColor = Color.White,
+                    labelColor = Color.Black
+                )
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyStateView(
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.baseline_home_24),
+            contentDescription = null,
+            tint = Color.Gray.copy(alpha = 0.5f),
+            modifier = Modifier.size(80.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = "No properties available",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Check back later for new listings",
+            fontSize = 14.sp,
+            color = Color.Gray.copy(alpha = 0.7f)
+        )
     }
 }
 

@@ -53,11 +53,12 @@ import com.google.maps.android.compose.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen() {
-    val context = LocalContext.current
-    val viewModel: PropertyViewModel = viewModel(
-        factory = PropertyViewModelFactory(context)
+fun SearchScreen(
+    viewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(LocalContext.current)
     )
+) {
+    val context = LocalContext.current
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -104,7 +105,12 @@ fun SearchScreen() {
                 },
                 onSearchClick = {
                     viewModel.performSearch()
-                }
+                },
+                onClearSearch = {
+                    viewModel.updateSearchQuery("")
+                    viewModel.clearSearch()
+                },
+                hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
@@ -116,7 +122,7 @@ fun SearchScreen() {
                 .background(Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Map Section - Only show if there are properties
+                // Map Section
                 if (mapHeight > 0.dp && uiState.properties.isNotEmpty()) {
                     Box(
                         modifier = Modifier
@@ -135,7 +141,6 @@ fun SearchScreen() {
                             }
                         )
 
-                        // Property Detail Overlay when a marker is selected
                         uiState.selectedProperty?.let { property ->
                             PropertyDetailOverlay(
                                 property = property,
@@ -165,66 +170,122 @@ fun SearchScreen() {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                if (uiState.isLoading) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                // Content
+                when {
+                    uiState.isLoading -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(color = Color(0xFF2196F3))
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Searching properties...",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator(color = Color(0xFF2196F3))
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "Searching properties...",
+                                    color = Color.Gray,
+                                    fontSize = 14.sp
+                                )
+                            }
                         }
                     }
-                } else if (uiState.error?.isNotEmpty() == true) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(32.dp)
+
+                    uiState.error != null -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.SearchOff,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                uiState.error ?: "An error occurred",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Try adjusting your search or filters",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SearchOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    uiState.error ?: "No properties found",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Try adjusting your search or filters",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray
+                                )
+
+                                if (uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Button(
+                                        onClick = {
+                                            viewModel.updateSearchQuery("")
+                                            viewModel.clearSearch()
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF2196F3)
+                                        )
+                                    ) {
+                                        Icon(Icons.Default.Clear, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Clear Search")
+                                    }
+                                }
+                            }
                         }
                     }
-                } else {
-                    PropertyList(
-                        properties = uiState.properties,
-                        listState = listState,
-                        onPropertyClick = { property ->
-                            val intent = Intent(context, PropertyDetailActivity::class.java)
-                            intent.putExtra("propertyId", property.id)
-                            context.startActivity(intent)
-                        },
-                        onFavoriteClick = { property ->
-                            viewModel.toggleFavorite(property)
+
+                    uiState.properties.isEmpty() -> {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Home,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    "No properties found",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Try different filters or search terms",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray
+                                )
+                            }
                         }
-                    )
+                    }
+
+                    else -> {
+                        PropertyList(
+                            properties = uiState.properties,
+                            listState = listState,
+                            onPropertyClick = { property ->
+                                val intent = Intent(context, PropertyDetailActivity::class.java)
+                                intent.putExtra("propertyId", property.id)
+                                context.startActivity(intent)
+                            },
+                            onFavoriteClick = { property ->
+                                viewModel.toggleFavorite(property)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -248,6 +309,7 @@ fun SearchScreen() {
             currentSort = uiState.currentSort,
             onSortSelected = { sortOption ->
                 viewModel.updateSort(sortOption)
+                showSortSheet = false
             },
             onDismiss = {
                 showSortSheet = false
@@ -256,8 +318,122 @@ fun SearchScreen() {
     }
 }
 
-/**
- */
+@Composable
+fun SearchTopBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit,
+    onLocationClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    onClearSearch: () -> Unit,
+    hasActiveSearch: Boolean
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.statusBars),
+        color = Color.White,
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                placeholder = {
+                    Text(
+                        text = "Search location, property type...",
+                        color = Color(0xFF9E9E9E),
+                        fontSize = 15.sp
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color(0xFF757575),
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (hasActiveSearch) {
+                        IconButton(onClick = onClearSearch) {
+                            Icon(
+                                imageVector = Icons.Default.Clear,
+                                contentDescription = "Clear search",
+                                tint = Color(0xFF757575)
+                            )
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color(0xFFE0E0E0),
+                    focusedBorderColor = Color(0xFF2196F3),
+                    unfocusedContainerColor = Color(0xFFFAFAFA),
+                    focusedContainerColor = Color.White,
+                    cursorColor = Color(0xFF2196F3)
+                ),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { onSearchClick() })
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onFilterClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color(0xFF2196F3)
+                    ),
+                    border = BorderStroke(1.5.dp, Color(0xFF2196F3))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filters",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Filters", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+
+                Button(
+                    onClick = onLocationClick,
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2196F3),
+                        contentColor = Color.White
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 4.dp
+                    )
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Select Location",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Near Me", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun PropertiesMapSection(
     properties: List<PropertyModel>,
@@ -416,108 +592,6 @@ fun PropertiesMapSection(
     }
 }
 
-@Composable
-fun SearchTopBar(
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onFilterClick: () -> Unit,
-    onLocationClick: () -> Unit,
-    onSearchClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
-        color = Color.White,
-        shadowElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                placeholder = {
-                    Text(
-                        text = "Search location, property type...",
-                        color = Color(0xFF9E9E9E),
-                        fontSize = 15.sp
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = Color(0xFF757575),
-                        modifier = Modifier.size(24.dp)
-                    )
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = Color(0xFF2196F3),
-                    unfocusedContainerColor = Color(0xFFFAFAFA),
-                    focusedContainerColor = Color.White,
-                    cursorColor = Color(0xFF2196F3)
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { onSearchClick() })
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedButton(
-                    onClick = onFilterClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = Color(0xFF2196F3)
-                    ),
-                    border = BorderStroke(1.5.dp, Color(0xFF2196F3))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = "Filters",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Filters", fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                }
-
-                Button(
-                    onClick = onLocationClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3),
-                        contentColor = Color.White
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 2.dp,
-                        pressedElevation = 4.dp
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Select Location",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Near Me", fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun SortBar(
