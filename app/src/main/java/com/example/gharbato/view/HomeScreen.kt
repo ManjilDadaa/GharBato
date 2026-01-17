@@ -2,6 +2,8 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -89,6 +91,23 @@ fun HomeScreen(
     var activeQuickFilter by remember { mutableStateOf<QuickFilter?>(null) }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    // Location picker launcher for "Nearby" filter
+    val locationPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val data = result.data
+            val latitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0) ?: 0.0
+            val longitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0) ?: 0.0
+            val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
+            val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
+
+            // Apply location-based filtering
+            viewModel.searchByLocation(latitude, longitude, address, radius)
+            activeQuickFilter = QuickFilter.NEARBY
+        }
+    }
 
     // Start observing notifications
     LaunchedEffect(Unit) {
@@ -200,19 +219,25 @@ fun HomeScreen(
                         activeFilter = activeQuickFilter,
                         onFilterClick = { filter ->
                             if (activeQuickFilter == filter) {
-                                // Deselect and show all
+                                // Deselect and show all (clear search/filters)
                                 activeQuickFilter = null
-                                viewModel.updateSort(SortOption.DATE_NEWEST)
+                                viewModel.clearSearch()
                             } else {
                                 // Apply quick filter
                                 activeQuickFilter = filter
                                 when (filter) {
-                                    QuickFilter.TRENDING -> viewModel.updateSort(SortOption.POPULARITY)
-                                    QuickFilter.NEWEST -> viewModel.updateSort(SortOption.DATE_NEWEST)
-                                    QuickFilter.NEARBY -> {
-                                        // TODO: Implement nearby sorting based on user location
-                                        // For now, just sort by newest
+                                    QuickFilter.TRENDING -> {
+                                        // Sort by most viewed properties
+                                        viewModel.updateSort(SortOption.POPULARITY)
+                                    }
+                                    QuickFilter.NEWEST -> {
+                                        // Sort by newest properties
                                         viewModel.updateSort(SortOption.DATE_NEWEST)
+                                    }
+                                    QuickFilter.NEARBY -> {
+                                        // Open location picker to find nearby properties
+                                        val intent = Intent(context, LocationPickerActivity::class.java)
+                                        locationPickerLauncher.launch(intent)
                                     }
                                     QuickFilter.PRICE_RANGE -> {
                                         // Navigate to SearchScreen with filters open

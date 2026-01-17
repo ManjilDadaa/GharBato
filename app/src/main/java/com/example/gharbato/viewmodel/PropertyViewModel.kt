@@ -578,13 +578,13 @@ class PropertyViewModel(
         sortOption: SortOption
     ): List<PropertyModel> {
         return when (sortOption) {
-            SortOption.POPULARITY -> properties.sortedByDescending { it.isFavorite }
+            SortOption.POPULARITY -> properties.sortedByDescending { it.totalViews }
             SortOption.PRICE_LOW_TO_HIGH -> properties.sortedBy { extractPriceValue(it.price) }
             SortOption.PRICE_HIGH_TO_LOW -> properties.sortedByDescending { extractPriceValue(it.price) }
             SortOption.AREA_SMALL_TO_LARGE -> properties.sortedBy { extractAreaValue(it.sqft) }
             SortOption.AREA_LARGE_TO_SMALL -> properties.sortedByDescending { extractAreaValue(it.sqft) }
-            SortOption.DATE_NEWEST -> properties.sortedByDescending { it.id }
-            SortOption.DATE_OLDEST -> properties.sortedBy { it.id }
+            SortOption.DATE_NEWEST -> properties.sortedByDescending { it.createdAt }
+            SortOption.DATE_OLDEST -> properties.sortedBy { it.createdAt }
         }
     }
 
