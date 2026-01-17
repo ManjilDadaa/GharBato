@@ -178,6 +178,7 @@ fun TrustAndVerificationScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = { Text("Trust & Verification", fontWeight = FontWeight.Bold) },
