@@ -47,20 +47,26 @@ fun VerifyUserScreen() {
     val context = LocalContext.current
     val kycViewModel = remember { KycViewModel(KycRepoImpl()) }
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
-    
+
     val kycSubmissions by kycViewModel.kycSubmissions.observeAsState(emptyList())
     val loading by kycViewModel.loading.observeAsState(false)
-    
+
+    var selectedTab by remember { mutableStateOf("Pending") }
     var selectedKyc by remember { mutableStateOf<KycModel?>(null) }
     var showImageDialog by remember { mutableStateOf(false) }
     var selectedImageUrl by remember { mutableStateOf("") }
     var showRejectDialog by remember { mutableStateOf(false) }
     var rejectionReason by remember { mutableStateOf("") }
-    
+
+    // Filter submissions based on selected tab
+    val filteredSubmissions = remember(kycSubmissions, selectedTab) {
+        kycSubmissions.filter { it.status == selectedTab }
+    }
+
     LaunchedEffect(Unit) {
         kycViewModel.loadAllKycSubmissions()
     }
-    
+
     // Image Dialog
     if (showImageDialog) {
         Dialog(onDismissRequest = { showImageDialog = false }) {
@@ -96,7 +102,7 @@ fun VerifyUserScreen() {
             }
         }
     }
-    
+
     // Reject Dialog
     if (showRejectDialog && selectedKyc != null) {
         AlertDialog(
@@ -148,7 +154,7 @@ fun VerifyUserScreen() {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { 
+                TextButton(onClick = {
                     showRejectDialog = false
                     rejectionReason = ""
                 }) {
@@ -191,32 +197,47 @@ fun VerifyUserScreen() {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Stats Cards
+            // Tab Cards - Clickable Status Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(
-                    title = "Total",
-                    count = kycSubmissions.size,
-                    color = Blue,
-                    modifier = Modifier.weight(1f)
-                )
-                StatCard(
+                TabStatCard(
                     title = "Pending",
                     count = kycSubmissions.count { it.status == "Pending" },
                     color = Color(0xFFFFA000),
+                    isSelected = selectedTab == "Pending",
+                    onClick = { selectedTab = "Pending" },
                     modifier = Modifier.weight(1f)
                 )
-                StatCard(
+                TabStatCard(
                     title = "Approved",
                     count = kycSubmissions.count { it.status == "Approved" },
                     color = Color(0xFF4CAF50),
+                    isSelected = selectedTab == "Approved",
+                    onClick = { selectedTab = "Approved" },
+                    modifier = Modifier.weight(1f)
+                )
+                TabStatCard(
+                    title = "Rejected",
+                    count = kycSubmissions.count { it.status == "Rejected" },
+                    color = Color(0xFFD32F2F),
+                    isSelected = selectedTab == "Rejected",
+                    onClick = { selectedTab = "Rejected" },
                     modifier = Modifier.weight(1f)
                 )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Selected Tab Title
+            Text(
+                text = "$selectedTab Submissions",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF2C2C2C),
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
 
             if (loading) {
                 Box(
@@ -225,22 +246,33 @@ fun VerifyUserScreen() {
                 ) {
                     CircularProgressIndicator(color = Blue)
                 }
-            } else if (kycSubmissions.isEmpty()) {
+            } else if (filteredSubmissions.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        "No KYC submissions found",
-                        fontSize = 16.sp,
-                        color = Color.Gray
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "No $selectedTab submissions",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.Gray
+                        )
+                        Text(
+                            "All submissions will appear here",
+                            fontSize = 14.sp,
+                            color = Color.LightGray
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(kycSubmissions) { kyc ->
+                    items(filteredSubmissions) { kyc ->
                         KycCard(
                             kyc = kyc,
                             onApprove = {
@@ -250,7 +282,6 @@ fun VerifyUserScreen() {
                                     reviewedBy = "Admin"
                                 ) { success, message ->
                                     if (success) {
-                                        // Notify user about approval
                                         userViewModel.createNotificationForUser(
                                             userId = kyc.userId,
                                             title = "✅ KYC Approved",
@@ -279,8 +310,51 @@ fun VerifyUserScreen() {
                             }
                         )
                     }
+
+                    // Add bottom spacing
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TabStatCard(
+    title: String,
+    count: Int,
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) color.copy(alpha = 0.15f) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp),
+        border = if (isSelected) BorderStroke(2.dp, color) else null
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                count.toString(),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+            Text(
+                title,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) color else Color.Gray
+            )
         }
     }
 }
@@ -351,9 +425,9 @@ fun KycCard(
                 }
                 StatusChip(kyc.status)
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Document Info
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -382,9 +456,9 @@ fun KycCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(12.dp))
-            
+
             // Document Images
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -403,7 +477,7 @@ fun KycCard(
                     modifier = Modifier.weight(1f)
                 )
             }
-            
+
             if (kyc.status == "Rejected" && kyc.rejectionReason.isNotBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -416,7 +490,7 @@ fun KycCard(
                         .padding(8.dp)
                 )
             }
-            
+
             // Action Buttons
             if (kyc.status == "Pending") {
                 Spacer(modifier = Modifier.height(12.dp))
@@ -464,7 +538,7 @@ fun StatusChip(status: String) {
         "Rejected" -> Color(0xFFD32F2F) to Color.White
         else -> Color(0xFFFFA000) to Color.White
     }
-    
+
     Box(
         modifier = Modifier
             .background(backgroundColor, RoundedCornerShape(12.dp))
