@@ -135,7 +135,12 @@ fun DashboardBody() {
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
             when (selectedIndex) {
-                0 -> HomeScreen(viewModel = propertyViewModel)
+                0 -> HomeScreen(
+                    viewModel = propertyViewModel,
+                    onNavigateToSearch = {
+                        selectedIndex = 1
+                    }
+                )
                 1 -> SearchScreen(viewModel = propertyViewModel)
                 2 -> MessageScreen()
                 3 -> SavedScreen(
