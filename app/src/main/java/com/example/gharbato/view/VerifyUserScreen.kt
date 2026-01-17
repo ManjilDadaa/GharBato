@@ -1,6 +1,7 @@
 package com.example.gharbato.view
 
 import android.widget.Toast
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -105,63 +106,151 @@ fun VerifyUserScreen() {
 
     // Reject Dialog
     if (showRejectDialog && selectedKyc != null) {
-        AlertDialog(
-            onDismissRequest = { showRejectDialog = false },
-            title = { Text("Reject KYC") },
-            text = {
-                Column {
-                    Text("Please provide a reason for rejection:")
+        Dialog(
+            onDismissRequest = {
+                showRejectDialog = false
+                rejectionReason = ""
+            }
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Column(
+                    modifier = Modifier.padding(24.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Reject KYC Submission",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2C2C2C)
+                        )
+                        IconButton(
+                            onClick = {
+                                showRejectDialog = false
+                                rejectionReason = ""
+                            }
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = Color.Gray
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // User Info
+                    Text(
+                        "User: ${selectedKyc!!.userName}",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Reason Input
+                    Text(
+                        "Rejection Reason",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF2C2C2C)
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     OutlinedTextField(
                         value = rejectionReason,
                         onValueChange = { rejectionReason = it },
-                        placeholder = { Text("Enter rejection reason...") },
-                        modifier = Modifier.fillMaxWidth()
+                        placeholder = { Text("Enter a clear reason for rejection...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Red,
+                            unfocusedBorderColor = Color(0xFFE0E0E0)
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        maxLines = 5
                     )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (rejectionReason.isNotBlank() && selectedKyc != null) {
-                            val kycToReject = selectedKyc!!
-                            kycViewModel.updateKycStatus(
-                                kycId = kycToReject.kycId,
-                                status = "Rejected",
-                                reviewedBy = "Admin",
-                                rejectionReason = rejectionReason
-                            ) { success, message ->
-                                if (success) {
-                                    userViewModel.createNotificationForUser(
-                                        userId = kycToReject.userId,
-                                        title = "❌ KYC Rejected",
-                                        message = "Your KYC verification was rejected. Reason: $rejectionReason",
-                                        type = "system"
-                                    ) { _, _ -> }
-                                    Toast.makeText(context, "KYC rejected", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                            showRejectDialog = false
-                            rejectionReason = ""
-                            selectedKyc = null
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // Action Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                showRejectDialog = false
+                                rejectionReason = ""
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color.Gray
+                            ),
+                            border = BorderStroke(1.dp, Color(0xFFE0E0E0))
+                        ) {
+                            Text("Cancel")
                         }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
-                ) {
-                    Text("Reject", color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showRejectDialog = false
-                    rejectionReason = ""
-                }) {
-                    Text("Cancel")
+
+                        Button(
+                            onClick = {
+                                if (rejectionReason.isNotBlank() && selectedKyc != null) {
+                                    val kycToReject = selectedKyc!!
+                                    kycViewModel.updateKycStatus(
+                                        kycId = kycToReject.kycId,
+                                        status = "Rejected",
+                                        reviewedBy = "Admin",
+                                        rejectionReason = rejectionReason
+                                    ) { success, message ->
+                                        if (success) {
+                                            userViewModel.createNotificationForUser(
+                                                userId = kycToReject.userId,
+                                                title = "❌ KYC Rejected",
+                                                message = "Your KYC verification was rejected. Reason: $rejectionReason",
+                                                type = "system"
+                                            ) { _, _ -> }
+                                            Toast.makeText(context, "KYC rejected", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed: $message", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    showRejectDialog = false
+                                    rejectionReason = ""
+                                    selectedKyc = null
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Red,
+                                contentColor = Color.White
+                            ),
+                            enabled = rejectionReason.isNotBlank()
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Reject KYC")
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 
     Scaffold { padding ->
@@ -332,12 +421,15 @@ fun TabStatCard(
 ) {
     Card(
         modifier = modifier
-            .clickable { onClick() },
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() }
+            ) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) color.copy(alpha = 0.15f) else Color.White
+            containerColor = Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp),
-        border = if (isSelected) BorderStroke(2.dp, color) else null
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = if (isSelected) BorderStroke(2.dp, color) else BorderStroke(1.dp, Color(0xFFE0E0E0))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -347,7 +439,7 @@ fun TabStatCard(
                 count.toString(),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = color
+                color = if (isSelected) color else Color.Gray
             )
             Text(
                 title,
