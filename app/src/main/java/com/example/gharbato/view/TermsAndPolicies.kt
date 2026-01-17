@@ -36,8 +36,12 @@ fun TermsAndConditionsScreen() {
     val goBackToProfile = { (context as ComponentActivity).finish() }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                ),
                 title = { Text("Terms and Conditions") },
                 navigationIcon = {
                     IconButton(onClick = { goBackToProfile() }) {

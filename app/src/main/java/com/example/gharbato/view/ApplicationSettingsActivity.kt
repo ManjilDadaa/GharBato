@@ -52,8 +52,9 @@ fun ApplicationSettingsScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = { Text("Application Settings") },
                 navigationIcon = {
                     IconButton(onClick = {

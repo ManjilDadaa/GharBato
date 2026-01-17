@@ -44,8 +44,12 @@ fun HelpCenterScreen() {
     val activity = LocalContext.current as Activity
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                ),
                 title = {
                     Text(
                         "Help Center",

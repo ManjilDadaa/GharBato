@@ -25,6 +25,7 @@ import coil.compose.AsyncImage
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.ui.theme.ReportedRed
 import com.example.gharbato.viewmodel.AdminDeleteViewModel
 import com.example.gharbato.viewmodel.AdminDeleteViewModelFactory
 import com.example.gharbato.viewmodel.DeletionRecord
@@ -63,7 +64,7 @@ fun AdminDeleteScreen() {
             // Header
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.Red,
+                color = ReportedRed,
                 shadowElevation = 4.dp
             ) {
                 Column(
