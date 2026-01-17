@@ -10,6 +10,7 @@ import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
+import com.example.gharbato.model.SimilarProperty
 import com.example.gharbato.model.SimilarityWeights
 import com.example.gharbato.repository.PropertyRepo
 import com.google.firebase.database.*
