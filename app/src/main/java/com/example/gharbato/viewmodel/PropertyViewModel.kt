@@ -2,6 +2,7 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.PropertyModel
@@ -9,11 +10,16 @@ import com.example.gharbato.data.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SortOption
 import com.example.gharbato.repository.SavedPropertiesRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.math.*
+
+private const val TAG = "PropertyViewModel"
+private const val SEARCH_DEBOUNCE_DELAY = 300L // milliseconds
 
 data class PropertyUiState(
     val properties: List<PropertyModel> = emptyList(),
@@ -46,28 +52,41 @@ class PropertyViewModel(
     private val _uiState = MutableStateFlow(PropertyUiState())
     val uiState: StateFlow<PropertyUiState> = _uiState.asStateFlow()
 
+    private var searchJob: Job? = null
+
     init {
         loadProperties()
         observeSavedProperties()
     }
 
+    /**
+     * Loads all approved properties from repository
+     * This is called once on initialization
+     */
     fun loadProperties() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
+                Log.d(TAG, "Loading properties...")
                 val properties = repository.getAllApprovedProperties()
 
                 val propertiesWithFavorites = properties.map { property ->
                     property.copy(isFavorite = savedPropertiesRepository.isPropertySaved(property.id))
                 }
 
+                Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties")
+
                 _uiState.value = _uiState.value.copy(
                     allLoadedProperties = propertiesWithFavorites,
                     isLoading = false
                 )
 
+                // Apply initial filters (defaults to "Buy" market type)
+                // This will filter the properties and update the properties list
                 applyCurrentFiltersAndSort()
+
             } catch (e: Exception) {
+                Log.e(TAG, "Error loading properties", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Failed to load properties"
@@ -76,6 +95,9 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Observes saved properties flow and updates favorite status
+     */
     private fun observeSavedProperties() {
         viewModelScope.launch {
             savedPropertiesRepository.getSavedPropertiesFlow().collect { savedProperties ->
@@ -102,6 +124,9 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Gets a specific property by ID
+     */
     fun getPropertyById(id: Int) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -124,12 +149,41 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Updates search query and triggers debounced search
+     */
     fun updateSearchQuery(query: String) {
-        _uiState.value = _uiState.value.copy(searchQuery = query)
+        Log.d(TAG, "Search query updated: '$query'")
+
+        _uiState.value = _uiState.value.copy(
+            searchQuery = query,
+            searchLocation = null // Clear location search when typing text search
+        )
+
+        // Cancel previous search job
+        searchJob?.cancel()
+
+        // If query is empty, clear search immediately
+        if (query.isEmpty()) {
+            applyCurrentFiltersAndSort()
+            return
+        }
+
+        // Debounce search - wait for user to stop typing
+        searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_DELAY)
+            performSearch()
+        }
     }
 
+    /**
+     * Performs text-based search on properties
+     * Called automatically after debounce delay or manually
+     */
     fun performSearch() {
         val query = _uiState.value.searchQuery.trim()
+
+        Log.d(TAG, "Performing search: '$query'")
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
@@ -137,6 +191,7 @@ class PropertyViewModel(
             try {
                 var result = _uiState.value.allLoadedProperties
 
+                // Apply text search if query is not empty
                 if (query.isNotEmpty()) {
                     val searchLower = query.lowercase().trim()
                     result = result.filter { property ->
@@ -147,17 +202,27 @@ class PropertyViewModel(
                                 property.marketType.lowercase().contains(searchLower) ||
                                 (property.description?.lowercase()?.contains(searchLower) == true)
                     }
+                    Log.d(TAG, "Text search found ${result.size} matches")
                 }
 
+                // Apply filters to search results
                 result = applyFiltersToList(result)
+                Log.d(TAG, "After filters: ${result.size} properties")
+
+                // Apply sorting
                 result = applySortToProperties(result, _uiState.value.currentSort)
 
                 _uiState.value = _uiState.value.copy(
                     properties = result,
                     isLoading = false,
-                    error = if (result.isEmpty()) "No properties found matching your search" else null
+                    error = if (result.isEmpty() && _uiState.value.allLoadedProperties.isNotEmpty())
+                        "No properties found matching your search"
+                    else null
                 )
+
+                Log.d(TAG, "Search completed: ${result.size} results")
             } catch (e: Exception) {
+                Log.e(TAG, "Search error", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Search failed"
@@ -166,7 +231,12 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Performs location-based search on properties
+     */
     fun searchByLocation(latitude: Double, longitude: Double, address: String, radiusKm: Float) {
+        Log.d(TAG, "Searching by location: ($latitude, $longitude) within ${radiusKm}km")
+
         _uiState.value = _uiState.value.copy(
             searchLocation = SearchLocation(latitude, longitude, address, radiusKm),
             searchQuery = address
@@ -178,20 +248,31 @@ class PropertyViewModel(
             try {
                 var result = _uiState.value.allLoadedProperties
 
+                // Filter by distance
                 result = result.filter { property ->
                     val distance = calculateDistance(latitude, longitude, property.latitude, property.longitude)
                     distance <= radiusKm
                 }
+                Log.d(TAG, "Location search found ${result.size} properties within radius")
 
+                // Apply filters to location results
                 result = applyFiltersToList(result)
+                Log.d(TAG, "After filters: ${result.size} properties")
+
+                // Apply sorting
                 result = applySortToProperties(result, _uiState.value.currentSort)
 
                 _uiState.value = _uiState.value.copy(
                     properties = result,
                     isLoading = false,
-                    error = if (result.isEmpty()) "No properties found in this area" else null
+                    error = if (result.isEmpty() && _uiState.value.allLoadedProperties.isNotEmpty())
+                        "No properties found in this area"
+                    else null
                 )
+
+                Log.d(TAG, "Location search completed: ${result.size} results")
             } catch (e: Exception) {
+                Log.e(TAG, "Location search error", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Location search failed"
@@ -200,7 +281,12 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Clears all search criteria and returns to filtered view
+     */
     fun clearSearch() {
+        Log.d(TAG, "Clearing search")
+
         _uiState.value = _uiState.value.copy(
             searchQuery = "",
             searchLocation = null
@@ -208,11 +294,20 @@ class PropertyViewModel(
         applyCurrentFiltersAndSort()
     }
 
+    /**
+     * Gets current active filters
+     */
     fun getCurrentFilters(): PropertyFilters {
         return _uiState.value.currentFilters
     }
 
+    /**
+     * Applies new filters to properties
+     * Maintains any active search
+     */
     fun applyFilters(filters: PropertyFilters) {
+        Log.d(TAG, "Applying filters: $filters")
+
         _uiState.value = _uiState.value.copy(
             currentFilters = filters,
             selectedMarketType = filters.marketType,
@@ -220,6 +315,7 @@ class PropertyViewModel(
             minPrice = filters.minPrice
         )
 
+        // Re-apply search with new filters
         if (_uiState.value.searchLocation != null) {
             val loc = _uiState.value.searchLocation!!
             searchByLocation(loc.latitude, loc.longitude, loc.address, loc.radiusKm)
@@ -230,76 +326,122 @@ class PropertyViewModel(
         }
     }
 
+    /**
+     * Updates market type filter (Buy/Rent/Book)
+     */
     fun updateMarketType(type: String) {
+        Log.d(TAG, "Updating market type to: $type")
         val updatedFilters = _uiState.value.currentFilters.copy(marketType = type)
         applyFilters(updatedFilters)
     }
 
+    /**
+     * Updates property type filter
+     */
     fun updatePropertyType(type: String) {
+        Log.d(TAG, "Updating property type to: $type")
         val updatedFilters = _uiState.value.currentFilters.copy(
             propertyTypes = if (type == "All") emptySet() else setOf(type)
         )
         applyFilters(updatedFilters)
     }
 
+    /**
+     * Updates minimum price filter
+     */
     fun updateMinPrice(price: Int) {
+        Log.d(TAG, "Updating min price to: $price")
         val updatedFilters = _uiState.value.currentFilters.copy(minPrice = price)
         applyFilters(updatedFilters)
     }
 
+    /**
+     * Applies current filters and sorting to all loaded properties
+     * This is the core filtering logic that respects all active filters
+     */
     private fun applyCurrentFiltersAndSort() {
-        var result = _uiState.value.allLoadedProperties
-        result = applyFiltersToList(result)
-        result = applySortToProperties(result, _uiState.value.currentSort)
+        viewModelScope.launch {
+            Log.d(TAG, "Applying current filters and sort")
 
-        _uiState.value = _uiState.value.copy(
-            properties = result,
-            error = if (result.isEmpty()) "No properties match your filters" else null
-        )
+            var result = _uiState.value.allLoadedProperties
+            Log.d(TAG, "Starting with ${result.size} properties")
+
+            // Apply filters
+            result = applyFiltersToList(result)
+            Log.d(TAG, "After filters: ${result.size} properties")
+
+            // Apply sorting
+            result = applySortToProperties(result, _uiState.value.currentSort)
+
+            _uiState.value = _uiState.value.copy(
+                properties = result,
+                error = if (result.isEmpty() && _uiState.value.allLoadedProperties.isNotEmpty())
+                    "No properties match your filters"
+                else null
+            )
+
+            Log.d(TAG, "Filter and sort completed: ${result.size} results")
+        }
     }
 
+    /**
+     * Applies all active filters to a list of properties
+     * This method is called by search and filter operations
+     */
     private fun applyFiltersToList(properties: List<PropertyModel>): List<PropertyModel> {
         val filters = _uiState.value.currentFilters
         var filtered = properties
 
+        Log.d(TAG, "Applying filters to ${properties.size} properties")
+        Log.d(TAG, "Active filters: $filters")
+
         // Market Type Filter (always apply if set)
         if (filters.marketType.isNotBlank()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 property.marketType.trim().equals(filters.marketType.trim(), ignoreCase = true)
             }
+            Log.d(TAG, "Market type '${filters.marketType}' filter: $beforeCount -> ${filtered.size}")
         }
 
         // Property Types Filter
         if (filters.propertyTypes.isNotEmpty()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 filters.propertyTypes.any { type ->
                     property.propertyType.trim().equals(type.trim(), ignoreCase = true)
                 }
             }
+            Log.d(TAG, "Property types ${filters.propertyTypes} filter: $beforeCount -> ${filtered.size}")
         }
 
         // Price Range Filter
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 val price = extractPriceValue(property.price)
                 val min = filters.minPrice * 1000
                 val max = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
                 price in min..max
             }
+            Log.d(TAG, "Price range filter: $beforeCount -> ${filtered.size}")
         }
 
         // Area Range Filter
         if (filters.minArea > 0 || filters.maxArea > 0) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 val area = extractAreaValue(property.sqft)
                 val min = filters.minArea
                 val max = if (filters.maxArea > 0) filters.maxArea else Int.MAX_VALUE
                 area in min..max
             }
+            Log.d(TAG, "Area range filter: $beforeCount -> ${filtered.size}")
         }
 
         // Bedrooms Filter
         if (filters.bedrooms.isNotEmpty()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 when (filters.bedrooms) {
                     "Studio" -> property.bedrooms == 0
@@ -307,50 +449,67 @@ class PropertyViewModel(
                     else -> property.bedrooms == filters.bedrooms.toIntOrNull()
                 }
             }
+            Log.d(TAG, "Bedrooms filter: $beforeCount -> ${filtered.size}")
         }
 
         // Furnishing Filter
         if (filters.furnishing.isNotEmpty()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 property.furnishing.trim().equals(filters.furnishing.trim(), ignoreCase = true)
             }
+            Log.d(TAG, "Furnishing filter: $beforeCount -> ${filtered.size}")
         }
 
         // Parking Filter
         filters.parking?.let { required ->
+            val beforeCount = filtered.size
             filtered = filtered.filter { it.parking == required }
+            Log.d(TAG, "Parking filter: $beforeCount -> ${filtered.size}")
         }
 
         // Pets Filter
         filters.petsAllowed?.let { required ->
+            val beforeCount = filtered.size
             filtered = filtered.filter { it.petsAllowed == required }
+            Log.d(TAG, "Pets filter: $beforeCount -> ${filtered.size}")
         }
 
         // Amenities Filter (must have all selected amenities)
         if (filters.amenities.isNotEmpty()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 filters.amenities.all { amenity ->
                     property.amenities.any { it.trim().equals(amenity.trim(), ignoreCase = true) }
                 }
             }
+            Log.d(TAG, "Amenities filter: $beforeCount -> ${filtered.size}")
         }
 
         // Floor Filter
         if (filters.floor.isNotEmpty()) {
+            val beforeCount = filtered.size
             filtered = filtered.filter { property ->
                 property.floor.trim().equals(filters.floor.trim(), ignoreCase = true)
             }
+            Log.d(TAG, "Floor filter: $beforeCount -> ${filtered.size}")
         }
 
         return filtered
     }
 
+    /**
+     * Extracts numeric price value from price string
+     */
     private fun extractPriceValue(priceString: String): Int {
         return priceString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
 
+    /**
+     * Calculates distance between two coordinates in kilometers
+     */
     private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
-        val R = 6371.0
+        val R = 6371.0 // Earth's radius in kilometers
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
         val a = sin(dLat / 2) * sin(dLat / 2) +
@@ -360,14 +519,23 @@ class PropertyViewModel(
         return (R * c).toFloat()
     }
 
+    /**
+     * Selects a property for detail view
+     */
     fun selectProperty(property: PropertyModel) {
         _uiState.value = _uiState.value.copy(selectedProperty = property)
     }
 
+    /**
+     * Clears selected property
+     */
     fun clearSelectedProperty() {
         _uiState.value = _uiState.value.copy(selectedProperty = null)
     }
 
+    /**
+     * Toggles favorite status of a property
+     */
     fun toggleFavorite(property: PropertyModel) {
         viewModelScope.launch {
             try {
@@ -377,12 +545,17 @@ class PropertyViewModel(
                     savedPropertiesRepository.saveProperty(property)
                 }
             } catch (e: Exception) {
+                Log.e(TAG, "Error toggling favorite", e)
                 _uiState.value = _uiState.value.copy(error = e.message)
             }
         }
     }
 
+    /**
+     * Updates sort option and re-sorts properties
+     */
     fun updateSort(sortOption: SortOption) {
+        Log.d(TAG, "Updating sort to: $sortOption")
         val sorted = applySortToProperties(_uiState.value.properties, sortOption)
         _uiState.value = _uiState.value.copy(
             properties = sorted,
@@ -390,6 +563,9 @@ class PropertyViewModel(
         )
     }
 
+    /**
+     * Applies sorting to properties list
+     */
     private fun applySortToProperties(
         properties: List<PropertyModel>,
         sortOption: SortOption
@@ -409,10 +585,16 @@ class PropertyViewModel(
         return areaString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
 
+    /**
+     * Toggles map visibility
+     */
     fun toggleMapVisibility() {
         _uiState.value = _uiState.value.copy(showMap = !_uiState.value.showMap)
     }
 
+    /**
+     * Uploads an image to storage
+     */
     fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
         repository.uploadImage(context, imageUri, callback)
     }
