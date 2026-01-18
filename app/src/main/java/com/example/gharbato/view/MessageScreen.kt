@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -80,7 +78,6 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
     val chatNavigation by messageViewModel.chatNavigation
-    val navigateToAiChat by messageViewModel.navigateToAiChat
     val context = LocalContext.current
     val activity = context as Activity
 
@@ -105,13 +102,6 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             )
         )
         messageViewModel.onChatNavigationHandled()
-    }
-
-    LaunchedEffect(navigateToAiChat) {
-        if (navigateToAiChat) {
-            activity.startActivity(Intent(activity, GeminiChatActivity::class.java))
-            messageViewModel.onAiChatNavigationHandled()
-        }
     }
 
     Scaffold(
@@ -192,20 +182,13 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    item {
-                        AiAssistantItem(
-                            onClick = { messageViewModel.requestAiChatNavigation() }
-                        )
-                    }
-
                     items(users) { user ->
                         val displayName = user.fullName.ifBlank { 
                             if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
                         }
-                        val lastMessage = user.lastMessage.ifBlank { "Tap to start chatting" }
                         ChatListItem(
                             name = displayName,
-                            message = lastMessage,
+                            message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
                             time = "Now", // Placeholder
                             imageUrl = user.profileImageUrl,
                             onClick = {
@@ -292,81 +275,6 @@ fun ChatListItem(
             color = Color.Gray,
             modifier = Modifier.align(Alignment.Top)
         )
-    }
-}
-
-@Composable
-fun AiAssistantItem(
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Blue),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SmartToy,
-                    contentDescription = "AI Assistant",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "AI Assistant",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(
-                        color = Blue,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "AI",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Start a conversation with AI",
-                    fontSize = 13.sp,
-                    color = Gray
-                )
-            }
-        }
     }
 }
 

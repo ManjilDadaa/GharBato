@@ -147,14 +147,21 @@ class MessageRepositoryImpl : MessageRepository {
 
                 Log.d(TAG, "Total chat rooms found: ${snapshot.childrenCount}")
 
+                // Find all chat rooms that involve current user
                 for (chatSnapshot in snapshot.children) {
                     val chatId = chatSnapshot.key ?: continue
 
+                    Log.d(TAG, "Checking chat room: $chatId")
+
+                    // Check if current user is part of this chat
                     if (chatId.contains(currentUserId)) {
+                        // Extract the other user's ID from chatId
+                        // chatId format: "userId1_userId2" (sorted)
                         val userIds = chatId.split("_")
                         for (userId in userIds) {
                             if (userId != currentUserId && userId.isNotBlank()) {
                                 chatPartnerIds.add(userId)
+                                Log.d(TAG, "Found chat partner: $userId")
                             }
                         }
                     }
@@ -163,69 +170,15 @@ class MessageRepositoryImpl : MessageRepository {
                 Log.d(TAG, "Total unique chat partners: ${chatPartnerIds.size}")
 
                 if (chatPartnerIds.isEmpty()) {
+                    Log.d(TAG, "No chat partners found")
                     callback(true, emptyList(), "")
                     return
                 }
 
+                // Get user details for each chat partner
                 fetchUsersByIds(chatPartnerIds.toList()) { users ->
-                    if (users.isEmpty()) {
-                        callback(true, emptyList(), "")
-                        return@fetchUsersByIds
-                    }
-
-                    val usersWithLastMessage = mutableListOf<UserModel>()
-                    var remaining = users.size
-
-                    for (user in users) {
-                        val sortedIds = listOf(currentUserId, user.userId).sorted()
-                        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
-                        val messagesRef = database.getReference("chats")
-                            .child(chatId)
-                            .child("messages")
-
-                        messagesRef
-                            .orderByChild("timestamp")
-                            .limitToLast(1)
-                            .addListenerForSingleValueEvent(object : ValueEventListener {
-                                override fun onDataChange(messageSnapshot: DataSnapshot) {
-                                    var lastMessageText = ""
-                                    var lastTimestamp = 0L
-
-                                    val lastMsg = messageSnapshot.children.firstOrNull()
-                                        ?.getValue(ChatMessage::class.java)
-
-                                    if (lastMsg != null) {
-                                        lastMessageText = when {
-                                            lastMsg.text.isNotBlank() -> lastMsg.text
-                                            lastMsg.imageUrl.isNotBlank() -> "Photo"
-                                            lastMsg.hasPropertyCard -> lastMsg.propertyTitle
-                                            else -> ""
-                                        }
-                                        lastTimestamp = lastMsg.timestamp
-                                    }
-
-                                    val updatedUser = user.copy(
-                                        lastMessage = lastMessageText,
-                                        lastMessageTimestamp = lastTimestamp
-                                    )
-                                    usersWithLastMessage.add(updatedUser)
-
-                                    remaining--
-                                    if (remaining == 0) {
-                                        callback(true, usersWithLastMessage, "")
-                                    }
-                                }
-
-                                override fun onCancelled(error: DatabaseError) {
-                                    Log.e(TAG, "Failed to load last message for chat $chatId: ${error.message}")
-                                    usersWithLastMessage.add(user)
-                                    remaining--
-                                    if (remaining == 0) {
-                                        callback(true, usersWithLastMessage, "")
-                                    }
-                                }
-                            })
-                    }
+                    Log.d(TAG, "Returning ${users.size} chat partners")
+                    callback(true, users, "")
                 }
             }
 
