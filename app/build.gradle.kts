@@ -53,6 +53,9 @@ android {
             .replace("\\\\", "\\\\\\\\")
             .replace("\"", "\\\\\"")
 
+        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
+        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
+
         val geminiApiKey = (
             project.findProperty("GEMINI_API_KEY")
                 ?: localProps.getProperty("GEMINI_API_KEY")
@@ -61,9 +64,11 @@ android {
                 ?: ""
             ).toString().trim()
 
-        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
-        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey}\"")
+        val geminiApiKeyEscaped = geminiApiKey
+            .replace("\\\\", "\\\\\\\\")
+            .replace("\"", "\\\\\"")
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKeyEscaped}\"")
     }
 
     buildTypes {
@@ -166,5 +171,5 @@ dependencies {
 
     implementation("com.cloudinary:cloudinary-android:2.1.0")
     implementation("io.coil-kt.coil3:coil-compose:3.3.0")
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    implementation("com.google.ai.client.generativeai:generativeai:0.1.2")
 }

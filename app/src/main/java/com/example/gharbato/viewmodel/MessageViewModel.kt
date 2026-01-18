@@ -2,8 +2,8 @@ package com.example.gharbato.viewmodel
 
 import android.content.Context
 import android.net.Uri
-import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 import androidx.lifecycle.ViewModel
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.model.ChatSession
@@ -43,9 +43,6 @@ class MessageViewModel(
 
     private val _chatNavigation = mutableStateOf<ChatNavigation?>(null)
     val chatNavigation: State<ChatNavigation?> = _chatNavigation
-
-    private val _navigateToAiChat = mutableStateOf(false)
-    val navigateToAiChat: State<Boolean> = _navigateToAiChat
 
     init {
         loadCurrentUser()
@@ -140,14 +137,6 @@ class MessageViewModel(
 
     fun onChatNavigationHandled() {
         _chatNavigation.value = null
-    }
-
-    fun requestAiChatNavigation() {
-        _navigateToAiChat.value = true
-    }
-
-    fun onAiChatNavigationHandled() {
-        _navigateToAiChat.value = false
     }
 
     fun getLocalUserId(context: android.content.Context): String {

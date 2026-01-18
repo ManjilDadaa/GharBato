@@ -51,7 +51,10 @@ interface MessageRepository {
     )
 
 
-    fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
+    fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, com.example.gharbato.model.ChatMessage?) -> Unit
+    ): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
     fun sendQuickMessage(
         context: Context,
@@ -144,17 +147,51 @@ class MessageRepositoryImpl : MessageRepository {
         chatsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val chatPartnerIds = mutableSetOf<String>()
+                val lastMessageMap = mutableMapOf<String, Pair<String, Long>>()
 
                 Log.d(TAG, "Total chat rooms found: ${snapshot.childrenCount}")
 
+                // Find all chat rooms that involve current user
                 for (chatSnapshot in snapshot.children) {
                     val chatId = chatSnapshot.key ?: continue
 
+                    Log.d(TAG, "Checking chat room: $chatId")
+
+                    // Check if current user is part of this chat
                     if (chatId.contains(currentUserId)) {
+                        // Extract the other user's ID from chatId
+                        // chatId format: "userId1_userId2" (sorted)
                         val userIds = chatId.split("_")
                         for (userId in userIds) {
                             if (userId != currentUserId && userId.isNotBlank()) {
                                 chatPartnerIds.add(userId)
+                                Log.d(TAG, "Found chat partner: $userId")
+
+                                val messagesSnapshot = chatSnapshot.child("messages")
+                                if (messagesSnapshot.exists()) {
+                                    var latestTimestamp = lastMessageMap[userId]?.second ?: 0L
+                                    var latestText = lastMessageMap[userId]?.first ?: ""
+
+                                    for (msgSnapshot in messagesSnapshot.children) {
+                                        try {
+                                            val message = msgSnapshot.getValue(ChatMessage::class.java)
+                                            if (message != null && message.timestamp >= latestTimestamp) {
+                                                latestTimestamp = message.timestamp
+                                                latestText = when {
+                                                    message.text.isNotBlank() -> message.text
+                                                    message.imageUrl.isNotBlank() -> "Photo"
+                                                    else -> latestText
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error parsing message for preview", e)
+                                        }
+                                    }
+
+                                    if (latestTimestamp > 0L) {
+                                        lastMessageMap[userId] = latestText to latestTimestamp
+                                    }
+                                }
                             }
                         }
                     }
@@ -163,69 +200,27 @@ class MessageRepositoryImpl : MessageRepository {
                 Log.d(TAG, "Total unique chat partners: ${chatPartnerIds.size}")
 
                 if (chatPartnerIds.isEmpty()) {
+                    Log.d(TAG, "No chat partners found")
                     callback(true, emptyList(), "")
                     return
                 }
 
+                // Get user details for each chat partner and attach last message preview
                 fetchUsersByIds(chatPartnerIds.toList()) { users ->
-                    if (users.isEmpty()) {
-                        callback(true, emptyList(), "")
-                        return@fetchUsersByIds
-                    }
+                    val enrichedUsers = users.map { user ->
+                        val info = lastMessageMap[user.userId]
+                        if (info != null) {
+                            user.copy(
+                                lastMessage = info.first,
+                                lastMessageTimestamp = info.second
+                            )
+                        } else {
+                            user
+                        }
+                    }.sortedByDescending { it.lastMessageTimestamp }
 
-                    val usersWithLastMessage = mutableListOf<UserModel>()
-                    var remaining = users.size
-
-                    for (user in users) {
-                        val sortedIds = listOf(currentUserId, user.userId).sorted()
-                        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
-                        val messagesRef = database.getReference("chats")
-                            .child(chatId)
-                            .child("messages")
-
-                        messagesRef
-                            .orderByChild("timestamp")
-                            .limitToLast(1)
-                            .addListenerForSingleValueEvent(object : ValueEventListener {
-                                override fun onDataChange(messageSnapshot: DataSnapshot) {
-                                    var lastMessageText = ""
-                                    var lastTimestamp = 0L
-
-                                    val lastMsg = messageSnapshot.children.firstOrNull()
-                                        ?.getValue(ChatMessage::class.java)
-
-                                    if (lastMsg != null) {
-                                        lastMessageText = when {
-                                            lastMsg.text.isNotBlank() -> lastMsg.text
-                                            lastMsg.imageUrl.isNotBlank() -> "Photo"
-                                            lastMsg.hasPropertyCard -> lastMsg.propertyTitle
-                                            else -> ""
-                                        }
-                                        lastTimestamp = lastMsg.timestamp
-                                    }
-
-                                    val updatedUser = user.copy(
-                                        lastMessage = lastMessageText,
-                                        lastMessageTimestamp = lastTimestamp
-                                    )
-                                    usersWithLastMessage.add(updatedUser)
-
-                                    remaining--
-                                    if (remaining == 0) {
-                                        callback(true, usersWithLastMessage, "")
-                                    }
-                                }
-
-                                override fun onCancelled(error: DatabaseError) {
-                                    Log.e(TAG, "Failed to load last message for chat $chatId: ${error.message}")
-                                    usersWithLastMessage.add(user)
-                                    remaining--
-                                    if (remaining == 0) {
-                                        callback(true, usersWithLastMessage, "")
-                                    }
-                                }
-                            })
-                    }
+                    Log.d(TAG, "Returning ${enrichedUsers.size} chat partners with previews")
+                    callback(true, enrichedUsers, "")
                 }
             }
 
@@ -536,12 +531,17 @@ class MessageRepositoryImpl : MessageRepository {
 
 
 
-    override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
+    override fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, ChatMessage?) -> Unit
+    ): () -> Unit {
         val chatsRef = database.getReference("chats")
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 var totalUnread = 0
+                var latestUnread: ChatMessage? = null
+                var latestTimestamp = 0L
                 for (chatSnapshot in snapshot.children) {
                     val chatId = chatSnapshot.key ?: continue
                     if (chatId.contains(userId)) {
@@ -551,6 +551,10 @@ class MessageRepositoryImpl : MessageRepository {
                                 val msg = msgSnapshot.getValue(ChatMessage::class.java)
                                 if (msg != null && msg.senderId != userId && !msg.isRead) {
                                     totalUnread++
+                                    if (msg.timestamp >= latestTimestamp) {
+                                        latestTimestamp = msg.timestamp
+                                        latestUnread = msg
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error parsing message for unread count", e)
@@ -558,7 +562,7 @@ class MessageRepositoryImpl : MessageRepository {
                         }
                     }
                 }
-                onCountChange(totalUnread)
+                onChange(totalUnread, latestUnread)
             }
 
             override fun onCancelled(error: DatabaseError) {
