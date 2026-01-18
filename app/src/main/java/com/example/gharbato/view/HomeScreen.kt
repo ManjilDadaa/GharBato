@@ -2,72 +2,40 @@ package com.example.gharbato.view
 
 import android.app.Activity
 import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.animation.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
-import com.example.gharbato.model.SortOption
+import com.example.gharbato.model.PropertyFilters
+import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Purple
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.UserViewModelProvider
+import kotlin.math.ln
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,26 +55,28 @@ fun HomeScreen(
     // Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Active quick filter
-    var activeQuickFilter by remember { mutableStateOf<QuickFilter?>(null) }
+    // IMPORTANT: Use ALL loaded properties, NOT filtered ones
+    val allProperties = uiState.allLoadedProperties
 
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+    // Calculate featured properties using professional algorithm
+    val featuredProperties = remember(allProperties) {
+        calculateFeaturedProperties(allProperties)
+    }
 
-    // Location picker launcher for "Nearby" filter
-    val locationPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val data = result.data
-            val latitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LATITUDE, 0.0) ?: 0.0
-            val longitude = data?.getDoubleExtra(LocationPickerActivity.RESULT_LONGITUDE, 0.0) ?: 0.0
-            val address = data?.getStringExtra(LocationPickerActivity.RESULT_ADDRESS) ?: ""
-            val radius = data?.getFloatExtra(LocationPickerActivity.RESULT_RADIUS, 5f) ?: 5f
+    // Get recent properties (last 2 weeks, sorted by date)
+    val recentProperties = remember(allProperties) {
+        val twoWeeksAgo = System.currentTimeMillis() - (14 * 24 * 60 * 60 * 1000)
+        allProperties
+            .filter { it.updatedAt >= twoWeeksAgo }
+            .sortedByDescending { it.updatedAt }
+            .take(20)
+    }
 
-            // Apply location-based filtering
-            viewModel.searchByLocation(latitude, longitude, address, radius)
-            activeQuickFilter = QuickFilter.NEARBY
-        }
+    // Popular properties (high views)
+    val popularProperties = remember(allProperties) {
+        allProperties
+            .sortedByDescending { it.totalViews }
+            .take(10)
     }
 
     // Start observing notifications
@@ -114,205 +84,511 @@ fun HomeScreen(
         userViewModel.startObservingNotifications()
     }
 
-    // Keep observers running when leaving screen
-    DisposableEffect(Unit) {
-        onDispose {
-            // Don't stop observers - keep them running for real-time updates
-        }
-    }
-
     Scaffold(
-        containerColor = Color.White,
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            val intent = Intent(context, ListingActivity::class.java)
-                            context.startActivity(intent)
-                        }
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_add_24),
-                            contentDescription = "Add Property"
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            if (uiState.isLoading) {
+                // Loading State
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Blue)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "Loading properties...",
+                            fontSize = 14.sp,
+                            color = Color.Gray
                         )
                     }
-                },
-                actions = {
-                    // Notification icon with badge
-                    Box(modifier = Modifier.padding(end = 8.dp)) {
-                        IconButton(
-                            onClick = {
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    // Header Section
+                    item {
+                        HomeHeader(
+                            unreadCount = unreadCount,
+                            onNotificationClick = {
                                 val intent = Intent(context, NotificationActivity::class.java)
                                 context.startActivity(intent)
+                            }
+                        )
+                    }
+
+                    // Search Bar
+                    item {
+                        SearchBarSection(
+                            onSearchClick = onNavigateToSearch,
+                            onMapClick = {
+                                val intent = Intent(context, FullSearchMapActivity::class.java)
+                                context.startActivity(intent)
+                            }
+                        )
+                    }
+
+                    // Quick Actions - Navigate to Search with pre-applied filter
+                    item {
+                        QuickActionsSection(
+                            onRentClick = {
+                                viewModel.applyFilters(PropertyFilters(marketType = "Rent"))
+                                onNavigateToSearch()
                             },
-                            modifier = Modifier.size(48.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.outline_notifications_24),
-                                contentDescription = "Notifications",
-                                tint = Blue,
-                                modifier = Modifier.size(24.dp)
+                            onBuyClick = {
+                                viewModel.applyFilters(PropertyFilters(marketType = "Sale"))
+                                onNavigateToSearch()
+                            },
+                            onBookClick = {
+                                viewModel.applyFilters(PropertyFilters(marketType = "Book"))
+                                onNavigateToSearch()
+                            }
+                        )
+                    }
+
+                    // Statistics Section
+                    item {
+                        PropertyStatsSection(
+                            totalProperties = allProperties.size,
+                            rentProperties = allProperties.count { it.marketType.equals("Rent", ignoreCase = true) },
+                            saleProperties = allProperties.count { it.marketType.equals("Sale", ignoreCase = true) },
+                            bookProperties = allProperties.count { it.marketType.equals("Book", ignoreCase = true) }
+                        )
+                    }
+
+                    // Featured Properties (Algorithm-based)
+                    if (featuredProperties.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = "Featured Properties",
+                                subtitle = "Top rated properties based on engagement",
+                                icon = Icons.Default.Star,
+                                showViewAll = true,
+                                onViewAllClick = {
+                                    viewModel.resetFilters()
+                                    onNavigateToSearch()
+                                }
                             )
                         }
 
-                        // Badge - only show if count > 0
-                        if (unreadCount > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .offset(x = (-2).dp, y = 6.dp)
-                                    .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFFF3B30))
-                                    .border(2.dp, Color.White, CircleShape)
-                                    .padding(horizontal = 5.dp, vertical = 2.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                        item {
+                            FeaturedPropertiesCarousel(
+                                properties = featuredProperties,
+                                onPropertyClick = { property ->
+                                    val intent = Intent(context, PropertyDetailActivity::class.java)
+                                    intent.putExtra("propertyId", property.id)
+                                    context.startActivity(intent)
+                                },
+                                onFavoriteClick = { property ->
+                                    viewModel.toggleFavorite(property)
+                                }
+                            )
                         }
                     }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                )
+
+                    // Recent Properties
+                    if (recentProperties.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = "New Listings",
+                                subtitle = "Recently added properties",
+                                icon = Icons.Default.NewReleases,
+                                showViewAll = true,
+                                onViewAllClick = onNavigateToSearch
+                            )
+                        }
+
+                        items(recentProperties.take(5)) { property ->
+                            ModernPropertyCard(
+                                property = property,
+                                onClick = {
+                                    val intent = Intent(context, PropertyDetailActivity::class.java)
+                                    intent.putExtra("propertyId", property.id)
+                                    context.startActivity(intent)
+                                },
+                                onFavoriteClick = {
+                                    viewModel.toggleFavorite(property)
+                                }
+                            )
+                        }
+                    }
+
+                    // Popular Properties
+                    if (popularProperties.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = "Most Viewed",
+                                subtitle = "Properties everyone's checking out",
+                                icon = Icons.Default.Visibility,
+                                showViewAll = false
+                            )
+                        }
+
+                        item {
+                            PopularPropertiesRow(
+                                properties = popularProperties.take(5),
+                                onPropertyClick = { property ->
+                                    val intent = Intent(context, PropertyDetailActivity::class.java)
+                                    intent.putExtra("propertyId", property.id)
+                                    context.startActivity(intent)
+                                }
+                            )
+                        }
+                    }
+
+                    // Empty State
+                    if (allProperties.isEmpty()) {
+                        item {
+                            EmptyStateSection()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Professional Featured Properties Algorithm
+ *
+ * Scoring Factors:
+ * 1. Engagement Score (40%) - Views, unique viewers, recency
+ * 2. Quality Score (30%) - Image count, description length, completeness
+ * 3. Freshness Score (20%) - How recently updated
+ * 4. Activity Score (10%) - Recent views trend
+ *
+ * Returns top 8 properties with highest scores
+ */
+fun calculateFeaturedProperties(properties: List<PropertyModel>): List<PropertyModel> {
+    if (properties.isEmpty()) return emptyList()
+
+    val now = System.currentTimeMillis()
+    val oneDayMs = 24 * 60 * 60 * 1000L
+    val oneWeekMs = 7 * oneDayMs
+
+    // Calculate max values for normalization
+    val maxViews = properties.maxOfOrNull { it.totalViews }?.toFloat() ?: 1f
+    val maxUniqueViewers = properties.maxOfOrNull { it.uniqueViewers }?.toFloat() ?: 1f
+
+    val scoredProperties = properties.map { property ->
+        // 1. ENGAGEMENT SCORE (40%)
+        val viewScore = (property.totalViews / maxViews) * 0.5f
+        val uniqueViewerScore = (property.uniqueViewers / maxUniqueViewers) * 0.5f
+        val engagementScore = (viewScore + uniqueViewerScore) * 0.4f
+
+        // 2. QUALITY SCORE (30%)
+        val imageCount = property.images.values.flatten().size
+        val imageScore = (imageCount.coerceAtMost(10) / 10f) * 0.4f
+
+        val descriptionScore = property.description?.let { desc ->
+            (desc.length.coerceAtMost(500) / 500f) * 0.3f
+        } ?: 0f
+
+        val completenessScore = calculateCompletenessScore(property) * 0.3f
+        val qualityScore = (imageScore + descriptionScore + completenessScore) * 0.3f
+
+        // 3. FRESHNESS SCORE (20%)
+        val daysSinceUpdate = ((now - property.updatedAt) / oneDayMs).toFloat()
+        val freshnessScore = when {
+            daysSinceUpdate <= 1 -> 1.0f      // Today
+            daysSinceUpdate <= 3 -> 0.8f      // Last 3 days
+            daysSinceUpdate <= 7 -> 0.6f      // Last week
+            daysSinceUpdate <= 14 -> 0.4f     // Last 2 weeks
+            daysSinceUpdate <= 30 -> 0.2f     // Last month
+            else -> 0.1f                       // Older
+        } * 0.2f
+
+        // 4. ACTIVITY SCORE (10%) - Logarithmic view score
+        val activityScore = if (property.totalViews > 0) {
+            (ln(property.totalViews.toFloat() + 1) / ln(maxViews + 1)) * 0.1f
+        } else 0f
+
+        // Calculate total score
+        val totalScore = engagementScore + qualityScore + freshnessScore + activityScore
+
+        Pair(property, totalScore)
+    }
+
+    // Return top 8 properties
+    return scoredProperties
+        .sortedByDescending { it.second }
+        .take(8)
+        .map { it.first }
+}
+
+/**
+ * Calculate property completeness score (0.0 to 1.0)
+ */
+fun calculateCompletenessScore(property: PropertyModel): Float {
+    var score = 0f
+    var totalFields = 0f
+
+    // Essential fields
+    if (property.title.isNotBlank()) score += 1f
+    totalFields += 1f
+
+    if (property.developer.isNotBlank()) score += 1f
+    totalFields += 1f
+
+    if (property.location.isNotBlank()) score += 1f
+    totalFields += 1f
+
+    if (property.price.isNotBlank()) score += 1f
+    totalFields += 1f
+
+    if (property.images.isNotEmpty()) score += 1f
+    totalFields += 1f
+
+    // Optional but valuable fields
+    if (!property.description.isNullOrBlank()) score += 0.5f
+    totalFields += 0.5f
+
+    if (property.amenities.isNotEmpty()) score += 0.5f
+    totalFields += 0.5f
+
+    if (property.ownerImageUrl.isNotBlank()) score += 0.25f
+    totalFields += 0.25f
+
+    return if (totalFields > 0) score / totalFields else 0f
+}
+
+@Composable
+fun PropertyStatsSection(
+    totalProperties: Int,
+    rentProperties: Int,
+    saleProperties: Int,
+    bookProperties: Int
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Properties Available",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Gray
             )
-        },
-    ) { padding ->
-        // Show loading state
-        if (uiState.isLoading) {
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatItem("Total", totalProperties, Color(0xFF2196F3))
+                StatItem("Rent", rentProperties, Color(0xFF4CAF50))
+                StatItem("Sale", saleProperties, Color(0xFFFF9800))
+                StatItem("Book", bookProperties, Color(0xFF9C27B0))
+            }
+        }
+    }
+}
+
+@Composable
+fun StatItem(label: String, count: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            text = count.toString(),
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.Gray
+        )
+    }
+}
+
+@Composable
+fun PopularPropertiesRow(
+    properties: List<PropertyModel>,
+    onPropertyClick: (PropertyModel) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(properties) { property ->
+            CompactPropertyCard(
+                property = property,
+                onClick = { onPropertyClick(property) }
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactPropertyCard(
+    property: PropertyModel,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(160.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            // Property Image
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(120.dp)
             ) {
-                CircularProgressIndicator(color = Blue)
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F9FB))
-                    .padding(top = padding.calculateTopPadding()),
-            ) {
-                // Search Button Card (navigates to SearchScreen)
-                item {
-                    SearchButtonCard(
-                        onClick = onNavigateToSearch,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                    )
-                }
+                val imageUrl = property.images.values.flatten().firstOrNull()
+                    ?: "https://via.placeholder.com/600x400?text=No+Image"
 
-                // Quick Filter Chips
-                item {
-                    QuickFiltersRow(
-                        activeFilter = activeQuickFilter,
-                        onFilterClick = { filter ->
-                            if (activeQuickFilter == filter) {
-                                // Deselect and show all (clear search/filters)
-                                activeQuickFilter = null
-                                viewModel.clearSearch()
-                            } else {
-                                // Apply quick filter
-                                activeQuickFilter = filter
-                                when (filter) {
-                                    QuickFilter.TRENDING -> {
-                                        // Sort by most viewed properties
-                                        viewModel.updateSort(SortOption.POPULARITY)
-                                    }
-                                    QuickFilter.NEWEST -> {
-                                        // Sort by newest properties
-                                        viewModel.updateSort(SortOption.DATE_NEWEST)
-                                    }
-                                    QuickFilter.NEARBY -> {
-                                        // Open location picker to find nearby properties
-                                        val intent = Intent(context, LocationPickerActivity::class.java)
-                                        locationPickerLauncher.launch(intent)
-                                    }
-                                    QuickFilter.PRICE_RANGE -> {
-                                        // Navigate to SearchScreen with filters open
-                                        onNavigateToSearch()
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
+                Image(
+                    painter = rememberAsyncImagePainter(imageUrl),
+                    contentDescription = property.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
 
-                // Properties count and current filter indicator
-                if (uiState.properties.isNotEmpty()) {
-                    item {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "${uiState.properties.size} Properties",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
-
-                            if (activeQuickFilter != null) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = Purple.copy(0.1f)
-                                ) {
-                                    Text(
-                                        text = when (activeQuickFilter) {
-                                            QuickFilter.TRENDING -> "Trending"
-                                            QuickFilter.NEWEST -> "Newest"
-                                            QuickFilter.NEARBY -> "Nearby"
-                                            QuickFilter.PRICE_RANGE -> "Price Range"
-                                            null -> ""
-                                        },
-                                        fontSize = 12.sp,
-                                        color = Purple,
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                    )
-                                }
-                            }
-                        }
+                // Views Badge
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp),
+                    color = Color.Black.copy(alpha = 0.7f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Visibility,
+                            contentDescription = "Views",
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = property.totalViews.toString(),
+                            fontSize = 10.sp,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
+            }
 
-                // Property Cards
-                items(uiState.properties) { property ->
-                    PropertyCard(
-                        property = property,
-                        onClick = {
-                            val intent = Intent(context, PropertyDetailActivity::class.java)
-                            intent.putExtra("propertyId", property.id)
-                            context.startActivity(intent)
-                        },
-                        onFavoriteClick = { prop ->
-                            viewModel.toggleFavorite(prop)
-                        }
+            // Property Info
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = property.price,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = property.developer,
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeHeader(
+    unreadCount: Int,
+    onNotificationClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Blue.copy(alpha = 0.1f),
+                        Color.Transparent
+                    )
+                )
+            )
+            .padding(horizontal = 20.dp, vertical = 24.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Hello 👋",
+                        fontSize = 16.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Find Your Dream Home",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
                     )
                 }
 
-                // Empty state
-                if (uiState.properties.isEmpty() && !uiState.isLoading) {
-                    item {
-                        EmptyStateView(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp)
+                // Notification Bell
+                Box {
+                    IconButton(
+                        onClick = onNotificationClick,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color.White, CircleShape)
+                            .border(1.dp, Color.Gray.copy(0.2f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Notifications",
+                            tint = if (unreadCount > 0) Blue else Color.Gray
                         )
+                    }
+
+                    if (unreadCount > 0) {
+                        Badge(
+                            modifier = Modifier.align(Alignment.TopEnd),
+                            containerColor = Color.Red
+                        ) {
+                            Text(
+                                text = if (unreadCount > 9) "9+" else unreadCount.toString(),
+                                fontSize = 10.sp,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -321,115 +597,596 @@ fun HomeScreen(
 }
 
 @Composable
-fun SearchButtonCard(
+fun SearchBarSection(
+    onSearchClick: () -> Unit,
+    onMapClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Search Bar
+        Surface(
+            modifier = Modifier
+                .weight(1f)
+                .height(56.dp)
+                .clickable(onClick = onSearchClick),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            shadowElevation = 2.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = "Search",
+                    tint = Color.Gray
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Search location, property...",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        // Map Button
+        Surface(
+            modifier = Modifier
+                .size(56.dp)
+                .clickable(onClick = onMapClick),
+            shape = RoundedCornerShape(16.dp),
+            color = Blue,
+            shadowElevation = 2.dp
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Map,
+                    contentDescription = "Map View",
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun QuickActionsSection(
+    onRentClick: () -> Unit,
+    onBuyClick: () -> Unit,
+    onBookClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text = "Browse by Category",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.Black,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            QuickActionCard(
+                title = "For Rent",
+                subtitle = "Monthly rentals",
+                icon = Icons.Default.Key,
+                color = Color(0xFF4CAF50),
+                onClick = onRentClick,
+                modifier = Modifier.weight(1f)
+            )
+
+            QuickActionCard(
+                title = "For Sale",
+                subtitle = "Buy property",
+                icon = Icons.Default.Home,
+                color = Color(0xFF2196F3),
+                onClick = onBuyClick,
+                modifier = Modifier.weight(1f)
+            )
+
+            QuickActionCard(
+                title = "For Book",
+                subtitle = "Short stays",
+                icon = Icons.Default.Hotel,
+                color = Color(0xFFFF9800),
+                onClick = onBookClick,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+fun QuickActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Card(
         modifier = modifier
-            .fillMaxWidth()
-            .height(56.dp)
+            .height(100.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF5F5F5),
-        shadowElevation = 0.dp
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Icon(
-                imageVector = Icons.Default.Search,
-                contentDescription = "Search",
-                tint = Color.Gray,
-                modifier = Modifier.size(24.dp)
+                imageVector = icon,
+                contentDescription = title,
+                tint = color,
+                modifier = Modifier.size(32.dp)
             )
+
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = color.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    showViewAll: Boolean = false,
+    onViewAllClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Surface(
+                modifier = Modifier.size(40.dp),
+                shape = CircleShape,
+                color = Blue.copy(alpha = 0.1f)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Blue,
+                    modifier = Modifier.padding(8.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            Text(
-                text = "Search for properties...",
-                fontSize = 15.sp,
-                color = Color.Gray
-            )
-        }
-    }
-}
-
-enum class QuickFilter {
-    TRENDING, NEWEST, NEARBY, PRICE_RANGE
-}
-
-@Composable
-fun QuickFiltersRow(
-    activeFilter: QuickFilter?,
-    onFilterClick: (QuickFilter) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val filters = listOf(
-        QuickFilter.TRENDING to R.drawable.baseline_trending_up_24,
-        QuickFilter.NEWEST to R.drawable.baseline_star_border_purple500_24,
-        QuickFilter.NEARBY to R.drawable.outline_location_on_24,
-        QuickFilter.PRICE_RANGE to R.drawable.baseline_currency_rupee_24
-    )
-
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.horizontalScroll(rememberScrollState())
-    ) {
-        filters.forEach { (filter, icon) ->
-            FilterChip(
-                selected = activeFilter == filter,
-                onClick = { onFilterClick(filter) },
-                label = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(icon),
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = when (filter) {
-                                QuickFilter.TRENDING -> "Trending"
-                                QuickFilter.NEWEST -> "New"
-                                QuickFilter.NEARBY -> "Nearby"
-                                QuickFilter.PRICE_RANGE -> "Price"
-                            },
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = Blue,
-                    selectedLabelColor = Color.White,
-                    containerColor = Color.White,
-                    labelColor = Color.Black
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
                 )
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        if (showViewAll) {
+            TextButton(onClick = onViewAllClick) {
+                Text(
+                    text = "View All",
+                    fontSize = 14.sp,
+                    color = Blue
+                )
+                Icon(
+                    imageVector = Icons.Default.ArrowForward,
+                    contentDescription = "View All",
+                    tint = Blue,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FeaturedPropertiesCarousel(
+    properties: List<PropertyModel>,
+    onPropertyClick: (PropertyModel) -> Unit,
+    onFavoriteClick: (PropertyModel) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(properties) { property ->
+            FeaturedPropertyCard(
+                property = property,
+                onClick = { onPropertyClick(property) },
+                onFavoriteClick = { onFavoriteClick(property) }
             )
         }
     }
 }
 
 @Composable
-fun EmptyStateView(
-    modifier: Modifier = Modifier
+fun FeaturedPropertyCard(
+    property: PropertyModel,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
 ) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+    Card(
+        modifier = Modifier
+            .width(300.dp)
+            .height(220.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Property Image
+            val imageUrl = property.images.values.flatten().firstOrNull()
+                ?: "https://via.placeholder.com/600x400?text=No+Image"
+
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = property.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Gradient Overlay
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.7f)
+                            ),
+                            startY = 100f
+                        )
+                    )
+            )
+
+            // Featured Badge
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(12.dp),
+                color = Color(0xFFFFD700),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Featured",
+                        tint = Color.White,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Featured",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
+            }
+
+            // Favorite Button
+            IconButton(
+                onClick = onFavoriteClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(12.dp)
+                    .size(36.dp)
+                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (property.isFavorite) Color.Red else Color.Gray
+                )
+            }
+
+            // Property Info
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = property.price,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = property.developer,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    PropertyFeature(Icons.Default.Bed, "${property.bedrooms}")
+                    PropertyFeature(Icons.Default.Bathroom, "${property.bathrooms}")
+                    PropertyFeature(Icons.Default.SquareFoot, property.sqft)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PropertyFeature(icon: ImageVector, text: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Icon(
-            painter = painterResource(R.drawable.baseline_home_24),
+            imageVector = icon,
             contentDescription = null,
-            tint = Color.Gray.copy(alpha = 0.5f),
-            modifier = Modifier.size(80.dp)
+            tint = Color.White,
+            modifier = Modifier.size(14.dp)
+        )
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            color = Color.White
+        )
+    }
+}
+
+@Composable
+fun ModernPropertyCard(
+    property: PropertyModel,
+    onClick: () -> Unit,
+    onFavoriteClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            // Property Image
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                val imageUrl = property.images.values.flatten().firstOrNull()
+                    ?: "https://via.placeholder.com/600x400?text=No+Image"
+
+                Image(
+                    painter = rememberAsyncImagePainter(imageUrl),
+                    contentDescription = property.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Market Type Badge
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp),
+                    color = when (property.marketType.lowercase()) {
+                        "rent" -> Color(0xFF4CAF50)
+                        "sale" -> Color(0xFF2196F3)
+                        "book" -> Color(0xFFFF9800)
+                        else -> Color.Gray
+                    },
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        text = property.marketType,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+
+                // NEW Badge
+                val isNew = (System.currentTimeMillis() - property.updatedAt) < (3 * 24 * 60 * 60 * 1000)
+                if (isNew) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(6.dp),
+                        color = Color.Red,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            text = "NEW",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Property Details
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = property.price,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = property.developer,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Black,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Location",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = property.location,
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    InfoChip(Icons.Default.Bed, "${property.bedrooms}")
+                    InfoChip(Icons.Default.Bathroom, "${property.bathrooms}")
+                    InfoChip(Icons.Default.SquareFoot, property.sqft)
+                }
+            }
+
+            // Favorite Button
+            IconButton(
+                onClick = onFavoriteClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = "Favorite",
+                    tint = if (property.isFavorite) Color.Red else Color.Gray
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun InfoChip(icon: ImageVector, text: String) {
+    Surface(
+        color = Color(0xFFF5F5F5),
+        shape = RoundedCornerShape(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.Gray,
+                modifier = Modifier.size(12.dp)
+            )
+            Text(
+                text = text,
+                fontSize = 11.sp,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun EmptyStateSection() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.SearchOff,
+            contentDescription = null,
+            modifier = Modifier.size(80.dp),
+            tint = Color.Gray.copy(alpha = 0.5f)
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -437,7 +1194,7 @@ fun EmptyStateView(
         Text(
             text = "No properties available",
             fontSize = 18.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
             color = Color.Gray
         )
 
@@ -446,13 +1203,7 @@ fun EmptyStateView(
         Text(
             text = "Check back later for new listings",
             fontSize = 14.sp,
-            color = Color.Gray.copy(alpha = 0.7f)
+            color = Color.Gray
         )
     }
-}
-
-@Composable
-@Preview
-fun HomeScreenPreview() {
-    HomeScreen()
 }

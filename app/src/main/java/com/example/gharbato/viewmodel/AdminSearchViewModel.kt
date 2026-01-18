@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
