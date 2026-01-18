@@ -37,6 +37,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.gharbato.viewmodel.DashboardViewModel
 import com.example.gharbato.viewmodel.DashboardViewModelFactory
+import com.example.gharbato.viewmodel.PropertyViewModel
+import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import androidx.compose.material3.ExperimentalMaterial3Api
 
 class DashboardActivity : ComponentActivity() {
@@ -60,9 +62,14 @@ class NoRippleInteractionSource : MutableInteractionSource {
 fun DashboardBody() {
     val context = LocalContext.current
     val activity = context as Activity
-    
-    val viewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory())
-    val unreadCount by viewModel.unreadMessageCount.collectAsState()
+
+    // Hoist PropertyViewModel to Dashboard level so it's shared across screens
+    val propertyViewModel: PropertyViewModel = viewModel(
+        factory = PropertyViewModelFactory(context)
+    )
+
+    val dashboardViewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory())
+    val unreadCount by dashboardViewModel.unreadMessageCount.collectAsState()
 
     // Bottom NavigationBar data class and its requirements
     data class NavItem(val label: String, val icon: Int)
@@ -128,8 +135,13 @@ fun DashboardBody() {
                 .padding(bottom = padding.calculateBottomPadding())
         ) {
             when (selectedIndex) {
-                0 -> HomeScreen()
-                1 -> SearchScreen()
+                0 -> HomeScreen(
+                    viewModel = propertyViewModel,
+                    onNavigateToSearch = {
+                        selectedIndex = 1
+                    }
+                )
+                1 -> SearchScreen(viewModel = propertyViewModel)
                 2 -> MessageScreen()
                 3 -> SavedScreen(
                     onNavigateToSearch = {

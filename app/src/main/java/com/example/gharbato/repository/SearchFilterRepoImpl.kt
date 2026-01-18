@@ -4,8 +4,7 @@ import android.util.Log
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyFilters
 import kotlin.math.*
-
-private const val TAG = "SearchFilterRepoImpl"
+private const val TAG = "SearchFilterRepo"
 
 class SearchFilterRepoImpl : SearchFilterRepo {
 
@@ -13,23 +12,22 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         properties: List<PropertyModel>,
         query: String
     ): List<PropertyModel> {
-        if (query.isEmpty()) {
-            return properties
-        }
+        if (query.isEmpty()) return properties
 
         val searchQuery = query.lowercase().trim()
-        Log.d(TAG, "Searching with query: '$searchQuery' in ${properties.size} properties")
+        Log.d(TAG, "Searching text: '$searchQuery' in ${properties.size} properties")
 
-        val results = properties.filter { property ->
+        val filtered = properties.filter { property ->
             property.title.lowercase().contains(searchQuery) ||
                     property.location.lowercase().contains(searchQuery) ||
                     property.developer.lowercase().contains(searchQuery) ||
                     property.propertyType.lowercase().contains(searchQuery) ||
+                    property.marketType.lowercase().contains(searchQuery) ||
                     property.description?.lowercase()?.contains(searchQuery) == true
         }
 
-        Log.d(TAG, "Search found ${results.size} properties")
-        return results
+        Log.d(TAG, "Text search found ${filtered.size} matches")
+        return filtered
     }
 
     override suspend fun filterByLocation(
@@ -38,9 +36,9 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         longitude: Double,
         radiusKm: Float
     ): List<PropertyModel> {
-        Log.d(TAG, "Filtering by location: ($latitude, $longitude), radius: ${radiusKm}km")
+        Log.d(TAG, "Filtering by location: ($latitude, $longitude) within ${radiusKm}km")
 
-        val results = properties.filter { property ->
+        val filtered = properties.filter { property ->
             val distance = calculateDistance(
                 latitude, longitude,
                 property.latitude, property.longitude
@@ -48,8 +46,8 @@ class SearchFilterRepoImpl : SearchFilterRepo {
             distance <= radiusKm
         }
 
-        Log.d(TAG, "Location filter found ${results.size} properties")
-        return results
+        Log.d(TAG, "Location filter found ${filtered.size} properties")
+        return filtered
     }
 
     override suspend fun applyFilters(
@@ -57,71 +55,37 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         filters: PropertyFilters
     ): List<PropertyModel> {
         var filtered = properties
-        Log.d(TAG, "=== APPLYING FILTERS ===")
-        Log.d(TAG, "Starting with ${properties.size} properties")
-        Log.d(TAG, "Filters: $filters")
+        Log.d(TAG, "Applying filters to ${properties.size} properties: $filters")
 
-        if (!hasActiveFilters(filters) && filters.marketType.isEmpty()) {
-            Log.d(TAG, "No active filters - returning all ${properties.size} properties")
-            return properties
+        // Market Type (always applied)
+        filtered = filtered.filter { property ->
+            property.marketType.equals(filters.marketType, ignoreCase = true)
         }
+        Log.d(TAG, "After market type: ${filtered.size}")
 
-        // Market Type Filter
-        if (filters.marketType.isNotEmpty()) {
-            Log.d(TAG, "Filtering by marketType: '${filters.marketType}'")
-
-            properties.take(3).forEach { property ->
-                Log.d(TAG, "Sample property ${property.id} marketType: '${property.marketType}'")
-            }
-
-            filtered = filtered.filter { property ->
-                val matches = property.marketType.equals(filters.marketType, ignoreCase = true)
-                if (!matches) {
-                    Log.v(TAG, "Property ${property.id} marketType '${property.marketType}' != '${filters.marketType}'")
-                }
-                matches
-            }
-            Log.d(TAG, "After market type (${filters.marketType}): ${filtered.size} properties")
-
-            if (filtered.isEmpty()) {
-                Log.w(TAG, "⚠️ NO PROPERTIES MATCH marketType '${filters.marketType}'")
-                Log.w(TAG, "Available marketTypes in database:")
-                properties.map { it.marketType }.distinct().forEach { type ->
-                    Log.w(TAG, "  - '$type'")
-                }
-            }
-        }
-
-        // Property Types Filter
+        // Property Types
         if (filters.propertyTypes.isNotEmpty()) {
-            Log.d(TAG, "Filtering by property types: ${filters.propertyTypes}")
             filtered = filtered.filter { property ->
                 filters.propertyTypes.any { type ->
                     property.propertyType.equals(type, ignoreCase = true)
                 }
             }
-            Log.d(TAG, "After property types: ${filtered.size} properties")
+            Log.d(TAG, "After property types: ${filtered.size}")
         }
 
-        // Price Range Filter
+        // Price Range
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
-            Log.d(TAG, "Filtering by price: ${filters.minPrice}k - ${filters.maxPrice}k")
             filtered = filtered.filter { property ->
-                val price = extractPriceValue(property.price)
-                val min = filters.minPrice * 1000
-                val max = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
-                val inRange = price in min..max
-                if (!inRange) {
-                    Log.v(TAG, "Property ${property.id} price $price not in range [$min, $max]")
-                }
-                inRange
+                val priceValue = extractPriceValue(property.price)
+                val minPriceValue = filters.minPrice * 1000
+                val maxPriceValue = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
+                priceValue in minPriceValue..maxPriceValue
             }
-            Log.d(TAG, "After price range: ${filtered.size} properties")
+            Log.d(TAG, "After price range: ${filtered.size}")
         }
 
-        // Bedrooms Filter
+        // Bedrooms
         if (filters.bedrooms.isNotEmpty()) {
-            Log.d(TAG, "Filtering by bedrooms: '${filters.bedrooms}'")
             filtered = filtered.filter { property ->
                 when (filters.bedrooms) {
                     "Studio" -> property.bedrooms == 0
@@ -129,58 +93,52 @@ class SearchFilterRepoImpl : SearchFilterRepo {
                     else -> property.bedrooms == filters.bedrooms.toIntOrNull()
                 }
             }
-            Log.d(TAG, "After bedrooms: ${filtered.size} properties")
+            Log.d(TAG, "After bedrooms: ${filtered.size}")
         }
 
-        // Furnishing Filter
+        // Furnishing
         if (filters.furnishing.isNotEmpty()) {
-            Log.d(TAG, "Filtering by furnishing: '${filters.furnishing}'")
             filtered = filtered.filter { property ->
                 property.furnishing.equals(filters.furnishing, ignoreCase = true)
             }
-            Log.d(TAG, "After furnishing: ${filtered.size} properties")
+            Log.d(TAG, "After furnishing: ${filtered.size}")
         }
 
-        // Parking Filter
-        filters.parking?.let { required ->
-            Log.d(TAG, "Filtering by parking: $required")
-            filtered = filtered.filter { it.parking == required }
-            Log.d(TAG, "After parking: ${filtered.size} properties")
+        // Parking
+        filters.parking?.let { parkingRequired ->
+            filtered = filtered.filter { it.parking == parkingRequired }
+            Log.d(TAG, "After parking: ${filtered.size}")
         }
 
-        // Pets Allowed Filter
-        filters.petsAllowed?.let { required ->
-            Log.d(TAG, "Filtering by pets: $required")
-            filtered = filtered.filter { it.petsAllowed == required }
-            Log.d(TAG, "After pets: ${filtered.size} properties")
+        // Pets Allowed
+        filters.petsAllowed?.let { petsRequired ->
+            filtered = filtered.filter { it.petsAllowed == petsRequired }
+            Log.d(TAG, "After pets: ${filtered.size}")
         }
 
-        // Amenities Filter
+        // Amenities (must have ALL selected amenities)
         if (filters.amenities.isNotEmpty()) {
-            Log.d(TAG, "Filtering by amenities: ${filters.amenities}")
             filtered = filtered.filter { property ->
                 filters.amenities.all { amenity ->
                     property.amenities.any { it.equals(amenity, ignoreCase = true) }
                 }
             }
-            Log.d(TAG, "After amenities: ${filtered.size} properties")
+            Log.d(TAG, "After amenities: ${filtered.size}")
         }
 
-        // Floor Filter
+        // Floor
         if (filters.floor.isNotEmpty()) {
-            Log.d(TAG, "Filtering by floor: '${filters.floor}'")
             filtered = filtered.filter { property ->
                 property.floor.equals(filters.floor, ignoreCase = true)
             }
-            Log.d(TAG, "After floor: ${filtered.size} properties")
+            Log.d(TAG, "After floor: ${filtered.size}")
         }
 
-        Log.d(TAG, "=== FILTER RESULT: ${filtered.size} properties ===")
         return filtered
     }
 
     override fun hasActiveFilters(filters: PropertyFilters): Boolean {
-        val hasFilters = filters.propertyTypes.isNotEmpty() ||
+        return filters.propertyTypes.isNotEmpty() ||
                 filters.minPrice > 0 ||
                 filters.maxPrice > 0 ||
                 filters.bedrooms.isNotEmpty() ||
@@ -189,34 +147,21 @@ class SearchFilterRepoImpl : SearchFilterRepo {
                 filters.petsAllowed != null ||
                 filters.amenities.isNotEmpty() ||
                 filters.floor.isNotEmpty()
-
-        Log.d(TAG, "hasActiveFilters: $hasFilters (marketType not counted here)")
-        return hasFilters
     }
 
-    override fun extractPriceValue(priceString: String): Int {
-        val numbers = priceString.filter { it.isDigit() }
-        return numbers.toIntOrNull() ?: 0
-    }
-
-    override fun extractAreaValue(areaString: String): Int {
-        val numbers = areaString.filter { it.isDigit() }
-        return numbers.toIntOrNull() ?: 0
-    }
-
-    private fun calculateDistance(
-        lat1: Double, lon1: Double,
-        lat2: Double, lon2: Double
-    ): Float {
-        val earthRadius = 6371.0
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val earthRadius = 6371.0 // km
         val dLat = Math.toRadians(lat2 - lat1)
         val dLon = Math.toRadians(lon2 - lon1)
-
         val a = sin(dLat / 2) * sin(dLat / 2) +
                 cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
                 sin(dLon / 2) * sin(dLon / 2)
-
         val c = 2 * atan2(sqrt(a), sqrt(1 - a))
         return (earthRadius * c).toFloat()
+    }
+
+    private fun extractPriceValue(priceString: String): Int {
+        val numbers = priceString.filter { it.isDigit() }
+        return numbers.toIntOrNull() ?: 0
     }
 }

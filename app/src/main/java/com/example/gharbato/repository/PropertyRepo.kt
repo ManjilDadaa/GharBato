@@ -1,4 +1,4 @@
-package com.example.gharbato.data.repository
+package com.example.gharbato.repository
 
 import android.content.Context
 import android.net.Uri
@@ -12,7 +12,11 @@ interface PropertyRepo {
     suspend fun getAllApprovedProperties(): List<PropertyModel>
     suspend fun getPropertyById(id: Int): PropertyModel?
 
-
+    // Similar Properties (NEW)
+    suspend fun getSimilarProperties(
+        currentProperty: PropertyModel,
+        limit: Int = 10
+    ): List<PropertyModel>
 
     // Search & Filter
     suspend fun searchProperties(query: String): List<PropertyModel>

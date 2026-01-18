@@ -36,8 +36,12 @@ fun ContactUsScreen() {
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                ),
                 title = { Text("Contact Us") },
                 navigationIcon = {
                     IconButton(onClick = {

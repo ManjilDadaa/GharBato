@@ -45,8 +45,6 @@ import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterBottomSheet(
@@ -119,7 +117,6 @@ fun FilterBottomSheet(
                             FilterChip(
                                 selected = filters.marketType == type,
                                 onClick = {
-                                    // ✅ Toggle: Click again to deselect
                                     filters = filters.copy(
                                         marketType = if (filters.marketType == type) "" else type
                                     )
@@ -251,6 +248,58 @@ fun FilterBottomSheet(
                                     filters = filters.copy(maxPrice = it.toIntOrNull() ?: 0)
                                 },
                                 label = { Text("Max (thousands)") },
+                                placeholder = { Text("Any") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true
+                            )
+                        }
+                    }
+                }
+
+                // Area Range
+                FilterSection(title = "Area Range (sq.ft)") {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                if (filters.minArea > 0) "Min: ${filters.minArea} sq.ft" else "No minimum",
+                                fontSize = 14.sp,
+                                color = Gray
+                            )
+                            Text(
+                                if (filters.maxArea > 0) "Max: ${filters.maxArea} sq.ft" else "No maximum",
+                                fontSize = 14.sp,
+                                color = Gray
+                            )
+                        }
+
+                        Spacer(Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = if (filters.minArea > 0) filters.minArea.toString() else "",
+                                onValueChange = {
+                                    filters = filters.copy(minArea = it.toIntOrNull() ?: 0)
+                                },
+                                label = { Text("Min Area") },
+                                placeholder = { Text("0") },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp),
+                                singleLine = true
+                            )
+
+                            OutlinedTextField(
+                                value = if (filters.maxArea > 0) filters.maxArea.toString() else "",
+                                onValueChange = {
+                                    filters = filters.copy(maxArea = it.toIntOrNull() ?: 0)
+                                },
+                                label = { Text("Max Area") },
                                 placeholder = { Text("Any") },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
@@ -475,6 +524,7 @@ private fun countActiveFilters(filters: PropertyFilters): Int {
     if (filters.marketType.isNotEmpty()) count++
     if (filters.propertyTypes.isNotEmpty()) count++
     if (filters.minPrice > 0 || filters.maxPrice > 0) count++
+    if (filters.minArea > 0 || filters.maxArea > 0) count++
     if (filters.bedrooms.isNotEmpty()) count++
     if (filters.furnishing.isNotEmpty()) count++
     if (filters.parking != null) count++
