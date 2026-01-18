@@ -478,12 +478,6 @@ class PropertyViewModel(
         applyCurrentFiltersAndSort()
     }
 
-
-
-
-
-
-
     private fun extractPriceValue(priceString: String): Int {
         return priceString.filter { it.isDigit() }.toIntOrNull() ?: 0
     }
