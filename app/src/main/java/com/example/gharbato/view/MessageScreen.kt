@@ -183,13 +183,26 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(users) { user ->
-                        val displayName = user.fullName.ifBlank { 
-                            if (user.email.isNotBlank()) user.email.substringBefore("@") else "User" 
+                        val displayName = user.fullName.ifBlank {
+                            if (user.email.isNotBlank()) user.email.substringBefore("@") else "User"
                         }
+
+                        val previewMessage = if (user.lastMessage.isNotBlank()) {
+                            user.lastMessage
+                        } else {
+                            "Tap to start chatting"
+                        }
+
+                        val previewTime = if (user.lastMessageTimestamp != 0L) {
+                            formatChatPreviewTime(user.lastMessageTimestamp)
+                        } else {
+                            "Now"
+                        }
+
                         ChatListItem(
                             name = displayName,
-                            message = "Tap to start chatting", // Placeholder as we don't have last message in UserModel
-                            time = "Now", // Placeholder
+                            message = previewMessage,
+                            time = previewTime,
                             imageUrl = user.profileImageUrl,
                             onClick = {
                                 messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
@@ -276,6 +289,39 @@ fun ChatListItem(
             modifier = Modifier.align(Alignment.Top)
         )
     }
+}
+
+private fun formatChatPreviewTime(timestamp: Long): String {
+    if (timestamp == 0L) return ""
+
+    val calendar = java.util.Calendar.getInstance()
+    calendar.timeInMillis = timestamp
+
+    val now = java.util.Calendar.getInstance()
+
+    return when {
+        isSameDay(calendar, now) -> {
+            java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(calendar.time)
+        }
+        isYesterday(calendar, now) -> {
+            "Yesterday"
+        }
+        else -> {
+            java.text.SimpleDateFormat("MMM dd", java.util.Locale.getDefault()).format(calendar.time)
+        }
+    }
+}
+
+private fun isSameDay(cal1: java.util.Calendar, cal2: java.util.Calendar): Boolean {
+    return cal1.get(java.util.Calendar.YEAR) == cal2.get(java.util.Calendar.YEAR) &&
+            cal1.get(java.util.Calendar.DAY_OF_YEAR) == cal2.get(java.util.Calendar.DAY_OF_YEAR)
+}
+
+private fun isYesterday(cal: java.util.Calendar, now: java.util.Calendar): Boolean {
+    val yesterday = now.clone() as java.util.Calendar
+    yesterday.add(java.util.Calendar.DAY_OF_YEAR, -1)
+    return cal.get(java.util.Calendar.YEAR) == yesterday.get(java.util.Calendar.YEAR) &&
+            cal.get(java.util.Calendar.DAY_OF_YEAR) == yesterday.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 

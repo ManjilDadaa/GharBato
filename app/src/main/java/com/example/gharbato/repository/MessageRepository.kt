@@ -144,6 +144,7 @@ class MessageRepositoryImpl : MessageRepository {
         chatsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val chatPartnerIds = mutableSetOf<String>()
+                val lastMessageMap = mutableMapOf<String, Pair<String, Long>>()
 
                 Log.d(TAG, "Total chat rooms found: ${snapshot.childrenCount}")
 
@@ -162,6 +163,32 @@ class MessageRepositoryImpl : MessageRepository {
                             if (userId != currentUserId && userId.isNotBlank()) {
                                 chatPartnerIds.add(userId)
                                 Log.d(TAG, "Found chat partner: $userId")
+
+                                val messagesSnapshot = chatSnapshot.child("messages")
+                                if (messagesSnapshot.exists()) {
+                                    var latestTimestamp = lastMessageMap[userId]?.second ?: 0L
+                                    var latestText = lastMessageMap[userId]?.first ?: ""
+
+                                    for (msgSnapshot in messagesSnapshot.children) {
+                                        try {
+                                            val message = msgSnapshot.getValue(ChatMessage::class.java)
+                                            if (message != null && message.timestamp >= latestTimestamp) {
+                                                latestTimestamp = message.timestamp
+                                                latestText = when {
+                                                    message.text.isNotBlank() -> message.text
+                                                    message.imageUrl.isNotBlank() -> "Photo"
+                                                    else -> latestText
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error parsing message for preview", e)
+                                        }
+                                    }
+
+                                    if (latestTimestamp > 0L) {
+                                        lastMessageMap[userId] = latestText to latestTimestamp
+                                    }
+                                }
                             }
                         }
                     }
@@ -175,10 +202,22 @@ class MessageRepositoryImpl : MessageRepository {
                     return
                 }
 
-                // Get user details for each chat partner
+                // Get user details for each chat partner and attach last message preview
                 fetchUsersByIds(chatPartnerIds.toList()) { users ->
-                    Log.d(TAG, "Returning ${users.size} chat partners")
-                    callback(true, users, "")
+                    val enrichedUsers = users.map { user ->
+                        val info = lastMessageMap[user.userId]
+                        if (info != null) {
+                            user.copy(
+                                lastMessage = info.first,
+                                lastMessageTimestamp = info.second
+                            )
+                        } else {
+                            user
+                        }
+                    }.sortedByDescending { it.lastMessageTimestamp }
+
+                    Log.d(TAG, "Returning ${enrichedUsers.size} chat partners with previews")
+                    callback(true, enrichedUsers, "")
                 }
             }
 
