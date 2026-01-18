@@ -13,6 +13,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallConfig
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallFragment
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ZegoCallActivity : FragmentActivity() {
 
@@ -274,11 +277,21 @@ class ZegoCallActivity : FragmentActivity() {
     }
 }
 
-// Call invitation listener to be added to Application class
+data class IncomingCall(
+    val callId: String,
+    val callerId: String,
+    val callerName: String,
+    val isVideoCall: Boolean,
+    val currentUserId: String
+)
+
 object CallInvitationManager {
     private var isListening = false
     private var pendingInvitation: Map<String, Any>? = null
     private var currentCallId: String? = null // Track ongoing call
+
+    private val _incomingCall = MutableStateFlow<IncomingCall?>(null)
+    val incomingCall: StateFlow<IncomingCall?> = _incomingCall.asStateFlow()
 
     fun startListening(context: android.content.Context) {
         if (isListening) return
@@ -364,36 +377,33 @@ object CallInvitationManager {
             return
         }
 
-        // Store invitation first before removing
         pendingInvitation = invitation
-        
-        // Show notification and start call activity
-        showCallNotification(context, callerName, isVideoCall) {
-            startIncomingCall(context, callId, currentUserId, callerId, isVideoCall)
-            FirebaseDatabase.getInstance().getReference("call_invitations").child(currentUserId).removeValue()
-            FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
-        }
+        _incomingCall.value = IncomingCall(
+            callId = callId,
+            callerId = callerId,
+            callerName = callerName,
+            isVideoCall = isVideoCall,
+            currentUserId = currentUserId
+        )
     }
 
-    private fun showCallNotification(
-        context: android.content.Context,
-        callerName: String,
-        isVideoCall: Boolean,
-        onAccept: () -> Unit
-    ) {
-        try {
-            // For now, directly start the call activity with a small delay
-            // In a real app, you'd show a system notification here
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                try {
-                    onAccept()
-                } catch (e: Exception) {
-                    android.util.Log.e("CallInvitation", "Failed to accept call", e)
-                }
-            }, 1000) // 1 second delay
-        } catch (e: Exception) {
-            android.util.Log.e("CallInvitation", "Failed to show notification", e)
+    fun acceptCurrentCall(context: android.content.Context) {
+        val call = _incomingCall.value ?: return
+        if (context !is android.app.Activity) {
+            android.util.Log.e("CallInvitation", "Context is not an Activity")
+            return
         }
+        startIncomingCall(context, call.callId, call.currentUserId, call.callerId, call.isVideoCall)
+        FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
+        FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
+        _incomingCall.value = null
+    }
+
+    fun rejectCurrentCall() {
+        val call = _incomingCall.value ?: return
+        FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
+        FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
+        _incomingCall.value = null
     }
 
     private fun startIncomingCall(

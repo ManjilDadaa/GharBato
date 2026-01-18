@@ -13,8 +13,18 @@ class DashboardViewModel(
     private val repository: MessageRepository = MessageRepositoryImpl()
 ) : ViewModel() {
 
+    data class IncomingMessagePreview(
+        val id: String,
+        val senderName: String,
+        val text: String,
+        val timestamp: Long
+    )
+
     private val _unreadMessageCount = MutableStateFlow(0)
     val unreadMessageCount: StateFlow<Int> = _unreadMessageCount.asStateFlow()
+
+    private val _latestIncomingMessage = MutableStateFlow<IncomingMessagePreview?>(null)
+    val latestIncomingMessage: StateFlow<IncomingMessagePreview?> = _latestIncomingMessage.asStateFlow()
 
     private var stopListening: (() -> Unit)? = null
 
@@ -25,8 +35,16 @@ class DashboardViewModel(
     private fun startListeningToUnreadCount() {
         val currentUser = FirebaseAuth.getInstance().currentUser
         if (currentUser != null) {
-            stopListening = repository.listenToTotalUnreadCount(currentUser.uid) { count ->
+            stopListening = repository.listenToTotalUnreadCount(currentUser.uid) { count, latestMessage ->
                 _unreadMessageCount.value = count
+                if (latestMessage != null) {
+                    _latestIncomingMessage.value = IncomingMessagePreview(
+                        id = latestMessage.id,
+                        senderName = latestMessage.senderName,
+                        text = if (latestMessage.text.isNotBlank()) latestMessage.text else if (latestMessage.imageUrl.isNotBlank()) "Photo" else "",
+                        timestamp = latestMessage.timestamp
+                    )
+                }
             }
         }
     }

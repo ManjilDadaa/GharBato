@@ -51,7 +51,10 @@ interface MessageRepository {
     )
 
 
-    fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
+    fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, com.example.gharbato.model.ChatMessage?) -> Unit
+    ): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
     fun sendQuickMessage(
         context: Context,
@@ -528,12 +531,17 @@ class MessageRepositoryImpl : MessageRepository {
 
 
 
-    override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
+    override fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, ChatMessage?) -> Unit
+    ): () -> Unit {
         val chatsRef = database.getReference("chats")
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 var totalUnread = 0
+                var latestUnread: ChatMessage? = null
+                var latestTimestamp = 0L
                 for (chatSnapshot in snapshot.children) {
                     val chatId = chatSnapshot.key ?: continue
                     if (chatId.contains(userId)) {
@@ -543,6 +551,10 @@ class MessageRepositoryImpl : MessageRepository {
                                 val msg = msgSnapshot.getValue(ChatMessage::class.java)
                                 if (msg != null && msg.senderId != userId && !msg.isRead) {
                                     totalUnread++
+                                    if (msg.timestamp >= latestTimestamp) {
+                                        latestTimestamp = msg.timestamp
+                                        latestUnread = msg
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error parsing message for unread count", e)
@@ -550,7 +562,7 @@ class MessageRepositoryImpl : MessageRepository {
                         }
                     }
                 }
-                onCountChange(totalUnread)
+                onChange(totalUnread, latestUnread)
             }
 
             override fun onCancelled(error: DatabaseError) {
