@@ -31,6 +31,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.repository.UserRepoImpl
+import android.util.Log
 
 class MyActivitiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -53,32 +54,56 @@ fun MyActivitiesScreen() {
     var pendingListings by remember { mutableStateOf(0) }
     var rejectedListings by remember { mutableStateOf(0) }
 
-    // Load user's properties
+    // Load properties from Firebase
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
+            Log.d("MyActivities", "Loading properties for user: $currentUserId")
+
             val database = FirebaseDatabase.getInstance()
-            val propertiesRef = database.getReference("Properties")
+            // IMPORTANT: Changed from "Properties" to "Property" to match your Firebase structure
+            val propertiesRef = database.getReference("Property")
 
-            propertiesRef.orderByChild("ownerId").equalTo(currentUserId)
-                .addValueEventListener(object : ValueEventListener {
-                    override fun onDataChange(snapshot: DataSnapshot) {
-                        val properties = snapshot.children.mapNotNull {
-                            it.getValue(PropertyModel::class.java)
+            propertiesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    Log.d("MyActivities", "Total properties in Firebase: ${snapshot.childrenCount}")
+
+                    // Get all properties and filter by ownerId
+                    val allProperties = snapshot.children.mapNotNull { child ->
+                        try {
+                            child.getValue(PropertyModel::class.java)
+                        } catch (e: Exception) {
+                            Log.e("MyActivities", "Error parsing property: ${e.message}")
+                            null
                         }
-
-                        totalListings = properties.size
-                        approvedListings = properties.count { it.status == PropertyStatus.APPROVED }
-                        pendingListings = properties.count { it.status == PropertyStatus.PENDING }
-                        rejectedListings = properties.count { it.status == PropertyStatus.REJECTED }
-
-                        isLoading = false
                     }
 
-                    override fun onCancelled(error: DatabaseError) {
-                        isLoading = false
+                    Log.d("MyActivities", "Parsed ${allProperties.size} properties")
+
+                    // Filter properties belonging to current user
+                    val userProperties = allProperties.filter { property ->
+                        property.ownerId == currentUserId
                     }
-                })
+
+                    Log.d("MyActivities", "User has ${userProperties.size} properties")
+
+                    // Count by status
+                    totalListings = userProperties.size
+                    approvedListings = userProperties.count { it.status == PropertyStatus.APPROVED }
+                    pendingListings = userProperties.count { it.status == PropertyStatus.PENDING }
+                    rejectedListings = userProperties.count { it.status == PropertyStatus.REJECTED }
+
+                    Log.d("MyActivities", "Stats - Total: $totalListings, Approved: $approvedListings, Pending: $pendingListings, Rejected: $rejectedListings")
+
+                    isLoading = false
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e("MyActivities", "Database error: ${error.message}")
+                    isLoading = false
+                }
+            })
         } else {
+            Log.e("MyActivities", "Current user ID is null")
             isLoading = false
         }
     }
