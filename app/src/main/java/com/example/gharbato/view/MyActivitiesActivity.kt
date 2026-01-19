@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -49,6 +50,7 @@ fun MyActivitiesScreen() {
     val currentUserId = userRepo.getCurrentUserId()
 
     var isLoading by remember { mutableStateOf(true) }
+    var userProperties by remember { mutableStateOf<List<PropertyModel>>(emptyList()) }
     var totalListings by remember { mutableStateOf(0) }
     var approvedListings by remember { mutableStateOf(0) }
     var pendingListings by remember { mutableStateOf(0) }
@@ -60,7 +62,6 @@ fun MyActivitiesScreen() {
             Log.d("MyActivities", "Loading properties for user: $currentUserId")
 
             val database = FirebaseDatabase.getInstance()
-            // IMPORTANT: Changed from "Properties" to "Property" to match your Firebase structure
             val propertiesRef = database.getReference("Property")
 
             propertiesRef.addValueEventListener(object : ValueEventListener {
@@ -80,7 +81,7 @@ fun MyActivitiesScreen() {
                     Log.d("MyActivities", "Parsed ${allProperties.size} properties")
 
                     // Filter properties belonging to current user
-                    val userProperties = allProperties.filter { property ->
+                    userProperties = allProperties.filter { property ->
                         property.ownerId == currentUserId
                     }
 
@@ -161,14 +162,28 @@ fun MyActivitiesScreen() {
                             count = approvedListings,
                             color = Color(0xFF4CAF50),
                             icon = R.drawable.baseline_check_24,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                    putExtra("FILTER_TYPE", "APPROVED")
+                                    putExtra("TITLE", "Approved Properties")
+                                }
+                                context.startActivity(intent)
+                            }
                         )
                         StatCard(
                             title = "Pending",
                             count = pendingListings,
                             color = Color(0xFFFF9800),
                             icon = R.drawable.baseline_pending_actions_24,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                    putExtra("FILTER_TYPE", "PENDING")
+                                    putExtra("TITLE", "Pending Properties")
+                                }
+                                context.startActivity(intent)
+                            }
                         )
                     }
 
@@ -185,14 +200,28 @@ fun MyActivitiesScreen() {
                             count = rejectedListings,
                             color = Color(0xFFD32F2F),
                             icon = R.drawable.baseline_close_24,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                    putExtra("FILTER_TYPE", "REJECTED")
+                                    putExtra("TITLE", "Rejected Properties")
+                                }
+                                context.startActivity(intent)
+                            }
                         )
                         StatCard(
                             title = "Total",
                             count = totalListings,
                             color = Blue,
                             icon = R.drawable.baseline_home_24,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                    putExtra("FILTER_TYPE", "ALL")
+                                    putExtra("TITLE", "All My Properties")
+                                }
+                                context.startActivity(intent)
+                            }
                         )
                     }
 
@@ -204,7 +233,28 @@ fun MyActivitiesScreen() {
                         approved = approvedListings,
                         pending = pendingListings,
                         rejected = rejectedListings,
-                        total = totalListings
+                        total = totalListings,
+                        onApprovedClick = {
+                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                putExtra("FILTER_TYPE", "APPROVED")
+                                putExtra("TITLE", "Approved Properties")
+                            }
+                            context.startActivity(intent)
+                        },
+                        onPendingClick = {
+                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                putExtra("FILTER_TYPE", "PENDING")
+                                putExtra("TITLE", "Pending Properties")
+                            }
+                            context.startActivity(intent)
+                        },
+                        onRejectedClick = {
+                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                putExtra("FILTER_TYPE", "REJECTED")
+                                putExtra("TITLE", "Rejected Properties")
+                            }
+                            context.startActivity(intent)
+                        }
                     )
                 } else {
                     // Empty State
@@ -297,13 +347,16 @@ fun StatCard(
     count: Int,
     color: Color,
     icon: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = modifier.clickable(enabled = count > 0) { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (count > 0) Color.White else Color.White.copy(alpha = 0.6f)
+        ),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(if (count > 0) 2.dp else 1.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -349,7 +402,10 @@ fun StatusBreakdownCard(
     approved: Int,
     pending: Int,
     rejected: Int,
-    total: Int
+    total: Int,
+    onApprovedClick: () -> Unit,
+    onPendingClick: () -> Unit,
+    onRejectedClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -374,7 +430,8 @@ fun StatusBreakdownCard(
                 label = "Approved & Live",
                 count = approved,
                 total = total,
-                color = Color(0xFF4CAF50)
+                color = Color(0xFF4CAF50),
+                onClick = onApprovedClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -384,7 +441,8 @@ fun StatusBreakdownCard(
                 label = "Pending Review",
                 count = pending,
                 total = total,
-                color = Color(0xFFFF9800)
+                color = Color(0xFFFF9800),
+                onClick = onPendingClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -394,7 +452,8 @@ fun StatusBreakdownCard(
                 label = "Rejected",
                 count = rejected,
                 total = total,
-                color = Color(0xFFD32F2F)
+                color = Color(0xFFD32F2F),
+                onClick = onRejectedClick
             )
         }
     }
@@ -405,9 +464,19 @@ fun StatusBreakdownItem(
     label: String,
     count: Int,
     total: Int,
-    color: Color
+    color: Color,
+    onClick: () -> Unit
 ) {
-    Column {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = count > 0) { onClick() }
+            .background(
+                if (count > 0) Color.Transparent else Color.Gray.copy(alpha = 0.05f),
+                RoundedCornerShape(8.dp)
+            )
+            .padding(8.dp)
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -427,12 +496,23 @@ fun StatusBreakdownItem(
                 )
             }
 
-            Text(
-                "$count",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "$count",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+                if (count > 0) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_chevron_right_24),
+                        contentDescription = "View",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
