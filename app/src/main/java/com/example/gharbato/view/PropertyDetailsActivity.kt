@@ -33,7 +33,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import android.util.Log
-
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import java.text.SimpleDateFormat
@@ -52,7 +52,7 @@ class PropertyDetailsActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalPagerApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun PropertyDetailsScreen(propertyId: Int) {
     val context = LocalContext.current
@@ -135,14 +135,14 @@ fun PropertyDetailsScreen(propertyId: Int) {
     }
 }
 
-@OptIn(ExperimentalPagerApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyDetailsContent(property: PropertyModel, padding: PaddingValues) {
     val scrollState = rememberScrollState()
 
     // Get all images from the property
     val allImages = property.images.values.flatten()
-    val pagerState = rememberPagerState()
+    val pagerState = rememberPagerState(pageCount = { allImages.size })
 
     Column(
         modifier = Modifier
@@ -155,7 +155,6 @@ fun PropertyDetailsContent(property: PropertyModel, padding: PaddingValues) {
         if (allImages.isNotEmpty()) {
             Box(modifier = Modifier.fillMaxWidth()) {
                 HorizontalPager(
-                    count = allImages.size,
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -347,8 +346,6 @@ fun PropertyDetailsContent(property: PropertyModel, padding: PaddingValues) {
         }
     }
 }
-
-annotation class ExperimentalPagerApi(val value: Any)
 
 @Composable
 fun StatusBadge(status: String, modifier: Modifier = Modifier) {
