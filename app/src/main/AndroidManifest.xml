@@ -191,6 +191,10 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
+            android:name=".view.PropertyDetailsActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
             android:name=".view.LoginActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
@@ -209,7 +213,7 @@
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
         <activity
-            android:name=".view.NotificationActivity"
+            android:name=".view.FilteredPropertiesActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
 
