@@ -112,7 +112,18 @@ fun SplashScreen() {
 
         delay(1800)
 
-        val intent = Intent(context, LoginActivity::class.java)
+        val sharedPreferences = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+        val rememberMe = sharedPreferences.getBoolean("remember_me", false)
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+
+        val intent = if (currentUser != null && rememberMe) {
+            Intent(context, DashboardActivity::class.java)
+        } else {
+            if (currentUser != null && !rememberMe) {
+                com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+            }
+            Intent(context, LoginActivity::class.java)
+        }
         context.startActivity(intent)
         (context as ComponentActivity).finish()
     }

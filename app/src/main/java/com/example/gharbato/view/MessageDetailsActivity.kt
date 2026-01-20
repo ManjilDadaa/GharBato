@@ -173,6 +173,20 @@ fun MessageDetailsScreen(
     var showReportDialog by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
+    if (showReportDialog) {
+        ReportUserDialog(
+            onDismiss = { showReportDialog = false },
+            onReport = { reason ->
+                viewModel.reportUser(reason) { success, message ->
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    if (success) {
+                        showReportDialog = false
+                    }
+                }
+            }
+        )
+    }
+
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->

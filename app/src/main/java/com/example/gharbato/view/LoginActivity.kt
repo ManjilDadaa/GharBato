@@ -317,6 +317,13 @@ fun LoginBody() {
                                                 userViewModel.checkEmailVerified { isVerified ->
                                                     isLoading = false
                                                     if (isVerified) {
+                                                        // Save Remember Me preference
+                                                        val sharedPreferences = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                                                        with(sharedPreferences.edit()) {
+                                                            putBoolean("remember_me", rememberMe)
+                                                            apply()
+                                                        }
+
                                                         // Email verified - proceed to dashboard
                                                         Toast.makeText(
                                                             context,

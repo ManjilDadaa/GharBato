@@ -108,6 +108,13 @@ fun DashboardBody() {
         }
     }
 
+    androidx.compose.runtime.LaunchedEffect(isMessageOverlayVisible, lastShownMessageId) {
+        if (isMessageOverlayVisible) {
+            kotlinx.coroutines.delay(3000)
+            isMessageOverlayVisible = false
+        }
+    }
+
     val incomingCall by CallInvitationManager.incomingCall.collectAsState(initial = null)
 
     Scaffold(
@@ -220,8 +227,8 @@ fun FloatingMessageOverlay(
     ) {
         Surface(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 24.dp)
+                .align(Alignment.TopCenter)
+                .padding(horizontal = 16.dp, vertical = 48.dp)
                 .clickable { onClick() },
             shape = RoundedCornerShape(16.dp),
             color = Color(0xFF222222),
