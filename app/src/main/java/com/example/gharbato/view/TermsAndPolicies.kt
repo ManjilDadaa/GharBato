@@ -21,11 +21,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 
 class TermsAndPoliciesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { TermsAndConditionsScreen() }
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                TermsAndConditionsScreen()
+            }
+        }
     }
 }
 
@@ -33,16 +44,22 @@ class TermsAndPoliciesActivity : ComponentActivity() {
 @Composable
 fun TermsAndConditionsScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val goBackToProfile = { (context as ComponentActivity).finish() }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
                 ),
-                title = { Text("Terms and Conditions") },
+                title = {
+                    Text(
+                        "Terms and Conditions",
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { goBackToProfile() }) {
                         Icon(
@@ -67,7 +84,7 @@ fun TermsAndConditionsScreen() {
                 text = "Welcome to GharBato Terms and Conditions",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
 
@@ -108,7 +125,7 @@ fun TermsAndConditionsScreen() {
                 """.trimIndent(),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color.Black,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
