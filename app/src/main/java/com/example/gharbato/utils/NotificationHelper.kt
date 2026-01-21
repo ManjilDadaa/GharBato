@@ -17,6 +17,9 @@ object NotificationHelper {
     private const val CHANNEL_ID = "gharbato_notifications"
     private const val CHANNEL_NAME = "Gharbato Notifications"
 
+    /**
+     * Create notification channel (required for Android 8.0+)
+     */
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -27,6 +30,7 @@ object NotificationHelper {
                 description = "Notifications for property updates and messages"
                 enableLights(true)
                 enableVibration(true)
+                setShowBadge(true)
             }
 
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -34,6 +38,9 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Show a local notification on the device
+     */
     fun showNotification(context: Context, notification: NotificationModel) {
         val intent = Intent(context, NotificationActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
