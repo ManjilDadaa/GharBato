@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel
 import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepo
+import com.example.gharbato.utils.NotificationHelper
 
 class UserViewModel(val repo: UserRepo) : ViewModel() {
 
@@ -26,6 +27,12 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     private val _unreadCount = MutableLiveData<Int>(0)
     val unreadCount: LiveData<Int> get() = _unreadCount
+
+    // Store previous notification IDs to detect new ones
+    private val previousNotificationIds = mutableSetOf<String>()
+
+    // Store context for showing notifications
+    private var appContext: Context? = null
 
     // ==================== AUTHENTICATION ====================
 
@@ -147,10 +154,39 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     // ==================== REAL-TIME NOTIFICATION OBSERVERS ====================
 
+    /**
+     * Initialize context for showing device notifications
+     */
+    fun initializeNotificationContext(context: Context) {
+        appContext = context.applicationContext
+    }
+
+    /**
+     * Start observing notifications with device notification support
+     */
     fun startObservingNotifications() {
         val userId = repo.getCurrentUserId() ?: return
 
         repo.observeNotifications(userId) { notificationList ->
+            // Detect new notifications
+            val newNotifications = notificationList.filter { notification ->
+                !previousNotificationIds.contains(notification.notificationId)
+            }
+
+            // Show device notifications for new unread notifications
+            appContext?.let { context ->
+                newNotifications.forEach { notification ->
+                    if (!notification.isRead) {
+                        NotificationHelper.showNotification(context, notification)
+                    }
+                }
+            }
+
+            // Update the previous IDs set
+            previousNotificationIds.clear()
+            previousNotificationIds.addAll(notificationList.map { it.notificationId })
+
+            // Update LiveData
             _notifications.postValue(notificationList)
         }
 
@@ -161,6 +197,7 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
 
     fun stopObservingNotifications() {
         repo.removeNotificationObservers()
+        previousNotificationIds.clear()
     }
 
     // ==================== NOTIFICATION ACTIONS ====================
@@ -169,6 +206,9 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         val userId = repo.getCurrentUserId() ?: return
         repo.getUserNotifications(userId) { success, notificationList, _ ->
             if (success && notificationList != null) {
+                // Don't trigger device notifications on manual load
+                previousNotificationIds.clear()
+                previousNotificationIds.addAll(notificationList.map { it.notificationId })
                 _notifications.postValue(notificationList)
             }
         }
@@ -264,5 +304,6 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
     override fun onCleared() {
         super.onCleared()
         stopObservingNotifications()
+        appContext = null
     }
 }
