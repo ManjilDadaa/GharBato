@@ -36,7 +36,6 @@ interface MessageRepository {
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
     fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
-    fun getLastMessageForChat(currentUserId: String, otherUserId: String, callback: (ChatMessage?) -> Unit)
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
@@ -52,7 +51,10 @@ interface MessageRepository {
     )
 
 
-    fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit
+    fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, com.example.gharbato.model.ChatMessage?) -> Unit
+    ): () -> Unit
     fun markMessagesAsRead(chatId: String, currentUserId: String)
     fun sendQuickMessage(
         context: Context,
@@ -145,6 +147,7 @@ class MessageRepositoryImpl : MessageRepository {
         chatsRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val chatPartnerIds = mutableSetOf<String>()
+                val lastMessageMap = mutableMapOf<String, Pair<String, Long>>()
 
                 Log.d(TAG, "Total chat rooms found: ${snapshot.childrenCount}")
 
@@ -163,6 +166,32 @@ class MessageRepositoryImpl : MessageRepository {
                             if (userId != currentUserId && userId.isNotBlank()) {
                                 chatPartnerIds.add(userId)
                                 Log.d(TAG, "Found chat partner: $userId")
+
+                                val messagesSnapshot = chatSnapshot.child("messages")
+                                if (messagesSnapshot.exists()) {
+                                    var latestTimestamp = lastMessageMap[userId]?.second ?: 0L
+                                    var latestText = lastMessageMap[userId]?.first ?: ""
+
+                                    for (msgSnapshot in messagesSnapshot.children) {
+                                        try {
+                                            val message = msgSnapshot.getValue(ChatMessage::class.java)
+                                            if (message != null && message.timestamp >= latestTimestamp) {
+                                                latestTimestamp = message.timestamp
+                                                latestText = when {
+                                                    message.text.isNotBlank() -> message.text
+                                                    message.imageUrl.isNotBlank() -> "Photo"
+                                                    else -> latestText
+                                                }
+                                            }
+                                        } catch (e: Exception) {
+                                            Log.e(TAG, "Error parsing message for preview", e)
+                                        }
+                                    }
+
+                                    if (latestTimestamp > 0L) {
+                                        lastMessageMap[userId] = latestText to latestTimestamp
+                                    }
+                                }
                             }
                         }
                     }
@@ -176,10 +205,22 @@ class MessageRepositoryImpl : MessageRepository {
                     return
                 }
 
-                // Get user details for each chat partner
+                // Get user details for each chat partner and attach last message preview
                 fetchUsersByIds(chatPartnerIds.toList()) { users ->
-                    Log.d(TAG, "Returning ${users.size} chat partners")
-                    callback(true, users, "")
+                    val enrichedUsers = users.map { user ->
+                        val info = lastMessageMap[user.userId]
+                        if (info != null) {
+                            user.copy(
+                                lastMessage = info.first,
+                                lastMessageTimestamp = info.second
+                            )
+                        } else {
+                            user
+                        }
+                    }.sortedByDescending { it.lastMessageTimestamp }
+
+                    Log.d(TAG, "Returning ${enrichedUsers.size} chat partners with previews")
+                    callback(true, enrichedUsers, "")
                 }
             }
 
@@ -386,41 +427,6 @@ class MessageRepositoryImpl : MessageRepository {
         }
     }
 
-    override fun getLastMessageForChat(
-        currentUserId: String,
-        otherUserId: String,
-        callback: (ChatMessage?) -> Unit
-    ) {
-        val sortedIds = listOf(currentUserId, otherUserId).sorted()
-        val chatId = "${sortedIds[0]}_${sortedIds[1]}"
-        val messagesRef = database.getReference("chats").child(chatId).child("messages")
-
-        messagesRef
-            .orderByChild("timestamp")
-            .limitToLast(1)
-            .addListenerForSingleValueEvent(object : ValueEventListener {
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    var lastMessage: ChatMessage? = null
-                    for (msgSnapshot in snapshot.children) {
-                        try {
-                            val msg = msgSnapshot.getValue(ChatMessage::class.java)
-                            if (msg != null) {
-                                lastMessage = msg
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error parsing last message", e)
-                        }
-                    }
-                    callback(lastMessage)
-                }
-
-                override fun onCancelled(error: DatabaseError) {
-                    Log.e(TAG, "Failed to load last message: ${error.message}")
-                    callback(null)
-                }
-            })
-    }
-
     override fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String) {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
@@ -525,12 +531,17 @@ class MessageRepositoryImpl : MessageRepository {
 
 
 
-    override fun listenToTotalUnreadCount(userId: String, onCountChange: (Int) -> Unit): () -> Unit {
+    override fun listenToTotalUnreadCount(
+        userId: String,
+        onChange: (Int, ChatMessage?) -> Unit
+    ): () -> Unit {
         val chatsRef = database.getReference("chats")
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 var totalUnread = 0
+                var latestUnread: ChatMessage? = null
+                var latestTimestamp = 0L
                 for (chatSnapshot in snapshot.children) {
                     val chatId = chatSnapshot.key ?: continue
                     if (chatId.contains(userId)) {
@@ -540,6 +551,10 @@ class MessageRepositoryImpl : MessageRepository {
                                 val msg = msgSnapshot.getValue(ChatMessage::class.java)
                                 if (msg != null && msg.senderId != userId && !msg.isRead) {
                                     totalUnread++
+                                    if (msg.timestamp >= latestTimestamp) {
+                                        latestTimestamp = msg.timestamp
+                                        latestUnread = msg
+                                    }
                                 }
                             } catch (e: Exception) {
                                 Log.e(TAG, "Error parsing message for unread count", e)
@@ -547,7 +562,7 @@ class MessageRepositoryImpl : MessageRepository {
                         }
                     }
                 }
-                onCountChange(totalUnread)
+                onChange(totalUnread, latestUnread)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -673,6 +688,7 @@ class MessageRepositoryImpl : MessageRepository {
         val currentUserId = auth.currentUser?.uid ?: getOrCreateLocalUserId(context)
         val currentUserName = auth.currentUser?.email ?: "Me"
 
+        // Create chat session
         val session = createChatSession(context, otherUserId)
 
         val propertyImageUrl = property.images.values.flatten().firstOrNull() ?: property.imageUrl
@@ -680,8 +696,7 @@ class MessageRepositoryImpl : MessageRepository {
         val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
 
-        // IMPORTANT: Use HashMap to ensure all fields are saved to Firebase
-        val chatMessage = hashMapOf<String, Any>(
+        val chatMessage = hashMapOf(
             "id" to messageId,
             "senderId" to session.myUserId,
             "senderName" to session.myUserName,
@@ -689,6 +704,7 @@ class MessageRepositoryImpl : MessageRepository {
             "timestamp" to System.currentTimeMillis(),
             "isRead" to false,
             "imageUrl" to "",
+            // Property card data
             "propertyId" to property.id,
             "propertyTitle" to property.developer,
             "propertyPrice" to property.price,
@@ -698,8 +714,17 @@ class MessageRepositoryImpl : MessageRepository {
             "propertyBathrooms" to property.bathrooms
         )
 
+        Log.d(TAG, "Sending message with property card and navigating:")
+        Log.d(TAG, "Chat ID: ${session.chatId}")
+        Log.d(TAG, "Property ID: ${property.id}")
+        Log.d(TAG, "Property Title: ${property.developer}")
+        Log.d(TAG, "Property Image: $propertyImageUrl")
+
+        // Send message first
         messagesRef.child(messageId).setValue(chatMessage)
             .addOnSuccessListener {
+                Log.d(TAG, "Property card message sent successfully, navigating to chat")
+                // Small delay to ensure Firebase has processed the write
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     val intent = MessageDetailsActivity.newIntent(
                         activity = activity,
@@ -710,11 +735,11 @@ class MessageRepositoryImpl : MessageRepository {
                     activity.startActivity(intent)
                 }, 300)
             }
-            .addOnFailureListener {
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to send property card message", e)
                 Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
             }
     }
-
 
 
 

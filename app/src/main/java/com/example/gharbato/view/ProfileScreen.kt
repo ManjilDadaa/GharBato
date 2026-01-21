@@ -61,35 +61,15 @@ fun ProfileScreen() {
             actions = {
                 Box(modifier = Modifier.padding(end = 8.dp)) {
                     IconButton(
-                        onClick = { context.startActivity(Intent(context, NotificationActivity::class.java)) },
+                        onClick = { context.startActivity(Intent(context, ListingActivity::class.java)) },
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.outline_notifications_24),
+                            painter = painterResource(R.drawable.baseline_add_24),
                             contentDescription = "Notifications",
                             tint = Blue,
                             modifier = Modifier.size(24.dp)
                         )
-                    }
-                    if (unreadCount > 0) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .offset(x = (-2).dp, y = 6.dp)
-                                .defaultMinSize(minWidth = 20.dp, minHeight = 20.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFFF3B30))
-                                .border(2.dp, Color.White, CircleShape)
-                                .padding(horizontal = 5.dp, vertical = 2.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
                     }
                 }
             }

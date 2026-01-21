@@ -13,6 +13,8 @@ data class UserModel(
     @get:PropertyName("isSuspended")
     val isSuspended: Boolean = false,
     val suspendedUntil: Long = 0L,
-    val suspensionReason: String = ""
+    val suspensionReason: String = "",
+    val lastMessage: String = "",
+    val lastMessageTimestamp: Long = 0L
 )
 

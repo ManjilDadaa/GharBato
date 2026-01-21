@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -14,20 +13,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,73 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AcUnit
-import androidx.compose.material.icons.filled.Accessible
-import androidx.compose.material.icons.filled.Apartment
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.Celebration
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Deck
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FireExtinguisher
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Inventory
-import androidx.compose.material.icons.filled.Kitchen
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.LocalHospital
-import androidx.compose.material.icons.filled.LocalLaundryService
-import androidx.compose.material.icons.filled.LocalParking
-import androidx.compose.material.icons.filled.LocationCity
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Park
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Pool
-import androidx.compose.material.icons.filled.Power
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Store
-import androidx.compose.material.icons.filled.Theaters
-import androidx.compose.material.icons.filled.Tv
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material.icons.filled.WbSunny
-import androidx.compose.material.icons.filled.Wifi
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -117,10 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.data.model.PlaceType
-import com.example.gharbato.model.NearbyPlace
-import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.model.ReportStatus
-import com.example.gharbato.model.ReportedProperty
+import com.example.gharbato.model.*
 import com.example.gharbato.repository.MessageRepositoryImpl
 import com.example.gharbato.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.repository.ReportPropertyRepoImpl
@@ -133,18 +55,13 @@ import com.example.gharbato.viewmodel.ReportViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.firebase.auth.FirebaseAuth
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.*
 import kotlin.collections.emptyMap
 
 
 private fun getCurrentUserId(): String {
     return FirebaseAuth.getInstance().currentUser?.uid ?: ""
 }
-
 
 
 class PropertyDetailActivity : ComponentActivity() {
@@ -161,7 +78,6 @@ class PropertyDetailActivity : ComponentActivity() {
 
         if (propertyId != -1) {
             viewModel.getPropertyById(propertyId)
-
             PropertyViewTracker.trackPropertyViewById(propertyId)
         }
 
@@ -169,11 +85,26 @@ class PropertyDetailActivity : ComponentActivity() {
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
             uiState.selectedProperty?.let { property ->
+                LaunchedEffect(property.id) {
+                    viewModel.loadSimilarProperties(property)
+                }
+
                 PropertyDetailScreen(
                     property = property,
-                    onBack = { finish() },
+                    similarProperties = uiState.similarProperties,
+                    isLoadingSimilar = uiState.isLoadingSimilar,
+                    onBack = {
+                        viewModel.clearSimilarProperties()
+                        finish()
+                    },
                     onFavoriteToggle = { prop ->
                         viewModel.toggleFavorite(prop)
+                    },
+                    onSimilarPropertyClick = { similarProperty ->
+                        val intent = Intent(this@PropertyDetailActivity, PropertyDetailActivity::class.java).apply {
+                            putExtra("propertyId", similarProperty.id)
+                        }
+                        startActivity(intent)
                     }
                 )
             } ?: run {
@@ -196,8 +127,11 @@ class PropertyDetailActivity : ComponentActivity() {
 @Composable
 fun PropertyDetailScreen(
     property: PropertyModel,
+    similarProperties: List<PropertyModel>,
+    isLoadingSimilar: Boolean,
     onBack: () -> Unit,
-    onFavoriteToggle: (PropertyModel) -> Unit
+    onFavoriteToggle: (PropertyModel) -> Unit,
+    onSimilarPropertyClick: (PropertyModel) -> Unit
 ) {
     val context = LocalContext.current
     var showReportDialog by remember { mutableStateOf(false) }
@@ -215,7 +149,7 @@ fun PropertyDetailScreen(
                     propertyImage = property.images.values.flatten().firstOrNull() ?: "",
                     ownerId = property.ownerId,
                     ownerName = property.ownerName.ifBlank { property.developer },
-                    reportedByName = "", // You can get this from current user's profile if available
+                    reportedByName = "",
                     reportedBy = getCurrentUserId(),
                     reportReason = reason,
                     reportDetails = details,
@@ -227,6 +161,7 @@ fun PropertyDetailScreen(
             }
         )
     }
+
     LaunchedEffect(reportUiState.successMessage) {
         reportUiState.successMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -241,25 +176,21 @@ fun PropertyDetailScreen(
         }
     }
 
-    Scaffold (
+    Scaffold(
         containerColor = Color.White
-    ){ paddingValues ->
+    ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Replace the LazyColumn items in PropertyDetailScreen with this:
-
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 // Image Gallery Section
                 item {
                     PropertyImageSection(
                         property = property,
                         isFavorite = property.isFavorite,
-                        onFavoriteClick = {
-                            onFavoriteToggle(property)
-                        },
+                        onFavoriteClick = { onFavoriteToggle(property) },
                         onBackClick = onBack
                     )
                 }
@@ -284,7 +215,7 @@ fun PropertyDetailScreen(
                     BuildingInfoSection(property = property)
                 }
 
-                // Description Section (NEW - show property description)
+                // Description Section
                 if (!property.description.isNullOrBlank()) {
                     item {
                         DescriptionSection(property = property)
@@ -321,14 +252,23 @@ fun PropertyDetailScreen(
                     PropertyDetailsInfoSection(property = property)
                 }
 
-                // Rental Terms (only show if property has rental terms)
+                // Rental Terms
                 item {
                     RentalTermsSection(property = property)
                 }
 
-                // Amenities (only show if property has amenities)
+                // Amenities
                 item {
                     AmenitiesSection(property = property)
+                }
+
+                // Similar Properties Section (NEW - FUNCTIONAL)
+                item {
+                    SimilarPropertiesSection(
+                        similarProperties = similarProperties,
+                        isLoading = isLoadingSimilar,
+                        onPropertyClick = onSimilarPropertyClick
+                    )
                 }
 
                 // Report Section
@@ -1473,60 +1413,237 @@ fun ReportSection(
 //    }
 //}
 
+@Composable
+fun SimilarPropertiesSection(
+    similarProperties: List<PropertyModel>,
+    isLoading: Boolean,
+    onPropertyClick: (PropertyModel) -> Unit
+) {
+    if (similarProperties.isEmpty() && !isLoading) {
+        return
+    }
 
-//
-//@Composable
-//fun SimilarPropertiesSection(
-//    price: String,
-//    details: String,
-//    location: String,
-//    imageUrl: String,
-//    modifier: Modifier = Modifier
-//) {
-//    Card(
-//        modifier = modifier.clickable { /* Navigate */ },
-//        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-//        shape = RoundedCornerShape(12.dp)
-//    ) {
-//        Column {
-//            Image(
-//                painter = rememberAsyncImagePainter(imageUrl),
-//                contentDescription = "Similar Property",
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .height(120.dp),
-//                contentScale = ContentScale.Crop
-//            )
-//            Column(modifier = Modifier.padding(12.dp)) {
-//                Text(
-//                    text = price,
-//                    fontSize = 16.sp,
-//                    fontWeight = FontWeight.Bold,
-//                    color = Color(0xFF4CAF50)
-//                )
-//                Text(
-//                    text = details,
-//                    fontSize = 12.sp,
-//                    color = Color.Gray
-//                )
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    Icon(
-//                        imageVector = Icons.Default.LocationOn,
-//                        contentDescription = null,
-//                        modifier = Modifier.size(12.dp),
-//                        tint = Color.Gray
-//                    )
-//                    Spacer(modifier = Modifier.width(4.dp))
-//                    Text(
-//                        text = location,
-//                        fontSize = 11.sp,
-//                        color = Color.Gray
-//                    )
-//                }
-//            }
-//        }
-//    }
-//}
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 16.dp)
+    ) {
+        // Section Header
+        Text(
+            text = "Similar Properties",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.Black,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "You might also be interested in",
+            fontSize = 14.sp,
+            color = Color.Gray,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        if (isLoading) {
+            // Loading State
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Finding similar properties...",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+        } else {
+            // Horizontal scrolling list of similar properties
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(similarProperties) { property ->
+                    SimilarPropertyCard(
+                        property = property,
+                        onClick = { onPropertyClick(property) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SimilarPropertyCard(
+    property: PropertyModel,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .width(280.dp)
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column {
+            // Property Image
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+            ) {
+                val imageUrl = property.images.values.flatten().firstOrNull()
+                    ?: "https://via.placeholder.com/600x400?text=No+Image"
+
+                Image(
+                    painter = rememberAsyncImagePainter(imageUrl),
+                    contentDescription = property.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
+                // Favorite indicator if property is saved
+                if (property.isFavorite) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp)
+                            .size(32.dp),
+                        color = Color.White.copy(alpha = 0.9f),
+                        shape = CircleShape
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Favorite",
+                            tint = Color.Red,
+                            modifier = Modifier.padding(6.dp)
+                        )
+                    }
+                }
+            }
+
+            // Property Details
+            Column(modifier = Modifier.padding(12.dp)) {
+                // Price
+                Text(
+                    text = property.price,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Title
+                Text(
+                    text = property.developer,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Property specs
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Bedrooms
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bed,
+                            contentDescription = "Bedrooms",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${property.bedrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    // Bathrooms
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.Bathroom,
+                            contentDescription = "Bathrooms",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${property.bathrooms}",
+                            fontSize = 12.sp,
+                            color = Color.Gray
+                        )
+                    }
+
+                    // Area
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.SquareFoot,
+                            contentDescription = "Area",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = property.sqft,
+                            fontSize = 12.sp,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Location
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocationOn,
+                        contentDescription = "Location",
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF2196F3)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = property.location,
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun BoxScope.BottomActionButtons(property: PropertyModel) {

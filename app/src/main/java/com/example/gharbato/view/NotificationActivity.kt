@@ -1,9 +1,13 @@
 package com.example.gharbato.view
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -31,29 +35,101 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
 import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.utils.NotificationHelper
 import com.example.gharbato.viewmodel.UserViewModel
+import com.google.firebase.messaging.FirebaseMessaging
 import java.text.SimpleDateFormat
 import java.util.*
 
 class NotificationActivity : ComponentActivity() {
+
+    private lateinit var userViewModel: UserViewModel
+
+    // Permission launcher
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted, get FCM token
+            getFCMToken()
+        } else {
+            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Initialize ViewModel
+        userViewModel = UserViewModel(UserRepoImpl())
+
+        // Initialize notification context in ViewModel
+        userViewModel.initializeNotificationContext(this)
+
+        // Create notification channel
+        NotificationHelper.createNotificationChannel(this)
+
+        // Request notification permission for Android 13+
+        requestNotificationPermission()
+
         setContent {
-            NotificationScreen()
+            NotificationScreen(userViewModel)
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // Permission already granted
+                    getFCMToken()
+                }
+                else -> {
+                    // Request permission
+                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            // For Android 12 and below, permission is automatically granted
+            getFCMToken()
+        }
+    }
+
+    private fun getFCMToken() {
+        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val token = task.result
+                // Save token to your user's profile in Firebase
+                saveFCMToken(token)
+            }
+        }
+    }
+
+    private fun saveFCMToken(token: String) {
+        val userId = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            com.google.firebase.database.FirebaseDatabase.getInstance().reference
+                .child("Users")
+                .child(userId)
+                .child("fcmToken")
+                .setValue(token)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationScreen() {
+fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(UserRepoImpl()) }) {
     val context = LocalContext.current
-    val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
     // Observe LiveData
     val notifications by userViewModel.notifications.observeAsState(emptyList())

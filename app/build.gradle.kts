@@ -6,7 +6,6 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
     id("kotlin-parcelize")
-    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin")
 }
 
 android {
@@ -51,7 +50,10 @@ android {
         val zegoAppSignEscaped = zegoAppSign
             .replace("\\\\", "\\\\\\\\")
             .replace("\"", "\\\\\"")
-//      Gemini API Key
+
+        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
+        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
+
         val geminiApiKey = (
                 project.findProperty("GEMINI_API_KEY")
                     ?: localProps.getProperty("GEMINI_API_KEY")
@@ -60,9 +62,11 @@ android {
                     ?: ""
                 ).toString().trim()
 
-        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
-        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
-        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKey}\"")  // ADD THIS LINE
+        val geminiApiKeyEscaped = geminiApiKey
+            .replace("\\\\", "\\\\\\\\")
+            .replace("\"", "\\\\\"")
+
+        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKeyEscaped}\"")
     }
 
     buildTypes {
@@ -88,29 +92,62 @@ android {
 }
 
 dependencies {
-    implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    // ========== FIREBASE - USE SINGLE BOM VERSION ==========
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-database-ktx")
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+
+    // Core Android
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
+    implementation("androidx.activity:activity-compose:1.8.2")
+
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.runtime:runtime-livedata:1.5.4")
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database")
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+
+    // Navigation
     implementation(libs.androidx.navigation.compose)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.database)
+
+    // Image Loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
+
+    // Google Services
     implementation("androidx.browser:browser:1.9.0")
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
-    implementation(libs.androidx.compose.runtime.livedata)
 
+    // Google Maps
+    implementation("com.google.maps.android:maps-compose:4.4.1")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
+    implementation("com.google.android.gms:play-services-location:21.1.0")
+    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
+
+    // Country Picker
+    implementation("com.github.arpitkatiyar1999:Country-Picker:3.0.1")
+
+    // Zego Video Call
+    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+
+    // Cloudinary
+    implementation("com.cloudinary:cloudinary-android:2.1.0")
+
+    // Gemini AI
+    implementation("com.google.ai.client.generativeai:generativeai:0.1.2")
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -118,58 +155,4 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
-    //
-    implementation("com.github.arpitkatiyar1999:Country-Picker:3.0.1")
-    // Kotlin extensions for Android framework - provides .dp, .sp units and Kotlin-friendly APIs
-    implementation("androidx.core:core-ktx:1.12.0")
-
-    // Lifecycle management - handles onCreate, onDestroy and provides lifecycleScope for coroutines
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
-
-    // Enables Jetpack Compose in Activities - allows setContent { } to display Compose UI
-    implementation("androidx.activity:activity-compose:1.8.2")
-
-    // Version management for Compose libraries - ensures all Compose dependencies are compatible
-    implementation(platform("androidx.compose:compose-bom:2024.02.00"))
-
-    // Core Compose UI - provides basic composables like Box, Column, Row, Text, Image
-    implementation("androidx.compose.ui:ui")
-
-    // Graphics support - provides Color, Brush, Shape for custom drawing and styling
-    implementation("androidx.compose.ui:ui-graphics")
-
-    // Preview support - enables @Preview annotation to see UI in Android Studio without running app
-    implementation("androidx.compose.ui:ui-tooling-preview")
-
-    // Material Design 3 components - provides Button, Card, TextField, Chip and modern Material theming
-    implementation("androidx.compose.material3:material3")
-
-    // Extended Material icons - provides Icons.Default.Search, LocationOn, FavoriteBorder, etc.
-    implementation("androidx.compose.material:material-icons-extended")
-
-    // Image loading from URLs - loads and caches images from internet efficiently with rememberAsyncImagePainter()
-    implementation("io.coil-kt:coil-compose:2.5.0")
-
-    implementation("com.google.maps.android:maps-compose:4.3.3") // Maps for Compose
-    implementation("com.google.android.gms:play-services-maps:18.2.0") // Google Maps SDK
-    implementation("com.google.android.gms:play-services-location:21.1.0") // Location services
-    implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
-    implementation("com.google.maps.android:maps-compose:4.4.1")
-    implementation("io.coil-kt:coil-compose:2.4.0")
-//    // for PhoneAuth
-    implementation(platform("com.google.firebase:firebase-bom:34.7.0"))
-    implementation("com.google.firebase:firebase-auth")
-
-    implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:3.9.11")
-    implementation("com.github.ZEGOCLOUD:zego_uikit_plugin_adapter_android:3.0.5")
-    implementation("androidx.fragment:fragment-ktx:1.8.5")
-
-    implementation("com.cloudinary:cloudinary-android:2.1.0")
-    implementation("io.coil-kt.coil3:coil-compose:3.3.0")
-
-    // Gemini AI
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-
-    // Gson for JSON (needed for Gemini local storage)
-    implementation("com.google.code.gson:gson:2.10.1")
 }

@@ -27,6 +27,7 @@ import coil.compose.AsyncImage
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.view.ui.theme.LightBlue
 import com.example.gharbato.viewmodel.AdminSearchViewModel
 import com.example.gharbato.viewmodel.AdminSearchViewModelFactory
 
@@ -54,7 +55,7 @@ fun AdminSearchScreen() {
     }
 
     Scaffold(
-        containerColor = Color(0xFF0061ff)
+        containerColor = Color.White,
     ) { padding ->
 
         Column(
@@ -64,10 +65,12 @@ fun AdminSearchScreen() {
                 .background(Color(0xFFF5F5F5))
         ) {
             // Header
-            Surface(
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                color = Blue,
-                shadowElevation = 4.dp
+                shape = RoundedCornerShape(0.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = LightBlue
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)

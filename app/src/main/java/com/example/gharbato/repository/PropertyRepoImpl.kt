@@ -10,6 +10,9 @@ import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
+import com.example.gharbato.model.SimilarProperty
+import com.example.gharbato.model.SimilarityWeights
+import com.example.gharbato.repository.PropertyRepo
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.InputStream
@@ -359,7 +362,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
 
         ref.child(propertyId)
-            .setValue(property.copy(id = propertyId.hashCode()))
+            .setValue(property.copy(id = propertyId.hashCode(), firebaseKey = propertyId))
             .addOnSuccessListener {
                 Log.d(TAG, "Property added successfully: ${property.title}")
                 callback(true, null)
@@ -471,5 +474,226 @@ class PropertyRepoImpl : PropertyRepo {
         }
 
         return "image_${System.currentTimeMillis()}"
+    }
+
+
+// this is the scoring criteria to show
+    /**
+     * Get similar properties based on multiple factors with weighted scoring
+     *
+     * Scoring Algorithm:
+     * 1. Market Type Match (30 points) - Same rent/sale/book type
+     * 2. Property Type Match (20 points) - Same apartment/house/land
+     * 3. Price Similarity (15 points) - Within ±30% price range
+     * 4. Location Match (15 points) - Same city/area or within 5km
+     * 5. Bedroom Match (10 points) - Same or ±1 bedroom
+     * 6. Area Similarity (5 points) - Within ±20% size
+     * 7. Bathroom Match (3 points) - Same or ±1 bathroom
+     * 8. Furnishing Match (2 points) - Same furnishing type
+     *
+     * Total possible score: 100 points
+     */
+    override suspend fun getSimilarProperties(
+        currentProperty: PropertyModel,
+        limit: Int
+    ): List<PropertyModel> {
+        return suspendCancellableCoroutine { continuation ->
+            Log.d(TAG, "Finding similar properties for: ${currentProperty.title}")
+
+            ref.addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val allProperties = mutableListOf<PropertyModel>()
+
+                    // Get all approved properties
+                    for (propertySnapshot in snapshot.children) {
+                        try {
+                            val property = propertySnapshot.getValue(PropertyModel::class.java)
+                            if (property != null &&
+                                property.status == PropertyStatus.APPROVED &&
+                                property.id != currentProperty.id) { // Exclude current property
+                                allProperties.add(property)
+                            }
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error parsing property: ${e.message}")
+                        }
+                    }
+
+                    // Calculate similarity scores for each property
+                    val scoredProperties = allProperties.map { property ->
+                        val score = calculateSimilarityScore(currentProperty, property)
+                        SimilarProperty(property, score)
+                    }
+
+                    // Sort by score (highest first) and take top results
+                    val similarProperties = scoredProperties
+                        .filter { it.similarityScore > 20f } // Minimum 20% similarity
+                        .sortedByDescending { it.similarityScore }
+                        .take(limit)
+                        .map { it.property }
+
+                    Log.d(TAG, "Found ${similarProperties.size} similar properties")
+                    continuation.resume(similarProperties)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Log.e(TAG, "Firebase error: ${error.message}")
+                    continuation.resume(emptyList()) // Return empty list on error
+                }
+            })
+        }
+    }
+
+    /**
+     * Calculate similarity score between two properties
+     * Returns a score from 0-100 based on multiple weighted factors
+     */
+    private fun calculateSimilarityScore(
+        current: PropertyModel,
+        candidate: PropertyModel
+    ): Float {
+        var score = 0f
+
+        // 1. Market Type Match (30 points) - CRITICAL
+        if (current.marketType.equals(candidate.marketType, ignoreCase = true)) {
+            score += SimilarityWeights.MARKET_TYPE
+        }
+
+        // 2. Property Type Match (20 points)
+        if (current.propertyType.equals(candidate.propertyType, ignoreCase = true)) {
+            score += SimilarityWeights.PROPERTY_TYPE
+        }
+
+        // 3. Price Similarity (15 points)
+        val priceScore = calculatePriceSimilarity(current.price, candidate.price)
+        score += priceScore * SimilarityWeights.PRICE_RANGE
+
+        // 4. Location Match (15 points)
+        val locationScore = calculateLocationSimilarity(
+            current.location, candidate.location,
+            current.latitude, current.longitude,
+            candidate.latitude, candidate.longitude
+        )
+        score += locationScore * SimilarityWeights.LOCATION
+
+        // 5. Bedroom Match (10 points)
+        val bedroomScore = calculateBedroomSimilarity(current.bedrooms, candidate.bedrooms)
+        score += bedroomScore * SimilarityWeights.BEDROOMS
+
+        // 6. Area Similarity (5 points)
+        val areaScore = calculateAreaSimilarity(current.sqft, candidate.sqft)
+        score += areaScore * SimilarityWeights.AREA
+
+        // 7. Bathroom Match (3 points)
+        val bathroomScore = calculateBathroomSimilarity(current.bathrooms, candidate.bathrooms)
+        score += bathroomScore * SimilarityWeights.BATHROOMS
+
+        // 8. Furnishing Match (2 points)
+        if (current.furnishing.equals(candidate.furnishing, ignoreCase = true)) {
+            score += SimilarityWeights.FURNISHING
+        }
+
+        return score
+    }
+
+    /**
+     * Calculate price similarity score (0.0 to 1.0)
+     * Returns 1.0 for exact match, decreasing as prices differ
+     * Returns 0.0 if prices differ by more than 30%
+     */
+    private fun calculatePriceSimilarity(price1: String, price2: String): Float {
+        try {
+            // Extract numeric values from price strings (e.g., "Rs 15000/month" -> 15000)
+            val num1 = price1.replace(Regex("[^0-9]"), "").toDoubleOrNull() ?: return 0f
+            val num2 = price2.replace(Regex("[^0-9]"), "").toDoubleOrNull() ?: return 0f
+
+            if (num1 == 0.0 || num2 == 0.0) return 0f
+
+            val ratio = min(num1, num2) / max(num1, num2)
+
+            // If within 30% range, give high score
+            return when {
+                ratio >= 0.9 -> 1.0f  // Within 10% = perfect
+                ratio >= 0.8 -> 0.8f  // Within 20% = good
+                ratio >= 0.7 -> 0.5f  // Within 30% = okay
+                else -> 0f            // More than 30% difference
+            }
+        } catch (e: Exception) {
+            return 0f
+        }
+    }
+
+    /**
+     * Calculate location similarity score (0.0 to 1.0)
+     * Checks both string match and geographic distance
+     */
+    private fun calculateLocationSimilarity(
+        loc1: String, loc2: String,
+        lat1: Double, lng1: Double,
+        lat2: Double, lng2: Double
+    ): Float {
+        // Check if location strings match (city/area)
+        val locationMatch = when {
+            loc1.equals(loc2, ignoreCase = true) -> 1.0f
+            loc1.contains(loc2, ignoreCase = true) || loc2.contains(loc1, ignoreCase = true) -> 0.7f
+            else -> 0f
+        }
+
+        // Calculate geographic distance
+        val distance = calculateDistance(lat1, lng1, lat2, lng2)
+        val distanceScore = when {
+            distance <= 1.0 -> 1.0f   // Within 1km = perfect
+            distance <= 3.0 -> 0.7f   // Within 3km = good
+            distance <= 5.0 -> 0.4f   // Within 5km = okay
+            else -> 0f                // More than 5km
+        }
+
+        // Return the better of the two scores
+        return max(locationMatch, distanceScore)
+    }
+
+    /**
+     * Calculate bedroom similarity score (0.0 to 1.0)
+     */
+    private fun calculateBedroomSimilarity(bed1: Int, bed2: Int): Float {
+        return when (abs(bed1 - bed2)) {
+            0 -> 1.0f    // Exact match
+            1 -> 0.6f    // ±1 bedroom
+            2 -> 0.3f    // ±2 bedrooms
+            else -> 0f   // Too different
+        }
+    }
+
+    /**
+     * Calculate bathroom similarity score (0.0 to 1.0)
+     */
+    private fun calculateBathroomSimilarity(bath1: Int, bath2: Int): Float {
+        return when (abs(bath1 - bath2)) {
+            0 -> 1.0f    // Exact match
+            1 -> 0.5f    // ±1 bathroom
+            else -> 0f   // Too different
+        }
+    }
+
+    /**
+     * Calculate area similarity score (0.0 to 1.0)
+     * Returns high score if areas are within 20% of each other
+     */
+    private fun calculateAreaSimilarity(sqft1: String, sqft2: String): Float {
+        try {
+            val area1 = sqft1.replace(Regex("[^0-9]"), "").toDoubleOrNull() ?: return 0f
+            val area2 = sqft2.replace(Regex("[^0-9]"), "").toDoubleOrNull() ?: return 0f
+
+            if (area1 == 0.0 || area2 == 0.0) return 0f
+
+            val ratio = min(area1, area2) / max(area1, area2)
+
+            return when {
+                ratio >= 0.9 -> 1.0f  // Within 10%
+                ratio >= 0.8 -> 0.6f  // Within 20%
+                else -> 0f            // More than 20% difference
+            }
+        } catch (e: Exception) {
+            return 0f
+        }
     }
 }

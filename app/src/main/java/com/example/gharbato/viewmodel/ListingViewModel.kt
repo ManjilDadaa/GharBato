@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
-import com.example.gharbato.data.repository.PropertyRepo
+import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
 import com.google.firebase.auth.FirebaseAuth
@@ -78,7 +78,6 @@ class ListingViewModel(
             state.location.isBlank() -> {
                 ListingValidationResult(false, "Location is required")
             }
-            // ⭐ NEW: Validate that location was selected on map
             !state.hasSelectedLocation -> {
                 ListingValidationResult(false, "Please select property location on the map")
             }
@@ -99,6 +98,18 @@ class ListingViewModel(
             }
             state.bathrooms.toIntOrNull() == null -> {
                 ListingValidationResult(false, "Please enter a valid number of bathrooms")
+            }
+            state.kitchen.isBlank() -> {
+                ListingValidationResult(false, "Number of kitchens is required")
+            }
+            state.kitchen.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid number of kitchens")
+            }
+            state.totalRooms.isBlank() -> {
+                ListingValidationResult(false, "Total number of rooms is required")
+            }
+            state.totalRooms.toIntOrNull() == null -> {
+                ListingValidationResult(false, "Please enter a valid number of total rooms")
             }
             state.description.isBlank() -> {
                 ListingValidationResult(false, "Property description is required")
@@ -183,6 +194,8 @@ class ListingViewModel(
     fun submitListing(
         context: Context,
         state: PropertyListingState,
+        propertyId: String? = null,
+        isEdit: Boolean = false,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -205,10 +218,16 @@ class ListingViewModel(
                 _uploadProgress.value = "Preparing images..."
 
                 val allImageUris = mutableListOf<Uri>()
+                val existingUrls = mutableListOf<String>()
+                
                 state.imageCategories.forEach { category ->
                     category.images.forEach { uriString ->
                         try {
-                            allImageUris.add(Uri.parse(uriString))
+                            if (uriString.startsWith("http://") || uriString.startsWith("https://")) {
+                                existingUrls.add(uriString)
+                            } else {
+                                allImageUris.add(Uri.parse(uriString))
+                            }
                         } catch (e: Exception) {
                             Log.e(TAG, "Error parsing URI: $uriString", e)
                         }
@@ -216,12 +235,12 @@ class ListingViewModel(
                 }
 
                 if (allImageUris.isEmpty()) {
-                    _uploadProgress.value = "No images selected"
-                    createAndSubmitProperty(state, emptyList(), currentUser.uid, onSuccess, onError)
+                    _uploadProgress.value = "Using existing images..."
+                    createAndSubmitProperty(state, existingUrls, currentUser.uid, propertyId, isEdit, onSuccess, onError)
                     return@launch
                 }
 
-                _uploadProgress.value = "Uploading ${allImageUris.size} images..."
+                _uploadProgress.value = "Uploading ${allImageUris.size} new images..."
 
                 repository.uploadMultipleImages(context, allImageUris) { uploadedUrls ->
                     viewModelScope.launch {
@@ -231,7 +250,8 @@ class ListingViewModel(
                             onError("Failed to upload images. Please check your internet connection.")
                         } else {
                             _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving..."
-                            createAndSubmitProperty(state, uploadedUrls, currentUser.uid, onSuccess, onError)
+                            val allUrls = existingUrls + uploadedUrls
+                            createAndSubmitProperty(state, allUrls, currentUser.uid, propertyId, isEdit, onSuccess, onError)
                         }
                     }
                 }
@@ -250,6 +270,8 @@ class ListingViewModel(
         state: PropertyListingState,
         uploadedUrls: List<String>,
         currentUserId: String,
+        propertyId: String?,
+        isEdit: Boolean,
         onSuccess: () -> Unit,
         onError: (String) -> Unit
     ) {
@@ -337,8 +359,9 @@ class ListingViewModel(
                     parking = state.parking,
                     petsAllowed = state.petsAllowed,
                     description = state.description,
+                    kitchen = state.kitchen,
+                    totalRooms = state.totalRooms,
 
-                    // Owner information
                     ownerId = currentUserId,
                     ownerName = ownerName,
                     ownerImageUrl = ownerImageUrl,
@@ -366,21 +389,72 @@ class ListingViewModel(
 
                 _uploadProgress.value = "Saving property to database..."
 
-                repository.addProperty(property) { success, error ->
-                    _isUploading.value = false
-                    if (success) {
-                        _uploadSuccess.value = true
-                        _uploadProgress.value = "✅ Property created successfully!"
-                        Log.d(TAG, "✅ Property saved successfully!")
-                        Log.d(TAG, "   ID: ${property.id}")
-                        Log.d(TAG, "   Coordinates: (${property.latitude}, ${property.longitude})")
-                        Log.d(TAG, "   Owner: ${property.ownerId}")
-                        onSuccess()
-                    } else {
-                        _uploadSuccess.value = false
-                        _uploadProgress.value = ""
-                        Log.e(TAG, "❌ Failed to save property: $error")
-                        onError(error ?: "Failed to save property")
+                if (isEdit && propertyId != null) {
+                    // Update existing property
+                    val updates = mapOf(
+                        "title" to property.title,
+                        "developer" to property.developer,
+                        "price" to property.price,
+                        "sqft" to property.sqft,
+                        "bedrooms" to property.bedrooms,
+                        "bathrooms" to property.bathrooms,
+                        "images" to property.images,
+                        "location" to property.location,
+                        "latitude" to property.latitude,
+                        "longitude" to property.longitude,
+                        "propertyType" to property.propertyType,
+                        "marketType" to property.marketType,
+                        "floor" to property.floor,
+                        "furnishing" to property.furnishing,
+                        "parking" to property.parking,
+                        "petsAllowed" to property.petsAllowed,
+                        "description" to property.description,
+                        "kitchen" to property.kitchen,
+                        "totalRooms" to property.totalRooms,
+                        "utilitiesIncluded" to property.utilitiesIncluded,
+                        "commission" to property.commission,
+                        "advancePayment" to property.advancePayment,
+                        "securityDeposit" to property.securityDeposit,
+                        "minimumLease" to property.minimumLease,
+                        "availableFrom" to property.availableFrom,
+                        "amenities" to property.amenities,
+                        "updatedAt" to System.currentTimeMillis(),
+                        "status" to PropertyStatus.PENDING
+                    )
+
+                    database.getReference("Property").child(propertyId).updateChildren(updates)
+                        .addOnSuccessListener {
+                            _isUploading.value = false
+                            _uploadSuccess.value = true
+                            _uploadProgress.value = "✅ Property updated successfully!"
+                            Log.d(TAG, "✅ Property updated successfully!")
+                            onSuccess()
+                        }
+                        .addOnFailureListener { e ->
+                            _isUploading.value = false
+                            _uploadSuccess.value = false
+                            _uploadProgress.value = ""
+                            Log.e(TAG, "❌ Failed to update property: ${e.message}")
+                            onError(e.message ?: "Failed to update property")
+                        }
+                } else {
+                    // Create new property
+                    repository.addProperty(property) { success, error ->
+                        _isUploading.value = false
+                        if (success) {
+                            _uploadSuccess.value = true
+                            _uploadProgress.value = "✅ Property created successfully!"
+                            Log.d(TAG, "✅ Property saved successfully!")
+                            Log.d(TAG, "   ID: ${property.id}")
+                            Log.d(TAG, "   Coordinates: (${property.latitude}, ${property.longitude})")
+                            Log.d(TAG, "   Owner: ${property.ownerId}")
+                            onSuccess()
+                        } else {
+                            _uploadSuccess.value = false
+                            _uploadProgress.value = ""
+                            Log.e(TAG, "❌ Failed to save property: $error")
+                            onError(error ?: "Failed to save property")
+                        }
                     }
                 }
 
