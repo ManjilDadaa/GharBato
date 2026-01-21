@@ -32,6 +32,8 @@ import com.example.gharbato.R
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.view.ui.theme.LightBlue
+import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.UserViewModelProvider
@@ -85,7 +87,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8F9FA),
+        containerColor = Color.White,
         floatingActionButton = {
             AIAssistanceFAB(
                 onClick = {
@@ -94,7 +96,7 @@ fun HomeScreen(
                 }
             )
         },
-        floatingActionButtonPosition = FabPosition.EndOverlay
+        floatingActionButtonPosition = FabPosition.End
     ) { padding ->
         Box(
             modifier = Modifier
@@ -269,34 +271,25 @@ fun AIAssistanceFAB(onClick: () -> Unit) {
     FloatingActionButton(
         onClick = onClick,
         modifier = Modifier
-            .padding(16.dp),
+            .padding(bottom = 0.dp, end = 16.dp), // Adjust for bottom navigation
         shape = RoundedCornerShape(16.dp),
-        containerColor = Blue,
+        containerColor = LightBlue,
         elevation = FloatingActionButtonDefaults.elevation(
             defaultElevation = 6.dp,
             pressedElevation = 8.dp
         )
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // AI Sparkle Icon
             Icon(
                 imageVector = Icons.Default.AutoAwesome,
                 contentDescription = "AI Assistant",
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(20.dp)
             )
-            Column {
-                Text(
-                    text = "Need Assistance?",
-                    fontSize = 12.sp,
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontWeight = FontWeight.Medium
-                )
-            }
         }
     }
 }
