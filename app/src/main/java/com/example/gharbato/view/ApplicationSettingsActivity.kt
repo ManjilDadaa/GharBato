@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,14 +24,20 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            val isDarkMode = ThemePreference.isDarkMode(this).collectAsState(initial = false)
 
-            GharBatoTheme(darkTheme = isDarkMode.value) {
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
                 ApplicationSettingsScreen()
             }
         }
@@ -43,7 +48,7 @@ class ApplicationSettingsActivity : ComponentActivity() {
 @Composable
 fun ApplicationSettingsScreen() {
     val context = LocalContext.current
-    val isDarkMode = ThemePreference.isDarkMode(context).collectAsState(initial = false)
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     var selectedLanguage by remember { mutableStateOf("English") }
     var appVersion by remember { mutableStateOf("") }
     val appName = "GharBato"
@@ -88,10 +93,10 @@ fun ApplicationSettingsScreen() {
             SettingItem(
                 icon = R.drawable.baseline_dark_mode_24,
                 title = "Dark Mode",
-                subtitle = if (isDarkMode.value) "Enabled" else "Disabled",
+                subtitle = if (isDarkMode) "Enabled" else "Disabled",
                 iconColor = Blue
             ) {
-                ThemePreference.setDarkMode(context, !isDarkMode.value)
+                ThemePreference.toggleDarkMode(context)
             }
 
             SettingItem(
@@ -202,19 +207,30 @@ fun SettingItem(
     }
 }
 
-// Theme Preference Manager
+// Theme Preference Manager with MutableStateFlow
 object ThemePreference {
     private const val PREFS_NAME = "theme_preferences"
     private const val KEY_DARK_MODE = "dark_mode"
 
-    fun isDarkMode(context: Context): kotlinx.coroutines.flow.Flow<Boolean> {
-        return kotlinx.coroutines.flow.flow {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            emit(prefs.getBoolean(KEY_DARK_MODE, false))
-        }
+    private val _isDarkModeState = MutableStateFlow(false)
+    val isDarkModeState: StateFlow<Boolean> = _isDarkModeState
+
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        _isDarkModeState.value = prefs.getBoolean(KEY_DARK_MODE, false)
+    }
+
+    fun toggleDarkMode(context: Context) {
+        val newValue = !_isDarkModeState.value
+        _isDarkModeState.value = newValue
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, newValue).apply()
     }
 
     fun setDarkMode(context: Context, isDark: Boolean) {
+        _isDarkModeState.value = isDark
+
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_DARK_MODE, isDark).apply()
     }
