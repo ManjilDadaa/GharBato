@@ -362,7 +362,7 @@ class PropertyRepoImpl : PropertyRepo {
         }
 
         ref.child(propertyId)
-            .setValue(property.copy(id = propertyId.hashCode()))
+            .setValue(property.copy(id = propertyId.hashCode(), firebaseKey = propertyId))
             .addOnSuccessListener {
                 Log.d(TAG, "Property added successfully: ${property.title}")
                 callback(true, null)

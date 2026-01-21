@@ -164,11 +164,10 @@ fun MyActivitiesScreen() {
                             icon = R.drawable.baseline_check_24,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                                context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
                                     putExtra("FILTER_TYPE", "APPROVED")
                                     putExtra("TITLE", "Approved Properties")
-                                }
-                                context.startActivity(intent)
+                                })
                             }
                         )
                         StatCard(
@@ -178,11 +177,7 @@ fun MyActivitiesScreen() {
                             icon = R.drawable.baseline_pending_actions_24,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                    putExtra("FILTER_TYPE", "PENDING")
-                                    putExtra("TITLE", "Pending Properties")
-                                }
-                                context.startActivity(intent)
+                                context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
                             }
                         )
                     }
@@ -202,11 +197,7 @@ fun MyActivitiesScreen() {
                             icon = R.drawable.baseline_close_24,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                    putExtra("FILTER_TYPE", "REJECTED")
-                                    putExtra("TITLE", "Rejected Properties")
-                                }
-                                context.startActivity(intent)
+                                context.startActivity(Intent(context, RejectedPropertiesActivity::class.java))
                             }
                         )
                         StatCard(
@@ -216,11 +207,7 @@ fun MyActivitiesScreen() {
                             icon = R.drawable.baseline_home_24,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                    putExtra("FILTER_TYPE", "ALL")
-                                    putExtra("TITLE", "All My Properties")
-                                }
-                                context.startActivity(intent)
+                                context.startActivity(Intent(context, AllPropertiesActivity::class.java))
                             }
                         )
                     }
@@ -235,25 +222,16 @@ fun MyActivitiesScreen() {
                         rejected = rejectedListings,
                         total = totalListings,
                         onApprovedClick = {
-                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
+                            context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
                                 putExtra("FILTER_TYPE", "APPROVED")
                                 putExtra("TITLE", "Approved Properties")
-                            }
-                            context.startActivity(intent)
+                            })
                         },
                         onPendingClick = {
-                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                putExtra("FILTER_TYPE", "PENDING")
-                                putExtra("TITLE", "Pending Properties")
-                            }
-                            context.startActivity(intent)
+                            context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
                         },
                         onRejectedClick = {
-                            val intent = Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                putExtra("FILTER_TYPE", "REJECTED")
-                                putExtra("TITLE", "Rejected Properties")
-                            }
-                            context.startActivity(intent)
+                            context.startActivity(Intent(context, RejectedPropertiesActivity::class.java))
                         }
                     )
                 } else {

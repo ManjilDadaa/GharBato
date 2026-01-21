@@ -42,7 +42,7 @@ data class PropertyModel(
     val ownerEmail: String = "",
 
     val createdAt: Long = System.currentTimeMillis(),
-    val updatedAt: Long = System.currentTimeMillis(), // Last updated timestamp
+    val updatedAt: Long = System.currentTimeMillis(),
 
     val totalViews: Int = 0,
     val todayViews: Int = 0,
@@ -50,6 +50,9 @@ data class PropertyModel(
     val lastViewedAt: Long = 0,
     val viewerIds: Map<String, Long> = emptyMap(),
 
+    var firebaseKey: String? = null,
+    val kitchen: String = "",
+    val totalRooms: String = ""
 ) {
     @get:Exclude
     val latLng: LatLng

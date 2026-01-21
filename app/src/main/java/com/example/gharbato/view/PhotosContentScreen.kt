@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -371,10 +372,9 @@ fun ImageCategorySection(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(
-                        items = category.images,
-                        key = { it }
-                    ) { uriString ->
+                    itemsIndexed(
+                        items = category.images
+                    ) { index, uriString ->
                         ImageThumbnail(
                             uriString = uriString,
                             onRemove = { onImageRemoved(uriString) }

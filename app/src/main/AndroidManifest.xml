@@ -218,6 +218,18 @@
             android:name=".view.FilteredPropertiesActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.PendingPropertiesActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.RejectedPropertiesActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.AllPropertiesActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
 
         <activity android:name=".view.GeminiChatActivity" />
 
