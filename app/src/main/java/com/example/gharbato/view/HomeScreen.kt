@@ -85,12 +85,21 @@ fun HomeScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8F9FA)
-    ) { paddingValues ->
+        containerColor = Color(0xFFF8F9FA),
+        floatingActionButton = {
+            AIAssistanceFAB(
+                onClick = {
+                    val intent = Intent(context, GeminiChatActivity::class.java)
+                    context.startActivity(intent)
+                }
+            )
+        },
+        floatingActionButtonPosition = FabPosition.EndOverlay
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = padding.calculateTopPadding())
         ) {
             if (uiState.isLoading) {
                 // Loading State
@@ -250,6 +259,43 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AIAssistanceFAB(onClick: () -> Unit) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(16.dp),
+        shape = RoundedCornerShape(16.dp),
+        containerColor = Blue,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // AI Sparkle Icon
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "AI Assistant",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+            Column {
+                Text(
+                    text = "Need Assistance?",
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
