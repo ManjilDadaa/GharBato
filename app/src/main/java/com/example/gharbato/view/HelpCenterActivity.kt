@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,13 +24,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.gharbato.ui.theme.GharBatoTheme
 
 class HelpCenterActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
         setContent {
-            HelpCenterScreen()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                HelpCenterScreen()
+            }
         }
     }
 }
@@ -40,20 +48,21 @@ class HelpCenterActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HelpCenterScreen() {
-
     val activity = LocalContext.current as Activity
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
                 ),
                 title = {
                     Text(
                         "Help Center",
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                     )
                 },
                 navigationIcon = {
@@ -62,7 +71,8 @@ fun HelpCenterScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                         )
                     }
                 }
@@ -106,6 +116,7 @@ fun HelpAccordion(
     answer: String
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     Card(
         modifier = Modifier
@@ -113,11 +124,14 @@ fun HelpAccordion(
             .padding(vertical = 6.dp)
             .clickable { expanded = !expanded },
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        )
     ) {
         Column(
             modifier = Modifier
-                .background(Color.White)
+                .background(if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White)
                 .padding(16.dp)
         ) {
 
@@ -128,6 +142,7 @@ fun HelpAccordion(
                     question,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black,
                     modifier = Modifier.weight(1f)
                 )
                 Text(
@@ -146,7 +161,7 @@ fun HelpAccordion(
                 Text(
                     answer,
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                     modifier = Modifier.padding(top = 12.dp)
                 )
             }

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +32,6 @@ class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize the theme preference
         ThemePreference.init(this)
 
         setContent {
@@ -57,8 +57,11 @@ fun ApplicationSettingsScreen() {
         appVersion = getAppVersion(context)
     }
 
+    val backgroundColor =
+        if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
@@ -79,7 +82,7 @@ fun ApplicationSettingsScreen() {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = backgroundColor
                 )
             )
         }
@@ -87,9 +90,11 @@ fun ApplicationSettingsScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundColor)
                 .padding(padding)
                 .padding(16.dp)
         ) {
+
             SettingItem(
                 icon = R.drawable.baseline_dark_mode_24,
                 title = "Dark Mode",
@@ -105,7 +110,8 @@ fun ApplicationSettingsScreen() {
                 subtitle = selectedLanguage,
                 iconColor = Blue
             ) {
-                selectedLanguage = if (selectedLanguage == "English") "Spanish" else "English"
+                selectedLanguage =
+                    if (selectedLanguage == "English") "Spanish" else "English"
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -154,15 +160,25 @@ fun SettingItem(
     iconColor: Color,
     onClick: () -> Unit
 ) {
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(
+                if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            )
+            .border(
+                width = 1.dp,
+                color = if (isDarkMode) Color.Transparent else Color(0xFFF0F0F0),
+                shape = RoundedCornerShape(12.dp)
+            )
             .clickable { onClick() }
             .padding(16.dp)
     ) {
+
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -185,15 +201,21 @@ fun SettingItem(
                 title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    Color(0xFF2C2C2C)
             )
 
             if (!subtitle.isNullOrEmpty()) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    subtitle ?: "",
+                    subtitle,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isDarkMode)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        Color(0xFF999999)
                 )
             }
         }
@@ -201,13 +223,15 @@ fun SettingItem(
         Icon(
             painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            tint = if (isDarkMode)
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            else
+                Color(0xFFCCCCCC),
             modifier = Modifier.size(16.dp)
         )
     }
 }
 
-// Theme Preference Manager with MutableStateFlow
 object ThemePreference {
     private const val PREFS_NAME = "theme_preferences"
     private const val KEY_DARK_MODE = "dark_mode"
