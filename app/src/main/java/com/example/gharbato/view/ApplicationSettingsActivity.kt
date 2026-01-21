@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,12 +24,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ApplicationSettingsScreen()
+            val isDarkMode = ThemePreference.isDarkMode(this).collectAsState(initial = false)
+
+            GharBatoTheme(darkTheme = isDarkMode.value) {
+                ApplicationSettingsScreen()
+            }
         }
     }
 }
@@ -37,39 +43,38 @@ class ApplicationSettingsActivity : ComponentActivity() {
 @Composable
 fun ApplicationSettingsScreen() {
     val context = LocalContext.current
-
-
-    var isDarkMode by remember { mutableStateOf(false) }
-
+    val isDarkMode = ThemePreference.isDarkMode(context).collectAsState(initial = false)
     var selectedLanguage by remember { mutableStateOf("English") }
-
     var appVersion by remember { mutableStateOf("") }
     val appName = "GharBato"
-
 
     LaunchedEffect(Unit) {
         appVersion = getAppVersion(context)
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Application Settings") },
+                title = {
+                    Text(
+                        "Application Settings",
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
-                        // Simply finish the activity to go back to Dashboard/Profile
                         (context as ComponentActivity).finish()
                     }) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color(0xFF2C2C2C)
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -80,16 +85,14 @@ fun ApplicationSettingsScreen() {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-
             SettingItem(
                 icon = R.drawable.baseline_dark_mode_24,
                 title = "Dark Mode",
-                subtitle = if (isDarkMode) "Enabled" else "Disabled",
+                subtitle = if (isDarkMode.value) "Enabled" else "Disabled",
                 iconColor = Blue
             ) {
-                isDarkMode = !isDarkMode
+                ThemePreference.setDarkMode(context, !isDarkMode.value)
             }
-
 
             SettingItem(
                 icon = R.drawable.baseline_language_24,
@@ -100,16 +103,15 @@ fun ApplicationSettingsScreen() {
                 selectedLanguage = if (selectedLanguage == "English") "Spanish" else "English"
             }
 
-
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
                 "App Info",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(vertical = 12.dp)
             )
-
 
             SettingItem(
                 icon = R.drawable.baseline_info_24,
@@ -129,7 +131,6 @@ fun ApplicationSettingsScreen() {
         }
     }
 }
-
 
 fun getAppVersion(context: Context): String {
     return try {
@@ -153,11 +154,10 @@ fun SettingItem(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(MaterialTheme.colorScheme.surface)
             .clickable { onClick() }
             .padding(16.dp)
     ) {
-        // Icon with rounded square background
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -180,7 +180,7 @@ fun SettingItem(
                 title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF2C2C2C)
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             if (!subtitle.isNullOrEmpty()) {
@@ -188,7 +188,7 @@ fun SettingItem(
                 Text(
                     subtitle ?: "",
                     fontSize = 12.sp,
-                    color = Color(0xFF999999)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -196,8 +196,31 @@ fun SettingItem(
         Icon(
             painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
             contentDescription = null,
-            tint = Color(0xFFCCCCCC),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.size(16.dp)
         )
+    }
+}
+
+// Theme Preference Manager
+object ThemePreference {
+    private const val PREFS_NAME = "theme_preferences"
+    private const val KEY_DARK_MODE = "dark_mode"
+
+    fun isDarkMode(context: Context): kotlinx.coroutines.flow.Flow<Boolean> {
+        return kotlinx.coroutines.flow.flow {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            emit(prefs.getBoolean(KEY_DARK_MODE, false))
+        }
+    }
+
+    fun setDarkMode(context: Context, isDark: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, isDark).apply()
+    }
+
+    fun getDarkModeSync(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_DARK_MODE, false)
     }
 }
