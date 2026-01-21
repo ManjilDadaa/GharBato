@@ -81,7 +81,7 @@ class GeminiRepositoryImpl(
 
     private fun createModel(): GenerativeModel {
         return GenerativeModel(
-            modelName = "gemini-3-flash-preview",
+            modelName = "gemini-2.5-flash",
             apiKey = BuildConfig.GEMINI_API_KEY,
             generationConfig = generationConfig {
                 temperature = 0.4f

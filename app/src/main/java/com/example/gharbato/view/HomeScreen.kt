@@ -32,6 +32,8 @@ import com.example.gharbato.R
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.view.ui.theme.LightBlue
+import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.UserViewModelProvider
@@ -85,12 +87,21 @@ fun HomeScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8F9FA)
-    ) { paddingValues ->
+        containerColor = Color.White,
+        floatingActionButton = {
+            AIAssistanceFAB(
+                onClick = {
+                    val intent = Intent(context, GeminiChatActivity::class.java)
+                    context.startActivity(intent)
+                }
+            )
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(top = padding.calculateTopPadding())
         ) {
             if (uiState.isLoading) {
                 // Loading State
@@ -251,6 +262,34 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun AIAssistanceFAB(onClick: () -> Unit) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(bottom = 0.dp, end = 16.dp), // Adjust for bottom navigation
+        shape = RoundedCornerShape(16.dp),
+        containerColor = LightBlue,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 6.dp,
+            pressedElevation = 8.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = "AI Assistant",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
