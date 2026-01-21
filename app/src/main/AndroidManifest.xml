@@ -14,6 +14,8 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- ADD THIS LINE - For Android 13+ notification permission -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".GharBatoApplication"
@@ -230,6 +232,24 @@
             android:exported="true"
             android:label="Email Verify"
             android:theme="@style/Theme.GharBato" />
+
+        <!-- ========== ADD THIS SERVICE - Firebase Cloud Messaging ========== -->
+        <service
+            android:name=".service.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- ========== ADD THESE META-DATA - Default Notification Settings ========== -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/outline_notifications_24" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@android:color/holo_blue_dark" />
+        <!-- ========== END OF FCM ADDITIONS ========== -->
 
         <provider
             android:name="androidx.core.content.FileProvider"
