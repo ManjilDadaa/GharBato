@@ -7,19 +7,32 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 
 class ContactUsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { ContactUsScreen() }
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ContactUsScreen()
+            }
+        }
     }
 }
 
@@ -27,6 +40,7 @@ class ContactUsActivity : ComponentActivity() {
 @Composable
 fun ContactUsScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     // Email intent
     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
@@ -36,13 +50,18 @@ fun ContactUsScreen() {
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
                 ),
-                title = { Text("Contact Us") },
+                title = {
+                    Text(
+                        "Contact Us",
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         (context as ComponentActivity).finish()
@@ -66,7 +85,7 @@ fun ContactUsScreen() {
             Text(
                 text = "If you have any problem or want to contact us regarding a serious matter, feel free to reach out.",
                 fontSize = 16.sp,
-                color = Color.Black,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
