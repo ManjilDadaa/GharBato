@@ -38,31 +38,92 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
+import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.getDefaultImageCategories
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.ListingViewModel
+import com.google.firebase.database.FirebaseDatabase
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        val propertyId = intent.getStringExtra("propertyId")
+        val isEdit = intent.getBooleanExtra("isEdit", false)
+        
         setContent {
-            ListingBody()
+            ListingBody(propertyId = propertyId, isEdit = isEdit)
         }
     }
 }
 
 @Composable
-fun ListingBody() {
+fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
 
     val context = LocalContext.current
     val activity = context as Activity
     val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
 
-    var step by rememberSaveable { mutableIntStateOf(1) }
+    var step by rememberSaveable { mutableIntStateOf(if (isEdit) 2 else 1) }
     val showHeader = step == 1
 
     var listingState by rememberSaveable { mutableStateOf(PropertyListingState()) }
+    var isLoadingProperty by remember { mutableStateOf(isEdit) }
+
+    // Load property data if editing
+    LaunchedEffect(propertyId, isEdit) {
+        if (isEdit && propertyId != null) {
+            FirebaseDatabase.getInstance()
+                .getReference("Property")
+                .child(propertyId)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    snapshot.getValue(PropertyModel::class.java)?.let { property ->
+                        listingState = PropertyListingState(
+                            selectedPurpose = property.marketType,
+                            selectedPropertyType = property.propertyType,
+                            title = property.title,
+                            developer = property.developer,
+                            price = property.price.replace(Regex("[^0-9]"), ""),
+                            location = property.location,
+                            area = property.sqft.replace(Regex("[^0-9]"), ""),
+                            floor = property.floor,
+                            furnishing = property.furnishing,
+                            bedrooms = property.bedrooms.toString(),
+                            bathrooms = property.bathrooms.toString(),
+                            parking = property.parking,
+                            petsAllowed = property.petsAllowed,
+                            description = property.description ?: "",
+                            kitchen = property.kitchen,
+                            totalRooms = property.totalRooms,
+                            latitude = property.latitude,
+                            longitude = property.longitude,
+                            hasSelectedLocation = property.latitude != 27.7172 || property.longitude != 85.3240,
+                            imageCategories = getDefaultImageCategories().map { category ->
+                                category.copy(images = (property.images[category.id] ?: emptyList()).toMutableList())
+                            },
+                            utilitiesIncluded = property.utilitiesIncluded ?: "Included (electricity extra)",
+                            commission = property.commission ?: "No commission",
+                            advancePayment = property.advancePayment ?: "1 month rent",
+                            securityDeposit = property.securityDeposit ?: "2 months rent",
+                            minimumLease = property.minimumLease ?: "12 months",
+                            availableFrom = property.availableFrom ?: "Immediate",
+                            amenities = property.amenities
+                        )
+                    }
+                    isLoadingProperty = false
+                }
+                .addOnFailureListener {
+                    Toast.makeText(context, "Failed to load property", Toast.LENGTH_SHORT).show()
+                    isLoadingProperty = false
+                }
+        } else if (isEdit) {
+            Toast.makeText(context, "Property ID not found", Toast.LENGTH_SHORT).show()
+            isLoadingProperty = false
+        }
+    }
 
     var showExitDialog by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
@@ -83,13 +144,14 @@ fun ListingBody() {
             onDismissRequest = { showExitDialog = false },
             title = {
                 Text(
-                    "Exit Listing?",
+                    if (isEdit) "Cancel Editing?" else "Exit Listing?",
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    "Are you sure you want to go back? Your progress won't be saved.",
+                    if (isEdit) "Are you sure you want to cancel? Any unsaved changes will be lost."
+                    else "Are you sure you want to go back? Your progress won't be saved.",
                     fontSize = 15.sp,
                     color = Color.DarkGray
                 )
@@ -98,15 +160,13 @@ fun ListingBody() {
                 Button(
                     onClick = {
                         showExitDialog = false
-                        val intent = Intent(context, DashboardActivity::class.java)
-                        context.startActivity(intent)
                         activity.finish()
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue
+                        containerColor = Color(0xFFD32F2F)
                     )
                 ) {
-                    Text("Yes, Exit")
+                    Text(if (isEdit) "Yes, Cancel" else "Yes, Exit")
                 }
             },
             dismissButton = {
@@ -116,7 +176,7 @@ fun ListingBody() {
                         containerColor = Gray.copy(0.7f)
                     )
                 ) {
-                    Text("Stay")
+                    Text("Continue Editing")
                 }
             },
             shape = RoundedCornerShape(16.dp)
@@ -169,10 +229,14 @@ fun ListingBody() {
                             listingViewModel.submitListing(
                                 context = context,
                                 state = listingState,
+                                propertyId = propertyId,
+                                isEdit = isEdit,
                                 onSuccess = {
                                     showConfirmDialog = false
                                     showSuccessDialog = true
-                                    Toast.makeText(context, "Listing Added successfully, Admin Approval Required ", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, if (isEdit) "Property updated successfully" else "Listing Added successfully, Admin Approval Required", Toast.LENGTH_LONG).show()
+                                    val intent = Intent(context, PendingPropertiesActivity::class.java)
+                                    context.startActivity(intent)
                                 },
                                 onError = { error ->
                                     showConfirmDialog = false
@@ -224,7 +288,7 @@ fun ListingBody() {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Your property has been listed successfully!",
+                        if (isEdit) "Your property has been updated successfully!" else "Your property has been listed successfully!",
                         textAlign = TextAlign.Center
                     )
                 }
@@ -250,13 +314,23 @@ fun ListingBody() {
     Scaffold(
         containerColor = Color.White
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .fillMaxSize()
-                .animateContentSize()
-                .verticalScroll(rememberScrollState())
-        ) {
+        if (isLoadingProperty) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Blue)
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .animateContentSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
             // Header with animation
             AnimatedVisibility(
                 visible = showHeader,
@@ -442,7 +516,8 @@ fun ListingBody() {
                 Button(
                     onClick = {
                         val newStep = step - 1
-                        if (newStep <= 0) {
+                        val minStep = if (isEdit) 2 else 1
+                        if (newStep < minStep) {
                             showExitDialog = true
                         } else {
                             step -= 1
@@ -487,6 +562,7 @@ fun ListingBody() {
                     Text(
                         if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next"
                     )
+                }
                 }
             }
         }

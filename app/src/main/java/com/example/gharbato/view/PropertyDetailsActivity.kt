@@ -421,6 +421,12 @@ fun PropertyDetailCard(property: PropertyModel) {
             DetailRow("Furnishing", property.furnishing)
             DetailRow("Parking", if (property.parking) "Available" else "Not Available")
             DetailRow("Pets Allowed", if (property.petsAllowed) "Yes" else "No")
+            if (property.kitchen.isNotEmpty()) {
+                DetailRow("Kitchens", property.kitchen)
+            }
+            if (property.totalRooms.isNotEmpty()) {
+                DetailRow("Total Rooms", property.totalRooms)
+            }
             if (!property.developer.isNullOrEmpty()) {
                 DetailRow("Developer", property.developer)
             }
