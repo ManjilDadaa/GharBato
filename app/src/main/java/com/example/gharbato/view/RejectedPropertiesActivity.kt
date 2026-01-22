@@ -129,7 +129,30 @@ fun RejectedPropertiesScreen() {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                EmptyPropertiesState("REJECTED")
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_home_24),
+                        contentDescription = null,
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(80.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "No Rejected Properties",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2C2C2C)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "You don't have any rejected properties.",
+                        fontSize = 14.sp,
+                        color = Color.Gray
+                    )
+                }
             }
         } else {
             LazyColumn(

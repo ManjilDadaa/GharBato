@@ -135,7 +135,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp)),
                 placeholder = {
                     Text(
-                        "", // Empty placeholder as per design usually or icon
+                        "Search Property Owners",
                         color = Color.Gray
                     )
                 },
