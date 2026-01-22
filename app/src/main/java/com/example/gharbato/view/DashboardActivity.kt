@@ -132,7 +132,7 @@ fun DashboardBody() {
         bottomBar = {
             NavigationBar(
                 tonalElevation = 4.dp,
-                containerColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surface else Color.White,
+                containerColor = Color.Transparent,
             ) {
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
@@ -166,8 +166,6 @@ fun DashboardBody() {
                             selectedIconColor = Blue,
                             selectedTextColor = Blue,
                             indicatorColor = Color.Transparent,
-                            unselectedIconColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
-                            unselectedTextColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         ),
                         interactionSource = remember { NoRippleInteractionSource() }
                     )
