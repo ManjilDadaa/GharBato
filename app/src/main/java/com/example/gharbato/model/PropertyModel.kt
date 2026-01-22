@@ -52,7 +52,8 @@ data class PropertyModel(
 
     var firebaseKey: String? = null,
     val kitchen: String = "",
-    val totalRooms: String = ""
+    val totalRooms: String = "",
+    val propertyStatus: String = "AVAILABLE"
 ) {
     @get:Exclude
     val latLng: LatLng

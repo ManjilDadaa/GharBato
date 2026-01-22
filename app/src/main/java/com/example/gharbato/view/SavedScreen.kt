@@ -290,10 +290,12 @@ fun SavedPropertyCard(
     onCardClick: () -> Unit,
     onRemoveClick: () -> Unit
 ) {
+    val isSold = property.propertyStatus == "SOLD"
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCardClick),
+            .clickable(enabled = !isSold, onClick = onCardClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)
@@ -356,6 +358,22 @@ fun SavedPropertyCard(
                             color = Color.Gray,
                             maxLines = 1
                         )
+                    }
+                    
+                    if (property.propertyStatus == "SOLD") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFD32F2F).copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "SOLD",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFD32F2F),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
 
