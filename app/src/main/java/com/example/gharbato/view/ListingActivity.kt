@@ -109,7 +109,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             totalRooms = property.totalRooms,
                             latitude = property.latitude,
                             longitude = property.longitude,
-                            hasSelectedLocation = property.latitude != 27.7172 || property.longitude != 85.3240,
+                            hasSelectedLocation = property.latitude != 0.0 && property.longitude != 0.0,
                             imageCategories = getDefaultImageCategories().map { category ->
                                 category.copy(images = (property.images[category.id] ?: emptyList()).toMutableList())
                             },

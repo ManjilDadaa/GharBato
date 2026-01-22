@@ -359,6 +359,8 @@ fun SavedPropertyCard(
     successColor: Color,
     primaryColor: Color
 ) {
+    val isSold = property.propertyStatus == "SOLD"
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -428,6 +430,22 @@ fun SavedPropertyCard(
                             color = textColorSecondary,
                             maxLines = 1
                         )
+                    }
+                    
+                    if (property.propertyStatus == "SOLD") {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFD32F2F).copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "SOLD",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFD32F2F),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
 

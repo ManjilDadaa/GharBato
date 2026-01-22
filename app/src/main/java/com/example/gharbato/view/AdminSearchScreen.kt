@@ -56,6 +56,28 @@ fun AdminSearchScreen() {
 
     Scaffold(
         containerColor = Color.White,
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "Property Search",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Search by title, location, or owner",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = LightBlue
+                )
+            )
+        }
     ) { padding ->
 
         Column(
@@ -64,55 +86,43 @@ fun AdminSearchScreen() {
                 .padding(top = padding.calculateTopPadding())
                 .background(Color(0xFFF5F5F5))
         ) {
-            // Header
-            Card(
+            // Search Bar
+            Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(0.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = LightBlue
-                )
+                color = LightBlue,
+                shadowElevation = 4.dp
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Text(
-                        "Search properties by title, location, or owner",
-                        fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = {
-                            searchQuery = it
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Search users, location...") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, null, tint = Gray)
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = {
-                                    searchQuery = ""
-                                    isSearching = false
-                                }) {
-                                    Icon(Icons.Default.Close, null)
-                                }
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = {
+                        searchQuery = it
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 16.dp),
+                    placeholder = { Text("Search users, location...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, null, tint = Gray)
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = {
+                                searchQuery = ""
+                                isSearching = false
+                            }) {
+                                Icon(Icons.Default.Close, null)
                             }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
-                            focusedBorderColor = Color.White,
-                            unfocusedBorderColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
+                        }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                )
             }
 
             // Status Tabs

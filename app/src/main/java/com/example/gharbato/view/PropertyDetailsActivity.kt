@@ -730,6 +730,14 @@ fun AdditionalInfoCard(
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            val postedDate = dateFormat.format(Date(property.createdAt))
+            
+            DetailRow("Posted On", postedDate)
+            DetailRow("Total Views", "${property.totalViews}")
+            DetailRow("Today's Views", "${property.todayViews}")
+            DetailRow("Unique Viewers", "${property.uniqueViewers}")
+            
             if (!property.utilitiesIncluded.isNullOrEmpty()) {
                 DetailRow(
                     "Utilities Included",
