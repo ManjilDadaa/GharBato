@@ -164,10 +164,7 @@ fun MyActivitiesScreen() {
                             icon = R.drawable.baseline_check_24,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                    putExtra("FILTER_TYPE", "APPROVED")
-                                    putExtra("TITLE", "Approved Properties")
-                                })
+                                context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java))
                             }
                         )
                         StatCard(

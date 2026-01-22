@@ -230,6 +230,10 @@
             android:name=".view.AllPropertiesActivity"
             android:exported="true"
             android:theme="@style/Theme.GharBato" />
+        <activity
+            android:name=".view.ApprovedPropertiesActivity"
+            android:exported="true"
+            android:theme="@style/Theme.GharBato" />
 
         <activity android:name=".view.GeminiChatActivity" />
 
