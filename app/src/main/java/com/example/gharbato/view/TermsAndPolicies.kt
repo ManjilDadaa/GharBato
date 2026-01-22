@@ -1,25 +1,23 @@
 package com.example.gharbato.view
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 
 class TermsAndPoliciesActivity : ComponentActivity() {
@@ -33,25 +31,26 @@ class TermsAndPoliciesActivity : ComponentActivity() {
 @Composable
 fun TermsAndConditionsScreen() {
     val context = LocalContext.current
-    val goBackToProfile = { (context as ComponentActivity).finish() }
 
     Scaffold(
         containerColor = Color.White,
         topBar = {
             TopAppBar(
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
-                ),
-                title = { Text("Terms and Conditions") },
+                title = {},
                 navigationIcon = {
-                    IconButton(onClick = { goBackToProfile() }) {
+                    IconButton(onClick = {
+                        (context as ComponentActivity).finish()
+                    }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = Blue
+                            tint = Color.DarkGray
                         )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
             )
         }
     ) { paddingValues ->
@@ -59,9 +58,11 @@ fun TermsAndConditionsScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Title for Terms and Conditions
             Text(
                 text = "Welcome to GharBato Terms and Conditions",
@@ -113,15 +114,6 @@ fun TermsAndConditionsScreen() {
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-
-            // Back to Profile Button
-            Button(
-                onClick = { goBackToProfile() },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Blue)
-            ) {
-                Text("Go Back to Profile", color = Color.White)
-            }
         }
     }
 }
