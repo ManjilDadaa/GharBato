@@ -70,7 +70,10 @@ class PropertyViewModel(
                 Log.d(TAG, "Loading properties...")
                 val properties = repository.getAllApprovedProperties()
 
-                val propertiesWithFavorites = properties.map { property ->
+                // Filter out SOLD properties
+                val availableProperties = properties.filter { it.propertyStatus != "SOLD" }
+
+                val propertiesWithFavorites = availableProperties.map { property ->
                     property.copy(isFavorite = savedPropertiesRepository.isPropertySaved(property.id))
                 }
 
