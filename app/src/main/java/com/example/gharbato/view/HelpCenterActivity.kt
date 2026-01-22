@@ -235,7 +235,7 @@ fun HelpAccordion(
             ) {
                 // Question Icon
                 Icon(
-                    painter = painterResource(R.drawable.baseline_help_outline_24),
+                    painter = painterResource(R.drawable.baseline_help_24),
                     contentDescription = "Question",
                     tint = Blue,
                     modifier = Modifier.size(20.dp)
