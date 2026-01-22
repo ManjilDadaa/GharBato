@@ -1,6 +1,5 @@
 package com.example.gharbato.view
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -36,20 +35,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.repository.KycRepoImpl
-import com.example.gharbato.viewmodel.UserViewModel
 import com.example.gharbato.viewmodel.KycViewModel
 import com.example.gharbato.viewmodel.UserViewModelProvider
-
-// Updated theme color
-private val AppBlue = Color(0xFF0061FF)
+import com.example.gharbato.ui.theme.GharBatoTheme
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { TrustAndVerificationScreen() }
+
+        ThemePreference.init(this)
+
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                TrustAndVerificationScreen()
+            }
+        }
     }
 }
 
@@ -57,6 +61,7 @@ class TrustAndVerificationActivity : ComponentActivity() {
 @Composable
 fun TrustAndVerificationScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val userViewModel = remember { UserViewModelProvider.getInstance() }
     val kycViewModel = remember { KycViewModel(KycRepoImpl()) }
 
@@ -75,7 +80,11 @@ fun TrustAndVerificationScreen() {
     var submittedFrontUrl by remember { mutableStateOf<String?>(null) }
     var submittedBackUrl by remember { mutableStateOf<String?>(null) }
     var submittedDocType by remember { mutableStateOf<String?>(null) }
-    var rejectionReason by remember { mutableStateOf<String?>(null) } // NEW: Store rejection reason
+    var rejectionReason by remember { mutableStateOf<String?>(null) }
+
+    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF0061FF)
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
 
     // Load KYC data on start
     LaunchedEffect(Unit) {
@@ -85,22 +94,20 @@ fun TrustAndVerificationScreen() {
             kycViewModel.getUserKycStatus(userId) { kycModel ->
                 isLoading = false
                 if (kycModel != null) {
-                    // User has submitted KYC before
                     kycStatus = kycModel.status
                     hasSubmittedKyc = true
                     submittedDocType = kycModel.documentType
                     submittedFrontUrl = kycModel.frontImageUrl
                     submittedBackUrl = kycModel.backImageUrl
-                    rejectionReason = kycModel.rejectionReason // NEW: Get rejection reason
+                    rejectionReason = kycModel.rejectionReason
 
                     trustScore = when (kycModel.status) {
-                        "Approved" -> 70  // FIXED: Changed from "Verified" to "Approved"
+                        "Approved" -> 70
                         "Pending" -> 50
                         "Rejected" -> 30
                         else -> 30
                     }
                 } else {
-                    // User has never submitted KYC
                     kycStatus = "Not Verified"
                     hasSubmittedKyc = false
                     trustScore = 30
@@ -145,7 +152,8 @@ fun TrustAndVerificationScreen() {
                     "KYC Submitted Successfully!",
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
                 )
             },
             text = {
@@ -154,7 +162,7 @@ fun TrustAndVerificationScreen() {
                         "Your KYC verification request has been submitted.",
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
-                        color = Color.Gray
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
@@ -168,26 +176,37 @@ fun TrustAndVerificationScreen() {
             confirmButton = {
                 Button(
                     onClick = { showSuccessDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = appBlue),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Got it!")
                 }
-            }
+            },
+            containerColor = cardBackgroundColor
         )
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
-                title = { Text("Trust & Verification", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Trust & Verification",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { (context as ComponentActivity).finish() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppBlue)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = appBlue
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = backgroundColor)
             )
         }
     ) { padding ->
@@ -198,34 +217,31 @@ fun TrustAndVerificationScreen() {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = AppBlue)
+                CircularProgressIndicator(color = appBlue)
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF8F9FB))
+                    .background(backgroundColor)
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
 
                 Spacer(modifier = Modifier.height(8.dp))
-                TrustSectionHeader("KYC Verification")
-                KycStatusCard(kycStatus)
+                TrustSectionHeader("KYC Verification", isDarkMode)
+                KycStatusCard(kycStatus, isDarkMode, cardBackgroundColor)
 
-                // UPDATED LOGIC: Show upload form if never submitted OR if rejected
                 if (!hasSubmittedKyc || kycStatus == "Rejected") {
-                    // Show upload form
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // NEW: Show rejection reason if rejected
                     if (kycStatus == "Rejected" && rejectionReason != null) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 20.dp, vertical = 8.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFFFF3CD))
+                                .background(if (isDarkMode) Color(0xFF3A2E1A) else Color(0xFFFFF3CD))
                                 .padding(16.dp)
                         ) {
                             Column {
@@ -233,25 +249,28 @@ fun TrustAndVerificationScreen() {
                                     "⚠️ Previous KYC was rejected",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp,
-                                    color = Color(0xFF856404)
+                                    color = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFF856404)
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     "Reason: $rejectionReason",
                                     fontSize = 13.sp,
-                                    color = Color(0xFF856404)
+                                    color = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFF856404)
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     "Please review the reason and resubmit your documents.",
                                     fontSize = 12.sp,
-                                    color = Color(0xFF856404)
+                                    color = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFF856404)
                                 )
                             }
                         }
                     }
 
-                    TrustSectionHeader(if (kycStatus == "Rejected") "Resubmit KYC Verification" else "Verify your KYC")
+                    TrustSectionHeader(
+                        if (kycStatus == "Rejected") "Resubmit KYC Verification" else "Verify your KYC",
+                        isDarkMode
+                    )
                     KycUploadCard(
                         selectedDoc = selectedDoc,
                         onDocChange = { selectedDoc = it },
@@ -269,7 +288,6 @@ fun TrustAndVerificationScreen() {
                                     context = context
                                 ) { success, message ->
                                     if (success) {
-                                        // Reload KYC status after successful submission
                                         kycViewModel.getUserKycStatus(userId) { kycModel ->
                                             if (kycModel != null) {
                                                 kycStatus = kycModel.status
@@ -277,7 +295,7 @@ fun TrustAndVerificationScreen() {
                                                 submittedDocType = kycModel.documentType
                                                 submittedFrontUrl = kycModel.frontImageUrl
                                                 submittedBackUrl = kycModel.backImageUrl
-                                                rejectionReason = null // Clear rejection reason
+                                                rejectionReason = null
                                                 trustScore = 50
                                                 showSuccessDialog = true
                                             }
@@ -300,23 +318,27 @@ fun TrustAndVerificationScreen() {
                         frontImageUri = frontImageUri,
                         backImageUri = backImageUri,
                         onFrontClick = { frontPicker.launch("image/*") },
-                        onBackClick = { backPicker.launch("image/*") }
+                        onBackClick = { backPicker.launch("image/*") },
+                        isDarkMode = isDarkMode,
+                        appBlue = appBlue,
+                        cardBackgroundColor = cardBackgroundColor
                     )
                 } else {
-                    // Show submitted documents (read-only for Pending or Approved status)
                     Spacer(modifier = Modifier.height(16.dp))
-                    TrustSectionHeader("Submitted Documents")
+                    TrustSectionHeader("Submitted Documents", isDarkMode)
                     SubmittedDocumentsCard(
                         documentType = submittedDocType ?: "Unknown",
                         frontImageUrl = submittedFrontUrl,
                         backImageUrl = submittedBackUrl,
-                        status = kycStatus
+                        status = kycStatus,
+                        isDarkMode = isDarkMode,
+                        cardBackgroundColor = cardBackgroundColor
                     )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                TrustSectionHeader("Profile Trust Meter")
-                TrustMeterCard(trustScore, kycStatus)
+                TrustSectionHeader("Profile Trust Meter", isDarkMode)
+                TrustMeterCard(trustScore, kycStatus, isDarkMode, cardBackgroundColor)
 
                 Spacer(modifier = Modifier.height(40.dp))
             }
@@ -327,24 +349,24 @@ fun TrustAndVerificationScreen() {
 /* -------------------- UI COMPONENTS -------------------- */
 
 @Composable
-fun TrustSectionHeader(title: String) {
+fun TrustSectionHeader(title: String, isDarkMode: Boolean) {
     Text(
         title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF2C2C2C),
+        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C),
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
     )
 }
 
 @Composable
-fun KycStatusCard(status: String) {
+fun KycStatusCard(status: String, isDarkMode: Boolean, cardBackgroundColor: Color) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(cardBackgroundColor)
             .padding(16.dp)
     ) {
         Row(
@@ -353,7 +375,12 @@ fun KycStatusCard(status: String) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("KYC Status", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
+                Text(
+                    "KYC Status",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     status,
@@ -371,7 +398,7 @@ fun KycStatusCard(status: String) {
                     Text(
                         "Under review • 24-48 hours",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                 }
             }
@@ -382,9 +409,9 @@ fun KycStatusCard(status: String) {
                     .clip(CircleShape)
                     .background(
                         when (status) {
-                            "Approved" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                            "Pending" -> Color(0xFFFF9800).copy(alpha = 0.1f)
-                            else -> Color(0xFFD32F2F).copy(alpha = 0.1f)
+                            "Approved" -> Color(0xFF4CAF50).copy(alpha = 0.15f)
+                            "Pending" -> Color(0xFFFF9800).copy(alpha = 0.15f)
+                            else -> Color(0xFFD32F2F).copy(alpha = 0.15f)
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -412,14 +439,16 @@ fun SubmittedDocumentsCard(
     documentType: String,
     frontImageUrl: String?,
     backImageUrl: String?,
-    status: String
+    status: String,
+    isDarkMode: Boolean,
+    cardBackgroundColor: Color
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(cardBackgroundColor)
             .padding(16.dp)
     ) {
         Column {
@@ -428,35 +457,49 @@ fun SubmittedDocumentsCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Document Type", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
-                Text(documentType, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(
+                    "Document Type",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                )
+                Text(
+                    documentType,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Submitted Images", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
+            Text(
+                "Submitted Images",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                SubmittedImageBox("Front", frontImageUrl, Modifier.weight(1f))
-                SubmittedImageBox("Back", backImageUrl, Modifier.weight(1f))
+                SubmittedImageBox("Front", frontImageUrl, isDarkMode, Modifier.weight(1f))
+                SubmittedImageBox("Back", backImageUrl, isDarkMode, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Status-specific message
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
                     .background(
                         when (status) {
-                            "Pending" -> Color(0xFFFFF3CD)
-                            "Approved" -> Color(0xFFD4EDDA)
-                            "Rejected" -> Color(0xFFF8D7DA)
-                            else -> Color(0xFFF8F9FB)
+                            "Pending" -> if (isDarkMode) Color(0xFF3A2E1A) else Color(0xFFFFF3CD)
+                            "Approved" -> if (isDarkMode) Color(0xFF1B3A1F) else Color(0xFFD4EDDA)
+                            "Rejected" -> if (isDarkMode) Color(0xFF3A1A1F) else Color(0xFFF8D7DA)
+                            else -> if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FB)
                         }
                     )
                     .padding(12.dp)
@@ -470,10 +513,10 @@ fun SubmittedDocumentsCard(
                     },
                     fontSize = 12.sp,
                     color = when (status) {
-                        "Pending" -> Color(0xFF856404)
-                        "Approved" -> Color(0xFF155724)
-                        "Rejected" -> Color(0xFF721C24)
-                        else -> Color.Gray
+                        "Pending" -> if (isDarkMode) Color(0xFFFFB74D) else Color(0xFF856404)
+                        "Approved" -> if (isDarkMode) Color(0xFF66BB6A) else Color(0xFF155724)
+                        "Rejected" -> if (isDarkMode) Color(0xFFEF5350) else Color(0xFF721C24)
+                        else -> if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     },
                     lineHeight = 16.sp
                 )
@@ -483,17 +526,26 @@ fun SubmittedDocumentsCard(
 }
 
 @Composable
-fun SubmittedImageBox(label: String, imageUrl: String?, modifier: Modifier = Modifier) {
+fun SubmittedImageBox(label: String, imageUrl: String?, isDarkMode: Boolean, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+        Text(
+            label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(120.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF5F5F5))
-                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp)),
+                .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5))
+                .border(
+                    1.dp,
+                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0),
+                    RoundedCornerShape(8.dp)
+                ),
             contentAlignment = Alignment.Center
         ) {
             if (imageUrl != null) {
@@ -504,7 +556,11 @@ fun SubmittedImageBox(label: String, imageUrl: String?, modifier: Modifier = Mod
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Text("No image", fontSize = 12.sp, color = Color.Gray)
+                Text(
+                    "No image",
+                    fontSize = 12.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                )
             }
         }
     }
@@ -518,7 +574,10 @@ fun KycUploadCard(
     frontImageUri: Uri?,
     backImageUri: Uri?,
     onFrontClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isDarkMode: Boolean,
+    appBlue: Color,
+    cardBackgroundColor: Color
 ) {
     val documents = listOf("Citizenship", "Driving License", "Passport")
     var showOptions by remember { mutableStateOf(false) }
@@ -528,19 +587,27 @@ fun KycUploadCard(
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(cardBackgroundColor)
             .padding(16.dp)
     ) {
         Column {
-            Text("Select Document Type", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            Text(
+                "Select Document Type",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Dropdown with arrow icon
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
+                    .border(
+                        1.dp,
+                        if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFDDDDDD),
+                        RoundedCornerShape(8.dp)
+                    )
                     .clickable { showOptions = !showOptions }
                     .padding(12.dp)
             ) {
@@ -551,13 +618,17 @@ fun KycUploadCard(
                 ) {
                     Text(
                         selectedDoc ?: "Choose document type",
-                        color = if (selectedDoc == null) Color.Gray else Color.Black,
+                        color = if (selectedDoc == null) {
+                            if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        } else {
+                            if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                        },
                         fontSize = 14.sp
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = "Dropdown",
-                        tint = AppBlue,
+                        tint = appBlue,
                         modifier = Modifier
                             .size(24.dp)
                             .rotate(if (showOptions) 180f else 0f)
@@ -571,8 +642,12 @@ fun KycUploadCard(
                         .fillMaxWidth()
                         .padding(top = 4.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
+                        .background(cardBackgroundColor)
+                        .border(
+                            1.dp,
+                            if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFDDDDDD),
+                            RoundedCornerShape(8.dp)
+                        )
                 ) {
                     documents.forEachIndexed { index, doc ->
                         Text(
@@ -584,25 +659,34 @@ fun KycUploadCard(
                                     showOptions = false
                                 }
                                 .padding(12.dp),
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
                         )
                         if (index < documents.size - 1) {
-                            Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                            Divider(
+                                color = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFEEEEEE),
+                                thickness = 1.dp
+                            )
                         }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Upload Document Images", fontWeight = FontWeight.Medium, fontSize = 14.sp)
+            Text(
+                "Upload Document Images",
+                fontWeight = FontWeight.Medium,
+                fontSize = 14.sp,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
+            )
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                UploadBox("Front Image", frontImageUri, onFrontClick, Modifier.weight(1f))
-                UploadBox("Back Image", backImageUri, onBackClick, Modifier.weight(1f))
+                UploadBox("Front Image", frontImageUri, onFrontClick, isDarkMode, appBlue, Modifier.weight(1f))
+                UploadBox("Back Image", backImageUri, onBackClick, isDarkMode, appBlue, Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -611,7 +695,7 @@ fun KycUploadCard(
                 onClick = onSubmit,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AppBlue),
+                colors = ButtonDefaults.buttonColors(containerColor = appBlue),
                 enabled = selectedDoc != null && frontImageUri != null && backImageUri != null
             ) {
                 Text("Submit KYC", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
@@ -622,13 +706,13 @@ fun KycUploadCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AppBlue.copy(alpha = 0.1f))
+                    .background(appBlue.copy(alpha = 0.15f))
                     .padding(12.dp)
             ) {
                 Text(
                     "📋 Your KYC will be verified within 24-48 hours",
                     fontSize = 12.sp,
-                    color = AppBlue
+                    color = appBlue
                 )
             }
         }
@@ -636,9 +720,21 @@ fun KycUploadCard(
 }
 
 @Composable
-fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun UploadBox(
+    title: String,
+    imageUri: Uri?,
+    onClick: () -> Unit,
+    isDarkMode: Boolean,
+    appBlue: Color,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
-        Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+        Text(
+            title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
@@ -647,7 +743,9 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit, modifier: Modi
                 .clip(RoundedCornerShape(8.dp))
                 .border(
                     width = 2.dp,
-                    color = if (imageUri != null) AppBlue else Color(0xFFDDDDDD),
+                    color = if (imageUri != null) appBlue else {
+                        if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFDDDDDD)
+                    },
                     shape = RoundedCornerShape(8.dp)
                 )
                 .clickable { onClick() }
@@ -669,7 +767,7 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit, modifier: Modi
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         "Upload",
-                        color = Color.Gray,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         fontSize = 12.sp
                     )
                 }
@@ -679,13 +777,13 @@ fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit, modifier: Modi
 }
 
 @Composable
-fun TrustMeterCard(score: Int, kycStatus: String) {
+fun TrustMeterCard(score: Int, kycStatus: String, isDarkMode: Boolean, cardBackgroundColor: Color) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
+            .background(cardBackgroundColor)
             .padding(16.dp)
     ) {
         Column {
@@ -694,7 +792,12 @@ fun TrustMeterCard(score: Int, kycStatus: String) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Trust Score", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(
+                    "Trust Score",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
+                )
                 Text(
                     "$score%",
                     fontWeight = FontWeight.Bold,
@@ -720,7 +823,7 @@ fun TrustMeterCard(score: Int, kycStatus: String) {
                     score >= 50 -> Color(0xFFFF9800)
                     else -> Color(0xFFD32F2F)
                 },
-                trackColor = Color(0xFFEEEEEE)
+                trackColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -729,22 +832,22 @@ fun TrustMeterCard(score: Int, kycStatus: String) {
                 "Score Breakdown",
                 fontWeight = FontWeight.Medium,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            TrustItem("KYC Verified", 40, kycStatus == "Approved")
-            TrustItem("No Reports", 20, true)
-            TrustItem("Email Verified", 10, false)
-            TrustItem("Profile Photo", 15, false)
-            TrustItem("Phone Verified", 15, false)
+            TrustItem("KYC Verified", 40, kycStatus == "Approved", isDarkMode)
+            TrustItem("No Reports", 20, true, isDarkMode)
+            TrustItem("Email Verified", 10, false, isDarkMode)
+            TrustItem("Profile Photo", 15, false, isDarkMode)
+            TrustItem("Phone Verified", 15, false, isDarkMode)
         }
     }
 }
 
 @Composable
-fun TrustItem(label: String, value: Int, isCompleted: Boolean) {
+fun TrustItem(label: String, value: Int, isCompleted: Boolean, isDarkMode: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -757,27 +860,45 @@ fun TrustItem(label: String, value: Int, isCompleted: Boolean) {
                 modifier = Modifier
                     .size(20.dp)
                     .clip(CircleShape)
-                    .background(if (isCompleted) Color(0xFF4CAF50).copy(alpha = 0.1f) else Color(0xFFF5F5F5)),
+                    .background(
+                        if (isCompleted) {
+                            if (isDarkMode) Color(0xFF1B5E20) else Color(0xFF4CAF50).copy(alpha = 0.1f)
+                        } else {
+                            if (isDarkMode) Color(0xFF424242) else Color(0xFFF5F5F5)
+                        }
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     if (isCompleted) "✓" else "○",
                     fontSize = 12.sp,
-                    color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+                    color = if (isCompleted) {
+                        if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+                    } else {
+                        if (isDarkMode) Color(0xFF9E9E9E) else Color.Gray
+                    }
                 )
             }
             Spacer(modifier = Modifier.width(10.dp))
             Text(
                 label,
                 fontSize = 13.sp,
-                color = if (isCompleted) Color.Black else Color.Gray
+                color = if (isCompleted) {
+                    if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                } else {
+                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                }
             )
         }
         Text(
             "+$value%",
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+            color = if (isCompleted) {
+                if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+            } else {
+                if (isDarkMode) Color(0xFF9E9E9E) else Color.Gray
+            }
         )
     }
 }
