@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.material3.Badge
@@ -56,8 +57,16 @@ class DashboardActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // CRITICAL: Initialize theme preference FIRST before setting content
+        ThemePreference.init(this)
+
         setContent {
-            DashboardBody()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                DashboardBody()
+            }
         }
     }
 }
@@ -73,6 +82,7 @@ class NoRippleInteractionSource : MutableInteractionSource {
 fun DashboardBody() {
     val context = LocalContext.current
     val activity = context as Activity
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     // Hoist PropertyViewModel to Dashboard level so it's shared across screens
     val propertyViewModel: PropertyViewModel = viewModel(
@@ -118,11 +128,11 @@ fun DashboardBody() {
     val incomingCall by CallInvitationManager.incomingCall.collectAsState(initial = null)
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.background else Color.White,
         bottomBar = {
             NavigationBar(
                 tonalElevation = 4.dp,
-                containerColor = Color.Transparent,
+                containerColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surface else Color.White,
             ) {
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
@@ -156,6 +166,8 @@ fun DashboardBody() {
                             selectedIconColor = Blue,
                             selectedTextColor = Blue,
                             indicatorColor = Color.Transparent,
+                            unselectedIconColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                            unselectedTextColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         ),
                         interactionSource = remember { NoRippleInteractionSource() }
                     )
