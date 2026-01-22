@@ -332,15 +332,9 @@ fun PropertyDetailsContent(property: PropertyModel, padding: PaddingValues) {
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // Owner Information
-            SectionHeader("Owner Information")
-            OwnerInfoCard(property)
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Additional Information
-            SectionHeader("Additional Information")
-            AdditionalInfoCard(property)
+            // Property Statistics
+            SectionHeader("Property Statistics")
+            PropertyStatsCard(property)
 
             Spacer(modifier = Modifier.height(32.dp))
         }
@@ -475,67 +469,7 @@ fun AmenitiesCard(amenities: List<String>) {
 }
 
 @Composable
-fun OwnerInfoCard(property: PropertyModel) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Owner Avatar
-            if (property.ownerImageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = property.ownerImageUrl,
-                    contentDescription = "Owner",
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(30.dp)),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.baseline_person_24)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(30.dp))
-                        .background(Blue.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_person_24),
-                        contentDescription = null,
-                        tint = Blue,
-                        modifier = Modifier.size(30.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = property.ownerName,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2C2C2C)
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = property.ownerEmail,
-                    fontSize = 13.sp,
-                    color = Color.Gray
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun AdditionalInfoCard(property: PropertyModel) {
+fun PropertyStatsCard(property: PropertyModel) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -543,6 +477,14 @@ fun AdditionalInfoCard(property: PropertyModel) {
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+            val postedDate = dateFormat.format(Date(property.createdAt))
+            
+            DetailRow("Posted On", postedDate)
+            DetailRow("Total Views", "${property.totalViews}")
+            DetailRow("Today's Views", "${property.todayViews}")
+            DetailRow("Unique Viewers", "${property.uniqueViewers}")
+            
             if (!property.utilitiesIncluded.isNullOrEmpty()) {
                 DetailRow("Utilities Included", property.utilitiesIncluded!!)
             }
@@ -561,16 +503,6 @@ fun AdditionalInfoCard(property: PropertyModel) {
             if (!property.availableFrom.isNullOrEmpty()) {
                 DetailRow("Available From", property.availableFrom!!)
             }
-
-            // Posted Date
-            val dateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-            val postedDate = dateFormat.format(Date(property.createdAt))
-            DetailRow("Posted On", postedDate)
-
-            // Views
-            DetailRow("Total Views", "${property.totalViews}")
-            DetailRow("Today's Views", "${property.todayViews}")
-            DetailRow("Unique Viewers", "${property.uniqueViewers}")
         }
     }
 }

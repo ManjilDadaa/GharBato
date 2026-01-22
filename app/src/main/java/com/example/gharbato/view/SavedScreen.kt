@@ -290,10 +290,12 @@ fun SavedPropertyCard(
     onCardClick: () -> Unit,
     onRemoveClick: () -> Unit
 ) {
+    val isSold = property.propertyStatus == "SOLD"
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCardClick),
+            .clickable(enabled = !isSold, onClick = onCardClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp)

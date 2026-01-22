@@ -219,10 +219,7 @@ fun MyActivitiesScreen() {
                         rejected = rejectedListings,
                         total = totalListings,
                         onApprovedClick = {
-                            context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                putExtra("FILTER_TYPE", "APPROVED")
-                                putExtra("TITLE", "Approved Properties")
-                            })
+                            context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java))
                         },
                         onPendingClick = {
                             context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
