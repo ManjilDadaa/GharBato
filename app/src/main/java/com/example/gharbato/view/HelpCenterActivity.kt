@@ -43,6 +43,9 @@ fun HelpCenterScreen() {
 
     val activity = LocalContext.current as Activity
 
+    // State to track which accordion is expanded (null = none expanded)
+    var expandedIndex by remember { mutableStateOf<Int?>(null) }
+
     Scaffold(
         containerColor = Color.White,
         topBar = {
@@ -79,22 +82,30 @@ fun HelpCenterScreen() {
 
             HelpAccordion(
                 question = "How do I sell a property?",
-                answer = "Go to Profile → Sell a Property and fill in property details with images."
+                answer = "Go to Profile → Sell a Property and fill in property details with images.",
+                isExpanded = expandedIndex == 0,
+                onToggle = { expandedIndex = if (expandedIndex == 0) null else 0 }
             )
 
             HelpAccordion(
                 question = "How do I edit my profile?",
-                answer = "Open Profile → Edit Profile. Update your details and tap Save."
+                answer = "Open Profile → Edit Profile. Update your details and tap Save.",
+                isExpanded = expandedIndex == 1,
+                onToggle = { expandedIndex = if (expandedIndex == 1) null else 1 }
             )
 
             HelpAccordion(
                 question = "How can I contact support?",
-                answer = "Use the Contact Us option or email support@gharbato.com"
+                answer = "Use the Contact Us option or email support@gharbato.com",
+                isExpanded = expandedIndex == 2,
+                onToggle = { expandedIndex = if (expandedIndex == 2) null else 2 }
             )
 
             HelpAccordion(
                 question = "Is my data secure?",
-                answer = "Yes. Your data is securely stored and never shared without permission."
+                answer = "Yes. Your data is securely stored and never shared without permission.",
+                isExpanded = expandedIndex == 3,
+                onToggle = { expandedIndex = if (expandedIndex == 3) null else 3 }
             )
         }
     }
@@ -103,15 +114,15 @@ fun HelpCenterScreen() {
 @Composable
 fun HelpAccordion(
     question: String,
-    answer: String
+    answer: String,
+    isExpanded: Boolean,
+    onToggle: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
-            .clickable { expanded = !expanded },
+            .clickable { onToggle() },
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -131,7 +142,7 @@ fun HelpAccordion(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    if (expanded) "−" else "+",
+                    if (isExpanded) "−" else "+",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF673AB7)
@@ -139,7 +150,7 @@ fun HelpAccordion(
             }
 
             AnimatedVisibility(
-                visible = expanded,
+                visible = isExpanded,
                 enter = expandVertically(),
                 exit = shrinkVertically()
             ) {
