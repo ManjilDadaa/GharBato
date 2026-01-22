@@ -236,8 +236,7 @@ fun ApprovedPropertyCard(property: PropertyModel) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -261,6 +260,29 @@ fun ApprovedPropertyCard(property: PropertyModel) {
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF4CAF50),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        
+                        val propertyStatus = property.propertyStatus ?: "AVAILABLE"
+                        val (statusColor, statusBgColor) = when(propertyStatus) {
+                            "SOLD" -> Color(0xFFD32F2F) to Color(0xFFD32F2F).copy(alpha = 0.1f)
+                            "ON_HOLD" -> Color(0xFFFF9800) to Color(0xFFFF9800).copy(alpha = 0.1f)
+                            else -> Color(0xFF2196F3) to Color(0xFF2196F3).copy(alpha = 0.1f)
+                        }
+                        
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = statusBgColor
+                        ) {
+                            Text(
+                                text = when(propertyStatus) {
+                                    "ON_HOLD" -> "ON HOLD"
+                                    else -> propertyStatus
+                                },
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -380,19 +402,13 @@ fun ApprovedPropertyCard(property: PropertyModel) {
     }
 
     if (showStatusDialog) {
+        var selectedStatus by remember { mutableStateOf(property.propertyStatus ?: "AVAILABLE") }
+        
         AlertDialog(
             onDismissRequest = { showStatusDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Pause,
-                    contentDescription = null,
-                    tint = Color(0xFFFF9800),
-                    modifier = Modifier.size(32.dp)
-                )
-            },
             title = {
                 Text(
-                    "Change Property Status",
+                    "Property Status",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp
                 )
@@ -400,56 +416,73 @@ fun ApprovedPropertyCard(property: PropertyModel) {
             text = {
                 Column {
                     Text(
-                        "Select new status for \"${property.title}\":",
+                        "Current status for \"${property.title}\":",
                         fontSize = 14.sp,
                         color = Color(0xFF666666)
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     
-                    StatusOption(
-                        label = "Mark as Sold",
+                    StatusToggleOption(
+                        label = "Available",
                         icon = Icons.Default.CheckCircle,
                         color = Color(0xFF4CAF50),
-                        onClick = {
-                            showStatusDialog = false
-                            property.firebaseKey?.let { key ->
-                                FirebaseDatabase.getInstance()
-                                    .getReference("Property")
-                                    .child(key)
-                                    .child("propertyStatus")
-                                    .setValue("SOLD")
-                                    .addOnSuccessListener {
-                                        Toast.makeText(context, "Property marked as sold", Toast.LENGTH_SHORT).show()
-                                    }
-                            }
-                        }
+                        isSelected = selectedStatus == "AVAILABLE",
+                        onClick = { selectedStatus = "AVAILABLE" }
                     )
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     
-                    StatusOption(
-                        label = "Mark as On Hold",
+                    StatusToggleOption(
+                        label = "On Hold",
                         icon = Icons.Default.Pause,
                         color = Color(0xFFFF9800),
-                        onClick = {
-                            showStatusDialog = false
-                            property.firebaseKey?.let { key ->
-                                FirebaseDatabase.getInstance()
-                                    .getReference("Property")
-                                    .child(key)
-                                    .child("propertyStatus")
-                                    .setValue("ON_HOLD")
-                                    .addOnSuccessListener {
-                                        Toast.makeText(context, "Property marked as on hold", Toast.LENGTH_SHORT).show()
-                                    }
-                            }
-                        }
+                        isSelected = selectedStatus == "ON_HOLD",
+                        onClick = { selectedStatus = "ON_HOLD" }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    StatusToggleOption(
+                        label = "Sold",
+                        icon = Icons.Default.CheckCircle,
+                        color = Color(0xFFD32F2F),
+                        isSelected = selectedStatus == "SOLD",
+                        onClick = { selectedStatus = "SOLD" }
                     )
                 }
             },
-            confirmButton = {},
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showStatusDialog = false
+                        property.firebaseKey?.let { key ->
+                            FirebaseDatabase.getInstance()
+                                .getReference("Property")
+                                .child(key)
+                                .child("propertyStatus")
+                                .setValue(selectedStatus)
+                                .addOnSuccessListener {
+                                    val statusText = when(selectedStatus) {
+                                        "SOLD" -> "sold"
+                                        "ON_HOLD" -> "on hold"
+                                        else -> "available"
+                                    }
+                                    Toast.makeText(context, "Property marked as $statusText", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = selectedStatus != (property.propertyStatus ?: "AVAILABLE")
+                ) {
+                    Text("Update Status")
+                }
+            },
             dismissButton = {
-                TextButton(onClick = { showStatusDialog = false }) {
+                OutlinedButton(
+                    onClick = { showStatusDialog = false },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
                     Text("Cancel", color = Color(0xFF666666))
                 }
             },
@@ -459,36 +492,63 @@ fun ApprovedPropertyCard(property: PropertyModel) {
 }
 
 @Composable
-fun StatusOption(
+fun StatusToggleOption(
     label: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     color: Color,
+    isSelected: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        color = color.copy(alpha = 0.1f)
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) color.copy(alpha = 0.15f) else Color(0xFFF5F5F5),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) color else Color(0xFFE0E0E0)
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                label,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = color
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) color else Color(0xFF9E9E9E),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    label,
+                    fontSize = 15.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) color else Color(0xFF666666)
+                )
+            }
+            
+            if (isSelected) {
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = color,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }

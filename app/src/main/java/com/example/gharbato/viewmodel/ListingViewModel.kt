@@ -338,10 +338,10 @@ class ListingViewModel(
                     title = state.title,
                     developer = state.developer,
                     price = when (state.selectedPurpose) {
-                        "Sell" -> "Rs ${state.price}"
-                        "Rent" -> "Rs ${state.price}/month"
-                        "Book" -> "Rs ${state.price}/night"
-                        else -> "Rs ${state.price}"
+                        "Sell" -> state.price
+                        "Rent" -> "${state.price}/month"
+                        "Book" -> "${state.price}/night"
+                        else -> state.price
                     },
                     sqft = "${state.area} sq.ft",
                     bedrooms = state.bedrooms.toIntOrNull() ?: 0,
