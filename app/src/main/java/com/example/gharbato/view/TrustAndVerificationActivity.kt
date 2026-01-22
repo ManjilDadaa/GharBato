@@ -14,36 +14,32 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.gharbato.repository.UserRepoImpl
+import com.example.gharbato.R
 import com.example.gharbato.repository.KycRepoImpl
-import com.example.gharbato.viewmodel.UserViewModel
+import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.KycViewModel
 import com.example.gharbato.viewmodel.UserViewModelProvider
-
-// Updated theme color
-private val AppBlue = Color(0xFF0061FF)
+import com.example.gharbato.viewmodel.UserViewModel
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +60,7 @@ fun TrustAndVerificationScreen() {
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
-    var trustScore by remember { mutableStateOf(30) }
+    var trustScore by remember { mutableStateOf(60) } // Default score with email and phone verified
     var showSuccessDialog by remember { mutableStateOf(false) }
     var hasSubmittedKyc by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -75,7 +71,14 @@ fun TrustAndVerificationScreen() {
     var submittedFrontUrl by remember { mutableStateOf<String?>(null) }
     var submittedBackUrl by remember { mutableStateOf<String?>(null) }
     var submittedDocType by remember { mutableStateOf<String?>(null) }
-    var rejectionReason by remember { mutableStateOf<String?>(null) } // NEW: Store rejection reason
+    var rejectionReason by remember { mutableStateOf<String?>(null) }
+
+    // Constants for trust score calculation
+    val emailVerified = true // Email verified by default
+    val phoneVerified = true // Phone verified by default
+    val profilePhoto = false // Profile photo not set by default
+    val noReports = true // No reports by default
+    val kycVerified = false // KYC not verified by default initially
 
     // Load KYC data on start
     LaunchedEffect(Unit) {
@@ -85,29 +88,42 @@ fun TrustAndVerificationScreen() {
             kycViewModel.getUserKycStatus(userId) { kycModel ->
                 isLoading = false
                 if (kycModel != null) {
-                    // User has submitted KYC before
                     kycStatus = kycModel.status
                     hasSubmittedKyc = true
                     submittedDocType = kycModel.documentType
                     submittedFrontUrl = kycModel.frontImageUrl
                     submittedBackUrl = kycModel.backImageUrl
-                    rejectionReason = kycModel.rejectionReason // NEW: Get rejection reason
+                    rejectionReason = kycModel.rejectionReason
 
-                    trustScore = when (kycModel.status) {
-                        "Approved" -> 70  // FIXED: Changed from "Verified" to "Approved"
-                        "Pending" -> 50
-                        "Rejected" -> 30
-                        else -> 30
-                    }
+                    // Calculate trust score based on status
+                    trustScore = calculateTrustScore(
+                        kycStatus = kycModel.status,
+                        emailVerified = emailVerified,
+                        phoneVerified = phoneVerified,
+                        profilePhoto = profilePhoto,
+                        noReports = noReports
+                    )
                 } else {
-                    // User has never submitted KYC
                     kycStatus = "Not Verified"
                     hasSubmittedKyc = false
-                    trustScore = 30
+                    trustScore = calculateTrustScore(
+                        kycStatus = "Not Verified",
+                        emailVerified = emailVerified,
+                        phoneVerified = phoneVerified,
+                        profilePhoto = profilePhoto,
+                        noReports = noReports
+                    )
                 }
             }
         } else {
             isLoading = false
+            trustScore = calculateTrustScore(
+                kycStatus = "Not Verified",
+                emailVerified = emailVerified,
+                phoneVerified = phoneVerified,
+                profilePhoto = profilePhoto,
+                noReports = noReports
+            )
         }
     }
 
@@ -124,54 +140,58 @@ fun TrustAndVerificationScreen() {
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { showSuccessDialog = false },
-            icon = {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF4CAF50)),
-                    contentAlignment = Alignment.Center
+            confirmButton = {
+                Button(
+                    onClick = { showSuccessDialog = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(36.dp)
-                    )
+                    Text("Got it!", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             },
             title = {
                 Text(
                     "KYC Submitted Successfully!",
-                    fontWeight = FontWeight.Bold,
+                    style = TextStyle(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.Black
+                    ),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
             },
             text = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(60.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_check_24),
+                            contentDescription = null,
+                            tint = Color(0xFF4CAF50),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "Your KYC verification request has been submitted.",
                         fontSize = 14.sp,
                         textAlign = TextAlign.Center,
-                        color = Color.Gray
+                        color = Color(0xFF666666)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "We'll review your documents and notify you once verification is complete (typically within 24-48 hours).",
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
-                        color = Color(0xFF4CAF50)
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.Medium
                     )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = { showSuccessDialog = false },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppBlue),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Got it!")
                 }
             }
         )
@@ -181,227 +201,650 @@ fun TrustAndVerificationScreen() {
         containerColor = Color.White,
         topBar = {
             TopAppBar(
-                title = { Text("Trust & Verification", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "Trust & Verification",
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.DarkGray
+                        )
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = { (context as ComponentActivity).finish() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = AppBlue)
+                    IconButton(
+                        onClick = {
+                            (context as ComponentActivity).finish()
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
+                            contentDescription = "Back",
+                            tint = Color.DarkGray,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    navigationIconContentColor = Color.DarkGray,
+                    titleContentColor = Color.DarkGray
+                ),
+                modifier = Modifier.shadow(
+                    elevation = 1.dp,
+                    spotColor = Color.LightGray
+                )
             )
         }
-    ) { padding ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = AppBlue)
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFFF8F9FB))
-                    .padding(padding)
-                    .verticalScroll(rememberScrollState())
-            ) {
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
+        ) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(vertical = 120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(color = Blue)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Loading verification data...", color = Color(0xFF666666))
+                    }
+                }
+            } else {
+                // KYC Verification Section
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Text(
+                            text = "KYC Verification",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            ),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
 
-                Spacer(modifier = Modifier.height(8.dp))
-                TrustSectionHeader("KYC Verification")
-                KycStatusCard(kycStatus)
-
-                // UPDATED LOGIC: Show upload form if never submitted OR if rejected
-                if (!hasSubmittedKyc || kycStatus == "Rejected") {
-                    // Show upload form
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // NEW: Show rejection reason if rejected
-                    if (kycStatus == "Rejected" && rejectionReason != null) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFFFF3CD))
-                                .padding(16.dp)
+                        // KYC Status Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column {
                                 Text(
-                                    "⚠️ Previous KYC was rejected",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp,
-                                    color = Color(0xFF856404)
+                                    text = "Status",
+                                    style = TextStyle(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF666666)
+                                    )
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    "Reason: $rejectionReason",
-                                    fontSize = 13.sp,
-                                    color = Color(0xFF856404)
+                                    text = kycStatus,
+                                    style = TextStyle(
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when (kycStatus) {
+                                            "Approved" -> Color(0xFF4CAF50)
+                                            "Pending" -> Color(0xFFFF9800)
+                                            "Rejected" -> Color(0xFFF44336)
+                                            else -> Color(0xFF9E9E9E)
+                                        }
+                                    )
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    "Please review the reason and resubmit your documents.",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFF856404)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        when (kycStatus) {
+                                            "Approved" -> Color(0xFFE8F5E9)
+                                            "Pending" -> Color(0xFFFFF3E0)
+                                            "Rejected" -> Color(0xFFFDEAEA)
+                                            else -> Color(0xFFF5F5F5)
+                                        }
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        when (kycStatus) {
+                                            "Approved" -> R.drawable.baseline_check_24
+                                            "Pending" -> R.drawable.baseline_access_time_24
+                                            "Rejected" -> R.drawable.baseline_close_24
+                                            else -> R.drawable.baseline_info_24
+                                        }
+                                    ),
+                                    contentDescription = "Status Icon",
+                                    tint = when (kycStatus) {
+                                        "Approved" -> Color(0xFF4CAF50)
+                                        "Pending" -> Color(0xFFFF9800)
+                                        "Rejected" -> Color(0xFFF44336)
+                                        else -> Color(0xFF9E9E9E)
+                                    },
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
-                    }
 
-                    TrustSectionHeader(if (kycStatus == "Rejected") "Resubmit KYC Verification" else "Verify your KYC")
-                    KycUploadCard(
-                        selectedDoc = selectedDoc,
-                        onDocChange = { selectedDoc = it },
-                        onSubmit = {
-                            val userId = userViewModel.getCurrentUserId()
+                        // Show rejection reason if applicable
+                        if (kycStatus == "Rejected" && rejectionReason != null) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFFFF3CD))
+                                    .padding(16.dp)
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.baseline_warning_24),
+                                            contentDescription = "Warning",
+                                            tint = Color(0xFF856404),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Previous KYC was rejected",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = Color(0xFF856404)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        "Reason: $rejectionReason",
+                                        fontSize = 13.sp,
+                                        color = Color(0xFF856404)
+                                    )
+                                }
+                            }
+                        }
 
-                            if (userId != null && userData != null && frontImageUri != null && backImageUri != null && selectedDoc != null) {
-                                kycViewModel.submitKyc(
-                                    userId = userId,
-                                    userEmail = userData!!.email,
-                                    userName = userData!!.fullName,
-                                    documentType = selectedDoc!!,
-                                    frontImageUri = frontImageUri!!,
-                                    backImageUri = backImageUri!!,
-                                    context = context
-                                ) { success, message ->
-                                    if (success) {
-                                        // Reload KYC status after successful submission
-                                        kycViewModel.getUserKycStatus(userId) { kycModel ->
-                                            if (kycModel != null) {
-                                                kycStatus = kycModel.status
-                                                hasSubmittedKyc = true
-                                                submittedDocType = kycModel.documentType
-                                                submittedFrontUrl = kycModel.frontImageUrl
-                                                submittedBackUrl = kycModel.backImageUrl
-                                                rejectionReason = null // Clear rejection reason
-                                                trustScore = 50
-                                                showSuccessDialog = true
+                        // Show either upload form or submitted documents
+                        if (!hasSubmittedKyc || kycStatus == "Rejected") {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            KYCUploadForm(
+                                selectedDoc = selectedDoc,
+                                onDocChange = { selectedDoc = it },
+                                onSubmit = {
+                                    val userId = userViewModel.getCurrentUserId()
+                                    if (userId != null && userData != null && frontImageUri != null && backImageUri != null && selectedDoc != null) {
+                                        kycViewModel.submitKyc(
+                                            userId = userId,
+                                            userEmail = userData!!.email,
+                                            userName = userData!!.fullName,
+                                            documentType = selectedDoc!!,
+                                            frontImageUri = frontImageUri!!,
+                                            backImageUri = backImageUri!!,
+                                            context = context
+                                        ) { success, message ->
+                                            if (success) {
+                                                kycViewModel.getUserKycStatus(userId) { kycModel ->
+                                                    if (kycModel != null) {
+                                                        kycStatus = kycModel.status
+                                                        hasSubmittedKyc = true
+                                                        submittedDocType = kycModel.documentType
+                                                        submittedFrontUrl = kycModel.frontImageUrl
+                                                        submittedBackUrl = kycModel.backImageUrl
+                                                        rejectionReason = null
+                                                        trustScore = calculateTrustScore(
+                                                            kycStatus = kycModel.status,
+                                                            emailVerified = emailVerified,
+                                                            phoneVerified = phoneVerified,
+                                                            profilePhoto = profilePhoto,
+                                                            noReports = noReports
+                                                        )
+                                                        showSuccessDialog = true
+                                                    }
+                                                }
+                                            } else {
+                                                Toast.makeText(context, "Failed to submit KYC: $message", Toast.LENGTH_SHORT).show()
                                             }
                                         }
-
-                                        userViewModel.createNotification(
-                                            title = "✅ KYC Submitted Successfully",
-                                            message = "Your KYC verification request has been submitted. We'll notify you once it's reviewed (typically within 24-48 hours).",
-                                            type = "system"
-                                        ) { _, _ -> }
-                                        Toast.makeText(context, "KYC submitted successfully!", Toast.LENGTH_SHORT).show()
                                     } else {
-                                        Toast.makeText(context, "Failed to submit KYC: $message", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
                                     }
-                                }
-                            } else {
-                                Toast.makeText(context, "Please fill all required fields", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        frontImageUri = frontImageUri,
-                        backImageUri = backImageUri,
-                        onFrontClick = { frontPicker.launch("image/*") },
-                        onBackClick = { backPicker.launch("image/*") }
-                    )
-                } else {
-                    // Show submitted documents (read-only for Pending or Approved status)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TrustSectionHeader("Submitted Documents")
-                    SubmittedDocumentsCard(
-                        documentType = submittedDocType ?: "Unknown",
-                        frontImageUrl = submittedFrontUrl,
-                        backImageUrl = submittedBackUrl,
-                        status = kycStatus
-                    )
+                                },
+                                frontImageUri = frontImageUri,
+                                backImageUri = backImageUri,
+                                onFrontClick = { frontPicker.launch("image/*") },
+                                onBackClick = { backPicker.launch("image/*") }
+                            )
+                        } else {
+                            Spacer(modifier = Modifier.height(20.dp))
+                            SubmittedDocumentsCard(
+                                documentType = submittedDocType ?: "Unknown",
+                                frontImageUrl = submittedFrontUrl,
+                                backImageUrl = submittedBackUrl,
+                                status = kycStatus
+                            )
+                        }
+                    }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                TrustSectionHeader("Profile Trust Meter")
-                TrustMeterCard(trustScore, kycStatus)
+                // Trust Meter Section
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp)
+                    ) {
+                        Text(
+                            text = "Trust Score",
+                            style = TextStyle(
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            ),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                        // Score Display
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Your Trust Score",
+                                    style = TextStyle(
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = Color(0xFF666666)
+                                    )
+                                )
+                                Text(
+                                    text = "$trustScore%",
+                                    style = TextStyle(
+                                        fontSize = 28.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = when {
+                                            trustScore >= 80 -> Color(0xFF4CAF50)
+                                            trustScore >= 60 -> Color(0xFFFF9800)
+                                            else -> Color(0xFFF44336)
+                                        }
+                                    )
+                                )
+                            }
+
+                            // Progress Circle
+                            Box(
+                                modifier = Modifier.size(80.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    progress = trustScore / 100f,
+                                    modifier = Modifier.size(80.dp),
+                                    color = when {
+                                        trustScore >= 80 -> Color(0xFF4CAF50)
+                                        trustScore >= 60 -> Color(0xFFFF9800)
+                                        else -> Color(0xFFF44336)
+                                    },
+                                    strokeWidth = 8.dp,
+                                    trackColor = Color(0xFFEEEEEE)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Trust Factors
+                        Text(
+                            text = "Trust Factors",
+                            style = TextStyle(
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF666666)
+                            ),
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+
+                        TrustFactorItem(
+                            title = "KYC Verified",
+                            completed = kycStatus == "Approved",
+                            points = 40
+                        )
+                        TrustFactorItem(
+                            title = "No Reports",
+                            completed = noReports,
+                            points = 20
+                        )
+                        TrustFactorItem(
+                            title = "Email Verified",
+                            completed = emailVerified,
+                            points = 10
+                        )
+                        TrustFactorItem(
+                            title = "Profile Photo",
+                            completed = profilePhoto,
+                            points = 15
+                        )
+                        TrustFactorItem(
+                            title = "Phone Verified",
+                            completed = phoneVerified,
+                            points = 15
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Score Info
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFF8F9FA))
+                                .padding(16.dp)
+                        ) {
+                            Text(
+                                text = "A higher trust score increases credibility and helps build trust with other users.",
+                                style = TextStyle(
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color(0xFF666666),
+                                    lineHeight = 18.sp
+                                )
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
-/* -------------------- UI COMPONENTS -------------------- */
-
-@Composable
-fun TrustSectionHeader(title: String) {
-    Text(
-        title,
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Bold,
-        color = Color(0xFF2C2C2C),
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)
-    )
+// Helper function to calculate trust score
+fun calculateTrustScore(
+    kycStatus: String,
+    emailVerified: Boolean,
+    phoneVerified: Boolean,
+    profilePhoto: Boolean,
+    noReports: Boolean
+): Int {
+    var score = 0
+    if (kycStatus == "Approved") score += 40
+    if (noReports) score += 20
+    if (emailVerified) score += 10
+    if (profilePhoto) score += 15
+    if (phoneVerified) score += 15
+    return score
 }
 
 @Composable
-fun KycStatusCard(status: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("KYC Status", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    status,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = when (status) {
-                        "Approved" -> Color(0xFF4CAF50)
-                        "Pending" -> Color(0xFFFF9800)
-                        "Rejected" -> Color(0xFFD32F2F)
-                        else -> Color(0xFFD32F2F)
-                    }
-                )
-                if (status == "Pending") {
-                    Spacer(modifier = Modifier.height(4.dp))
+fun KYCUploadForm(
+    selectedDoc: String?,
+    onDocChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    frontImageUri: Uri?,
+    backImageUri: Uri?,
+    onFrontClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    val documents = listOf("Citizenship", "Driving License", "Passport")
+    var showOptions by remember { mutableStateOf(false) }
+
+    Column {
+        Text(
+            text = "Upload Documents",
+            style = TextStyle(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            ),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+
+        // Document Type Selection
+        Column(modifier = Modifier.padding(bottom = 20.dp)) {
+            Text(
+                text = "Document Type",
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666)
+                ),
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFF5F5F5))
+                    .clickable { showOptions = !showOptions }
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        "Under review • 24-48 hours",
-                        fontSize = 12.sp,
-                        color = Color.Gray
+                        text = selectedDoc ?: "Select document type",
+                        color = if (selectedDoc == null) Color(0xFF999999) else Color.Black,
+                        fontSize = 15.sp
+                    )
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_arrow_drop_down_24),
+                        contentDescription = "Dropdown",
+                        tint = Color(0xFF666666)
                     )
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (status) {
-                            "Approved" -> Color(0xFF4CAF50).copy(alpha = 0.1f)
-                            "Pending" -> Color(0xFFFF9800).copy(alpha = 0.1f)
-                            else -> Color(0xFFD32F2F).copy(alpha = 0.1f)
+            // Dropdown Options
+            if (showOptions) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Column {
+                        documents.forEach { doc ->
+                            Text(
+                                text = doc,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onDocChange(doc)
+                                        showOptions = false
+                                    }
+                                    .padding(16.dp),
+                                fontSize = 14.sp,
+                                color = Color.Black
+                            )
                         }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    when (status) {
-                        "Approved" -> "✓"
-                        "Pending" -> "⏱"
-                        else -> "✗"
-                    },
-                    fontSize = 24.sp,
-                    color = when (status) {
-                        "Approved" -> Color(0xFF4CAF50)
-                        "Pending" -> Color(0xFFFF9800)
-                        else -> Color(0xFFD32F2F)
                     }
+                }
+            }
+        }
+
+        // Image Upload Section
+        Column(modifier = Modifier.padding(bottom = 24.dp)) {
+            Text(
+                text = "Upload Images",
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666)
+                ),
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                UploadImageBox(
+                    title = "Front Side",
+                    imageUri = frontImageUri,
+                    onClick = onFrontClick,
+                    modifier = Modifier.weight(1f)
                 )
+                UploadImageBox(
+                    title = "Back Side",
+                    imageUri = backImageUri,
+                    onClick = onBackClick,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // Submit Button
+        Button(
+            onClick = onSubmit,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .shadow(
+                    elevation = 6.dp,
+                    shape = RoundedCornerShape(14.dp),
+                    spotColor = Blue.copy(alpha = 0.3f)
+                ),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Blue,
+                disabledContainerColor = Color(0xFFCCCCCC)
+            ),
+            enabled = selectedDoc != null && frontImageUri != null && backImageUri != null
+        ) {
+            Text(
+                "Submit KYC Verification",
+                style = TextStyle(
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            )
+        }
+
+        // Info Note
+        Spacer(modifier = Modifier.height(12.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFEFF6FF))
+                .padding(16.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_info_24),
+                    contentDescription = "Info",
+                    tint = Blue,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "Verification typically takes 24-48 hours",
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Blue
+                    )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun UploadImageBox(
+    title: String,
+    imageUri: Uri?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = title,
+            style = TextStyle(
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF666666)
+            ),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .border(
+                    width = 2.dp,
+                    color = if (imageUri != null) Blue else Color(0xFFDDDDDD),
+                    shape = RoundedCornerShape(12.dp)
+                )
+                .clickable { onClick() }
+                .background(Color(0xFFF8F9FA)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (imageUri != null) {
+                AsyncImage(
+                    model = imageUri,
+                    contentDescription = title,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(10.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.baseline_add_photo_alternate_24),
+                        contentDescription = "Add Photo",
+                        tint = Color(0xFF999999),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Upload",
+                        fontSize = 13.sp,
+                        color = Color(0xFF999999)
+                    )
+                }
             }
         }
     }
@@ -414,68 +857,140 @@ fun SubmittedDocumentsCard(
     backImageUrl: String?,
     status: String
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Document Type", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
-                Text(documentType, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
+    Column {
+        Text(
+            text = "Submitted Documents",
+            style = TextStyle(
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.Black
+            ),
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
 
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Submitted Images", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = Color.Gray)
-            Spacer(modifier = Modifier.height(12.dp))
+        // Document Info
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Document Type",
+                style = TextStyle(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF666666)
+                )
+            )
+            Text(
+                text = documentType,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+            )
+        }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                SubmittedImageBox("Front", frontImageUrl, Modifier.weight(1f))
-                SubmittedImageBox("Back", backImageUrl, Modifier.weight(1f))
-            }
+        Spacer(modifier = Modifier.height(16.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
+        // Images Row
+        Text(
+            text = "Uploaded Images",
+            style = TextStyle(
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF666666)
+            ),
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
 
-            // Status-specific message
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        when (status) {
-                            "Pending" -> Color(0xFFFFF3CD)
-                            "Approved" -> Color(0xFFD4EDDA)
-                            "Rejected" -> Color(0xFFF8D7DA)
-                            else -> Color(0xFFF8F9FB)
-                        }
-                    )
-                    .padding(12.dp)
-            ) {
-                Text(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            SubmittedImageBox(
+                label = "Front",
+                imageUrl = frontImageUrl,
+                modifier = Modifier.weight(1f)
+            )
+            SubmittedImageBox(
+                label = "Back",
+                imageUrl = backImageUrl,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Status Message
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(
                     when (status) {
-                        "Pending" -> "ℹ️ Your documents are under review. You'll be notified once verification is complete."
-                        "Approved" -> "✅ Your KYC has been verified successfully!"
-                        "Rejected" -> "❌ Your KYC was rejected. Please contact support for more information."
-                        else -> "ℹ️ Document status unknown."
+                        "Pending" -> Color(0xFFFFF3E0)
+                        "Approved" -> Color(0xFFE8F5E9)
+                        "Rejected" -> Color(0xFFFDEAEA)
+                        else -> Color(0xFFF5F5F5)
+                    }
+                )
+                .padding(16.dp)
+        ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        painter = painterResource(
+                            when (status) {
+                                "Pending" -> R.drawable.baseline_access_time_24
+                                "Approved" -> R.drawable.baseline_check_circle_24
+                                "Rejected" -> R.drawable.baseline_error_24
+                                else -> R.drawable.baseline_info_24
+                            }
+                        ),
+                        contentDescription = "Status Icon",
+                        tint = when (status) {
+                            "Pending" -> Color(0xFFFF9800)
+                            "Approved" -> Color(0xFF4CAF50)
+                            "Rejected" -> Color(0xFFF44336)
+                            else -> Color(0xFF9E9E9E)
+                        },
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = when (status) {
+                            "Pending" -> "Under Review"
+                            "Approved" -> "Verified Successfully"
+                            "Rejected" -> "Verification Rejected"
+                            else -> "Status Unknown"
+                        },
+                        style = TextStyle(
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = when (status) {
+                                "Pending" -> Color(0xFFFF9800)
+                                "Approved" -> Color(0xFF4CAF50)
+                                "Rejected" -> Color(0xFFF44336)
+                                else -> Color(0xFF9E9E9E)
+                            }
+                        )
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = when (status) {
+                        "Pending" -> "Your documents are being reviewed. This usually takes 24-48 hours."
+                        "Approved" -> "Your KYC verification has been completed successfully."
+                        "Rejected" -> "Your KYC submission was not approved. Please contact support for assistance."
+                        else -> "Please check back later for updates."
                     },
-                    fontSize = 12.sp,
-                    color = when (status) {
-                        "Pending" -> Color(0xFF856404)
-                        "Approved" -> Color(0xFF155724)
-                        "Rejected" -> Color(0xFF721C24)
-                        else -> Color.Gray
-                    },
-                    lineHeight = 16.sp
+                    style = TextStyle(
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = Color(0xFF666666)
+                    )
                 )
             }
         }
@@ -483,301 +998,97 @@ fun SubmittedDocumentsCard(
 }
 
 @Composable
-fun SubmittedImageBox(label: String, imageUrl: String?, modifier: Modifier = Modifier) {
+fun SubmittedImageBox(
+    label: String,
+    imageUrl: String?,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
-        Text(label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
-        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = label,
+            style = TextStyle(
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF666666)
+            ),
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(120.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFF5F5F5))
-                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp)),
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(12.dp))
+                .background(Color(0xFFF8F9FA)),
             contentAlignment = Alignment.Center
         ) {
             if (imageUrl != null) {
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = "$label image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text("No image", fontSize = 12.sp, color = Color.Gray)
-            }
-        }
-    }
-}
-
-@Composable
-fun KycUploadCard(
-    selectedDoc: String?,
-    onDocChange: (String) -> Unit,
-    onSubmit: () -> Unit,
-    frontImageUri: Uri?,
-    backImageUri: Uri?,
-    onFrontClick: () -> Unit,
-    onBackClick: () -> Unit
-) {
-    val documents = listOf("Citizenship", "Driving License", "Passport")
-    var showOptions by remember { mutableStateOf(false) }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Column {
-            Text("Select Document Type", fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Dropdown with arrow icon
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
-                    .clickable { showOptions = !showOptions }
-                    .padding(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        selectedDoc ?: "Choose document type",
-                        color = if (selectedDoc == null) Color.Gray else Color.Black,
-                        fontSize = 14.sp
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = "Dropdown",
-                        tint = AppBlue,
-                        modifier = Modifier
-                            .size(24.dp)
-                            .rotate(if (showOptions) 180f else 0f)
-                    )
-                }
-            }
-
-            if (showOptions) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFDDDDDD), RoundedCornerShape(8.dp))
-                ) {
-                    documents.forEachIndexed { index, doc ->
-                        Text(
-                            doc,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onDocChange(doc)
-                                    showOptions = false
-                                }
-                                .padding(12.dp),
-                            fontSize = 14.sp
-                        )
-                        if (index < documents.size - 1) {
-                            Divider(color = Color(0xFFEEEEEE), thickness = 1.dp)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-            Text("Upload Document Images", fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                UploadBox("Front Image", frontImageUri, onFrontClick, Modifier.weight(1f))
-                UploadBox("Back Image", backImageUri, onBackClick, Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = onSubmit,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AppBlue),
-                enabled = selectedDoc != null && frontImageUri != null && backImageUri != null
-            ) {
-                Text("Submit KYC", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppBlue.copy(alpha = 0.1f))
-                    .padding(12.dp)
-            ) {
-                Text(
-                    "📋 Your KYC will be verified within 24-48 hours",
-                    fontSize = 12.sp,
-                    color = AppBlue
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun UploadBox(title: String, imageUri: Uri?, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier = modifier) {
-        Text(title, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(120.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .border(
-                    width = 2.dp,
-                    color = if (imageUri != null) AppBlue else Color(0xFFDDDDDD),
-                    shape = RoundedCornerShape(8.dp)
-                )
-                .clickable { onClick() }
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (imageUri != null) {
-                AsyncImage(
-                    model = imageUri,
-                    contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
-                        .clip(RoundedCornerShape(6.dp)),
+                        .clip(RoundedCornerShape(10.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📷", fontSize = 28.sp)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Upload",
-                        color = Color.Gray,
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TrustMeterCard(score: Int, kycStatus: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Trust Score", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(
-                    "$score%",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
-                    color = when {
-                        score >= 70 -> Color(0xFF4CAF50)
-                        score >= 50 -> Color(0xFFFF9800)
-                        else -> Color(0xFFD32F2F)
-                    }
+                Icon(
+                    painter = painterResource(R.drawable.baseline_image_24),
+                    contentDescription = "No Image",
+                    tint = Color(0xFFCCCCCC),
+                    modifier = Modifier.size(32.dp)
                 )
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LinearProgressIndicator(
-                progress = score / 100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                color = when {
-                    score >= 70 -> Color(0xFF4CAF50)
-                    score >= 50 -> Color(0xFFFF9800)
-                    else -> Color(0xFFD32F2F)
-                },
-                trackColor = Color(0xFFEEEEEE)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                "Score Breakdown",
-                fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                color = Color.Gray
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            TrustItem("KYC Verified", 40, kycStatus == "Approved")
-            TrustItem("No Reports", 20, true)
-            TrustItem("Email Verified", 10, false)
-            TrustItem("Profile Photo", 15, false)
-            TrustItem("Phone Verified", 15, false)
         }
     }
 }
 
 @Composable
-fun TrustItem(label: String, value: Int, isCompleted: Boolean) {
+fun TrustFactorItem(
+    title: String,
+    completed: Boolean,
+    points: Int
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
+            .padding(vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(24.dp)
                     .clip(CircleShape)
-                    .background(if (isCompleted) Color(0xFF4CAF50).copy(alpha = 0.1f) else Color(0xFFF5F5F5)),
+                    .background(
+                        if (completed) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    if (isCompleted) "✓" else "○",
+                    text = if (completed) "✓" else "○",
                     fontSize = 12.sp,
-                    color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+                    color = if (completed) Color(0xFF4CAF50) else Color(0xFFCCCCCC)
                 )
             }
-            Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(12.dp))
             Text(
-                label,
-                fontSize = 13.sp,
-                color = if (isCompleted) Color.Black else Color.Gray
+                text = title,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    fontWeight = if (completed) FontWeight.Medium else FontWeight.Normal,
+                    color = if (completed) Color.Black else Color(0xFF666666)
+                )
             )
         }
         Text(
-            "+$value%",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isCompleted) Color(0xFF4CAF50) else Color.Gray
+            text = "+$points%",
+            style = TextStyle(
+                fontSize = 14.sp,
+                fontWeight = if (completed) FontWeight.Bold else FontWeight.Medium,
+                color = if (completed) Color(0xFF4CAF50) else Color(0xFFCCCCCC)
+            )
         )
     }
 }
