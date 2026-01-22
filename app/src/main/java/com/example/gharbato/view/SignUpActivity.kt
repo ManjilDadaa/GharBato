@@ -43,7 +43,6 @@ import com.example.gharbato.R
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
@@ -111,6 +110,7 @@ fun PasswordRequirementItem(text: String, isMet: Boolean) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpBody() {
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
@@ -148,12 +148,33 @@ fun SignUpBody() {
 
     Scaffold(
         containerColor = Color.White,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) }
-    ) { padding ->
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = {
+                        val intent = Intent(context, LoginActivity::class.java)
+                        context.startActivity(intent)
+                        activity.finish()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
+                            contentDescription = "Back",
+                            tint = Color.DarkGray
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White
+                )
+            )
+        }
+    ) { innerPadding ->
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .padding(padding)
+                .padding(innerPadding)
                 .fillMaxSize()
                 .imePadding()
         ) {
@@ -163,7 +184,7 @@ fun SignUpBody() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 32.dp)
+                        .padding(top = 16.dp)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.gharbato_logo),
