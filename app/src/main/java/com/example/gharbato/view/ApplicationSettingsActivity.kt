@@ -4,21 +4,21 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -31,12 +31,9 @@ import kotlinx.coroutines.flow.StateFlow
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        ThemePreference.init(this)
-
+        enableEdgeToEdge()
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-
             GharBatoTheme(darkTheme = isDarkMode) {
                 ApplicationSettingsScreen()
             }
@@ -71,13 +68,16 @@ fun ApplicationSettingsScreen() {
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        (context as ComponentActivity).finish()
-                    }) {
+                    IconButton(
+                        onClick = {
+                            (context as ComponentActivity).finish()
+                        }
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = Color.DarkGray,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 },
@@ -86,7 +86,7 @@ fun ApplicationSettingsScreen() {
                 )
             )
         }
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -94,12 +94,16 @@ fun ApplicationSettingsScreen() {
                 .padding(padding)
                 .padding(16.dp)
         ) {
-
-            SettingItem(
-                icon = R.drawable.baseline_dark_mode_24,
-                title = "Dark Mode",
-                subtitle = if (isDarkMode) "Enabled" else "Disabled",
-                iconColor = Blue
+            // App Settings Section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 ThemePreference.toggleDarkMode(context)
             }
@@ -131,14 +135,24 @@ fun ApplicationSettingsScreen() {
                 iconColor = Blue
             ) {}
 
-            SettingItem(
-                icon = R.drawable.baseline_info_24,
-                title = "Version",
-                subtitle = appVersion,
-                iconColor = Blue
-            ) {}
+            Spacer(modifier = Modifier.height(32.dp))
 
-            Spacer(modifier = Modifier.height(40.dp))
+            // Footer Note
+            Text(
+                text = "App settings are saved automatically",
+                style = TextStyle(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = Color(0xFF999999)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .align(Alignment.CenterHorizontally),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
