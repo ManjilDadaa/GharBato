@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,14 +41,18 @@ class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Get dark mode preference directly without using collectAsState in activity
+        val isDarkMode = ThemePreference.getDarkModeSync(this)
+
         setContent {
-            SplashScreen()
+            SplashScreen(isDarkMode = isDarkMode)
         }
     }
 }
 
 @Composable
-fun SplashScreen() {
+fun SplashScreen(isDarkMode: Boolean = false) {
     val context = LocalContext.current
 
     val logoAlpha = remember { Animatable(0f) }
@@ -128,14 +133,18 @@ fun SplashScreen() {
         (context as ComponentActivity).finish()
     }
 
+    val backgroundColorStart = if (isDarkMode) Color(0xFF121212) else Color(0xFFF8F9FA)
+    val backgroundColorEnd = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF0066CC)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFFF8F9FA),
-                        Color.White
+                        backgroundColorStart,
+                        backgroundColorEnd
                     )
                 )
             ),
@@ -153,6 +162,16 @@ fun SplashScreen() {
                     .scale(logoScale.value)
             )
 
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "Find Your Dream Home",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor,
+                modifier = Modifier
+                    .alpha(textAlpha.value)
+            )
         }
     }
 }
