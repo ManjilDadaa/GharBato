@@ -7,9 +7,8 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.registerForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +40,7 @@ import com.example.gharbato.R
 import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.NotificationHelper
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.messaging.FirebaseMessaging
@@ -66,6 +66,9 @@ class NotificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // IMPORTANT: Initialize ThemePreference FIRST
+        ThemePreference.init(this)
+
         // Initialize ViewModel
         userViewModel = UserViewModel(UserRepoImpl())
 
@@ -79,7 +82,13 @@ class NotificationActivity : ComponentActivity() {
         requestNotificationPermission()
 
         setContent {
-            NotificationScreen(userViewModel)
+            // Get dark mode state from ThemePreference
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            // Wrap with GharBatoTheme and pass dark mode state
+            GharBatoTheme(darkTheme = isDarkMode) {
+                NotificationScreen(userViewModel)
+            }
         }
     }
 
@@ -138,6 +147,14 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
     var showMenu by remember { mutableStateOf(false) }
     var showClearAllDialog by remember { mutableStateOf(false) }
 
+    // Get MaterialTheme colors for dark/light mode
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val isDarkTheme = MaterialTheme.colorScheme.background == Color(0xFF121212)
+
     // Start real-time observers
     LaunchedEffect(Unit) {
         userViewModel.startObservingNotifications()
@@ -158,13 +175,15 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
             title = {
                 Text(
                     "Clear All Notifications",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = onBackgroundColor
                 )
             },
             text = {
                 Text(
                     "Are you sure you want to delete all ${notifications.size} notification${if (notifications.size != 1) "s" else ""}? This action cannot be undone.",
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    color = onSurfaceVariantColor
                 )
             },
             confirmButton = {
@@ -189,31 +208,37 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
                 ) {
-                    Text("Clear All")
+                    Text("Clear All", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearAllDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Cancel", color = onSurfaceVariantColor)
                 }
-            }
+            },
+            containerColor = surfaceColor
         )
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Notifications", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            "Notifications",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = onBackgroundColor
+                        )
 
                         // Show notification count
                         if (notifications.isNotEmpty()) {
                             Text(
                                 "${notifications.size} notification${if (notifications.size != 1) "s" else ""}",
                                 fontSize = 12.sp,
-                                color = if (unreadCount > 0) Color(0xFFFF9800) else Color.Gray
+                                color = if (unreadCount > 0) Color(0xFFFF9800) else onSurfaceVariantColor
                             )
                         }
                     }
@@ -242,10 +267,16 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
 
                         DropdownMenu(
                             expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(surfaceColor)
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Clear all") },
+                                text = {
+                                    Text(
+                                        "Clear all",
+                                        color = onSurfaceColor
+                                    )
+                                },
                                 onClick = {
                                     showMenu = false
                                     showClearAllDialog = true
@@ -262,7 +293,7 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 )
             )
         }
@@ -272,6 +303,7 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(backgroundColor)
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
@@ -283,20 +315,20 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                         painter = painterResource(R.drawable.outline_notifications_24),
                         contentDescription = null,
                         modifier = Modifier.size(80.dp),
-                        tint = Color.LightGray
+                        tint = onSurfaceVariantColor.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         "No notifications yet",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Gray
+                        color = onSurfaceVariantColor
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "We'll notify you when something new arrives",
                         fontSize = 14.sp,
-                        color = Color.LightGray
+                        color = onSurfaceVariantColor.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -305,8 +337,9 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .background(Color(0xFFF8F9FB))
+                    .background(backgroundColor)
+                    .padding(padding),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
             ) {
                 items(
                     items = notifications,
@@ -326,7 +359,11 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                                 "Notification deleted",
                                 Toast.LENGTH_SHORT
                             ).show()
-                        }
+                        },
+                        isDarkTheme = isDarkTheme,
+                        surfaceColor = surfaceColor,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor
                     )
                 }
 
@@ -342,7 +379,11 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
 fun NotificationItem(
     notification: NotificationModel,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    isDarkTheme: Boolean,
+    surfaceColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
 ) {
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -352,10 +393,16 @@ fun NotificationItem(
             title = {
                 Text(
                     "Delete Notification",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = onBackgroundColor
                 )
             },
-            text = { Text("Are you sure you want to delete this notification?") },
+            text = {
+                Text(
+                    "Are you sure you want to delete this notification?",
+                    color = onSurfaceVariantColor
+                )
+            },
             confirmButton = {
                 Button(
                     onClick = {
@@ -364,19 +411,28 @@ fun NotificationItem(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF3B30))
                 ) {
-                    Text("Delete")
+                    Text("Delete", color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel", color = Color.Gray)
+                    Text("Cancel", color = onSurfaceVariantColor)
                 }
-            }
+            },
+            containerColor = surfaceColor
         )
     }
 
-    // Background color based on read status
-    val backgroundColor = if (notification.isRead) Color.White else Color(0xFFE3F2FD)
+    // Background color based on read status and theme
+    val backgroundColor = if (notification.isRead) {
+        surfaceColor
+    } else {
+        if (isDarkTheme) {
+            Blue.copy(alpha = 0.15f)
+        } else {
+            Color(0xFFE3F2FD)
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -422,7 +478,7 @@ fun NotificationItem(
                 notification.title,
                 fontSize = 15.sp,
                 fontWeight = if (notification.isRead) FontWeight.Normal else FontWeight.Bold,
-                color = Color(0xFF2C2C2C),
+                color = if (notification.isRead) onSurfaceVariantColor else onBackgroundColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -432,7 +488,7 @@ fun NotificationItem(
             Text(
                 notification.message,
                 fontSize = 13.sp,
-                color = Color.Gray,
+                color = onSurfaceVariantColor,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -442,7 +498,7 @@ fun NotificationItem(
             Text(
                 getTimeAgo(notification.timestamp),
                 fontSize = 11.sp,
-                color = Color.LightGray
+                color = onSurfaceVariantColor.copy(alpha = 0.7f)
             )
         }
 
@@ -454,7 +510,7 @@ fun NotificationItem(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = "Delete",
-                tint = Color.Gray,
+                tint = onSurfaceVariantColor,
                 modifier = Modifier.size(20.dp)
             )
         }
