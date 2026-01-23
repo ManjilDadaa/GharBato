@@ -208,17 +208,44 @@ fun MessageDetailsScreen(
     }
 
     fun launchCamera() {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = context.getExternalFilesDir(null)
-        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+        try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val storageDir = context.getExternalFilesDir(null)
+            val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
 
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        currentPhotoUri = uri
-        cameraLauncher.launch(uri)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            currentPhotoUri = uri
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            Log.e("MessageDetails", "Error launching camera", e)
+            Toast.makeText(context, "Cannot open camera", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(context, "Camera permission needed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun checkAndLaunchCamera() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCamera()
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     // Initialize chat session
@@ -298,7 +325,7 @@ fun MessageDetailsScreen(
                     messageText = messageText,
                     onMessageTextChange = { viewModel.onMessageTextChanged(it) },
                     onSendClick = { viewModel.sendTextMessage() },
-                    onCameraClick = { launchCamera() },
+                    onCameraClick = { checkAndLaunchCamera() },
                     onAttachClick = { imagePickerLauncher.launch("image/*") }
                 )
             }
@@ -741,8 +768,7 @@ fun MessageInput(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(
-                onClick = onCameraClick,
-                modifier = Modifier.size(24.dp)
+                onClick = onCameraClick
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
@@ -752,8 +778,7 @@ fun MessageInput(
             }
 
             IconButton(
-                onClick = onAttachClick,
-                modifier = Modifier.size(24.dp)
+                onClick = onAttachClick
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,
