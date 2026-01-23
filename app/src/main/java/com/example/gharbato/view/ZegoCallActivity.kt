@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+import com.example.gharbato.R
+
 class ZegoCallActivity : FragmentActivity() {
 
     private var callId: String = ""
@@ -385,6 +387,58 @@ object CallInvitationManager {
             isVideoCall = isVideoCall,
             currentUserId = currentUserId
         )
+
+        showIncomingCallNotification(context, callerName, isVideoCall, callId)
+    }
+
+    private fun showIncomingCallNotification(
+        context: android.content.Context, 
+        callerName: String, 
+        isVideoCall: Boolean,
+        callId: String
+    ) {
+        val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val channelId = "incoming_call_channel"
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId,
+                "Incoming Calls",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for incoming video and audio calls"
+                enableLights(true)
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE), null)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val intent = android.content.Intent(context, DashboardActivity::class.java).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            context,
+            callId.hashCode(),
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationBuilder = androidx.core.app.NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.outline_call_24)
+            .setContentTitle("Incoming Call")
+            .setContentText("$callerName is calling you...")
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true)
+            .setOngoing(true)
+            .setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE))
+        
+        notificationManager.notify(1001, notificationBuilder.build())
     }
 
     fun acceptCurrentCall(context: android.content.Context) {
