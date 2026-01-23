@@ -29,6 +29,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,6 +44,7 @@ import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Home
@@ -80,6 +83,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -174,6 +179,25 @@ fun MessageDetailsScreen(
 
     var showReportDialog by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    
+    // Full screen image viewer state
+    var fullScreenImageIndex by remember { mutableStateOf<Int?>(null) }
+    
+    // Filter messages to get only those with images
+    val imageMessages = remember(messages) {
+        messages.filter { it.imageUrl.isNotEmpty() }
+    }
+    val allImages = remember(imageMessages) {
+        imageMessages.map { it.imageUrl }
+    }
+
+    if (fullScreenImageIndex != null && fullScreenImageIndex!! < allImages.size) {
+        FullScreenImageGallery(
+            images = allImages,
+            initialPage = fullScreenImageIndex!!,
+            onDismiss = { fullScreenImageIndex = null }
+        )
+    }
 
     if (showReportDialog) {
         ReportUserDialog(
@@ -274,7 +298,13 @@ fun MessageDetailsScreen(
                 items(messages) { message ->
                     MessageBubble(
                         message = message,
-                        isCurrentUser = message.senderId == currentUserId
+                        isCurrentUser = message.senderId == currentUserId,
+                        onImageClick = { imageUrl ->
+                            val index = allImages.indexOf(imageUrl)
+                            if (index != -1) {
+                                fullScreenImageIndex = index
+                            }
+                        }
                     )
                 }
             }
@@ -476,7 +506,8 @@ fun ChatTopBar(
 @Composable
 fun MessageBubble(
     message: ChatMessage,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    onImageClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
 
@@ -528,7 +559,8 @@ fun MessageBubble(
                             .fillMaxWidth()
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color.LightGray),
+                            .background(Color.LightGray)
+                            .clickable { onImageClick(message.imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotEmpty()) {
@@ -718,6 +750,77 @@ fun PropertyCardInMessage(
                         tint = Color(0xFF2196F3)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun FullScreenImageGallery(
+    images: List<String>,
+    initialPage: Int,
+    onDismiss: () -> Unit
+) {
+    val pagerState = rememberPagerState(initialPage = initialPage) { images.size }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(images[page])
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Full Screen Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
+                }
+            }
+
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 48.dp, end = 16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+
+            // Page indicator
+            if (images.size > 1) {
+                Text(
+                    text = "${pagerState.currentPage + 1} / ${images.size}",
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
