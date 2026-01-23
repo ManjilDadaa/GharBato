@@ -38,7 +38,10 @@ class UserRepoImpl : UserRepo {
 
     override fun login(email: String, password: String, callback: (Boolean, String) -> Unit) {
         auth.signInWithEmailAndPassword(email, password).addOnCompleteListener {
-            callback(it.isSuccessful, if (it.isSuccessful) "Login Successful" else it.exception?.message ?: "Failed")
+            callback(
+                it.isSuccessful,
+                if (it.isSuccessful) "Login Successful" else it.exception?.message ?: "Failed"
+            )
         }
     }
 
@@ -506,5 +509,30 @@ class UserRepoImpl : UserRepo {
         }.addOnFailureListener {
             callback(false, "Failed to fetch users")
         }
+    }
+
+    override fun updateUserPresence(userId: String, isOnline: Boolean) {
+        val updates = hashMapOf<String, Any>(
+            "isOnline" to isOnline,
+            "lastActive" to ServerValue.TIMESTAMP
+        )
+        ref.child(userId).updateChildren(updates)
+        if (isOnline) {
+            ref.child(userId).child("isOnline").onDisconnect().setValue(false)
+            ref.child(userId).child("lastActive").onDisconnect().setValue(ServerValue.TIMESTAMP)
+        }
+    }
+
+    override fun observeUser(userId: String, callback: (UserModel?) -> Unit): () -> Unit {
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val user = snapshot.getValue(UserModel::class.java)
+                callback(user)
+            }
+            override fun onCancelled(error: DatabaseError) {
+            }
+        }
+        ref.child(userId).addValueEventListener(listener)
+        return { ref.child(userId).removeEventListener(listener) }
     }
 }

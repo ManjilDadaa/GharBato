@@ -174,6 +174,8 @@ fun MessageDetailsScreen(
     val messageText by viewModel.messageText
     val isBlockedByMe by viewModel.isBlockedByMe
     val isBlockedByOther by viewModel.isBlockedByOther
+    val isOtherUserOnline by viewModel.isOtherUserOnline
+    val otherUserLastActive by viewModel.otherUserLastActive
 
     val listState = rememberLazyListState()
 
@@ -271,6 +273,8 @@ fun MessageDetailsScreen(
                 userName = otherUserName,
                 userImage = otherUserImage,
                 isBlockedByMe = isBlockedByMe,
+                isOnline = isOtherUserOnline,
+                lastActive = otherUserLastActive,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
                 onDeleteClick = { viewModel.deleteChat() },
@@ -384,6 +388,8 @@ fun ChatTopBar(
     userName: String,
     userImage: String,
     isBlockedByMe: Boolean,
+    isOnline: Boolean,
+    lastActive: Long,
     onBackClick: () -> Unit,
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -432,9 +438,9 @@ fun ChatTopBar(
                         color = Color.Black
                     )
                     Text(
-                        text = "Online",
+                        text = if (isOnline) "Online" else if (lastActive > 0) "Last active ${formatLastActive(lastActive)}" else "Offline",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (isOnline) Blue else Color.Gray
                     )
                 }
             }
@@ -507,12 +513,13 @@ fun ChatTopBar(
 fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean,
+    modifier: Modifier = Modifier,
     onImageClick: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         Surface(
@@ -915,6 +922,29 @@ private fun formatTimestamp(timestamp: Long): String {
         }
         else -> {
             SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(calendar.time)
+        }
+    }
+}
+
+private fun formatLastActive(timestamp: Long): String {
+    if (timestamp == 0L) return ""
+
+    val calendar = Calendar.getInstance()
+    calendar.timeInMillis = timestamp
+    val now = Calendar.getInstance()
+
+    val diff = now.timeInMillis - timestamp
+
+    return when {
+        diff < 60 * 1000 -> "just now"
+        isSameDay(calendar, now) -> {
+            "at ${SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)}"
+        }
+        isYesterday(calendar, now) -> {
+            "yesterday at ${SimpleDateFormat("hh:mm a", Locale.getDefault()).format(calendar.time)}"
+        }
+        else -> {
+            "on ${SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault()).format(calendar.time)}"
         }
     }
 }
