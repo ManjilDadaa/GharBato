@@ -41,7 +41,9 @@ import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
@@ -545,11 +547,27 @@ fun MessageBubble(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
-                    fontSize = 11.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.align(Alignment.End)
+                ) {
+                    Text(
+                        text = formatTimestamp(message.timestamp),
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                        fontSize = 11.sp
+                    )
+
+                    if (isCurrentUser) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Check,
+                            contentDescription = if (message.isRead) "Seen" else "Delivered",
+                            tint = if (message.isRead) Color.White else Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
