@@ -110,8 +110,4 @@ interface UserRepo {
         actionData: String,
         callback: (Boolean, String) -> Unit
     )
-
-    fun updateUserPresence(userId: String, isOnline: Boolean)
-
-    fun observeUser(userId: String, callback: (UserModel?) -> Unit): () -> Unit
 }

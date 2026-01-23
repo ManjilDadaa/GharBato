@@ -11,8 +11,6 @@ import com.example.gharbato.model.MessageUser
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.MessageRepository
 import com.example.gharbato.repository.MessageRepositoryImpl
-import com.example.gharbato.repository.UserRepo
-import com.example.gharbato.repository.UserRepoImpl
 
 data class ChatNavigation(
     val targetUserId: String,
@@ -148,8 +146,7 @@ class MessageViewModel(
 
 class MessageDetailsViewModel(
     private val repository: MessageRepository = MessageRepositoryImpl(),
-    private val reportRepo: com.example.gharbato.repository.ReportUserRepo = com.example.gharbato.repository.ReportUserRepoImpl(),
-    private val userRepo: UserRepo = UserRepoImpl()
+    private val reportRepo: com.example.gharbato.repository.ReportUserRepo = com.example.gharbato.repository.ReportUserRepoImpl()
 ) : ViewModel() {
 
     private val _chatSession = mutableStateOf<ChatSession?>(null)
@@ -167,15 +164,8 @@ class MessageDetailsViewModel(
     private val _isBlockedByOther = mutableStateOf(false)
     val isBlockedByOther: State<Boolean> = _isBlockedByOther
 
-    private val _isOtherUserOnline = mutableStateOf(false)
-    val isOtherUserOnline: State<Boolean> = _isOtherUserOnline
-
-    private val _otherUserLastActive = mutableStateOf(0L)
-    val otherUserLastActive: State<Long> = _otherUserLastActive
-
     private var stopListening: (() -> Unit)? = null
     private var stopBlockListening: (() -> Unit)? = null
-    private var stopUserObserver: (() -> Unit)? = null
 
     fun initiateCall(
         activity: android.app.Activity,
@@ -192,21 +182,9 @@ class MessageDetailsViewModel(
 
         stopListening?.invoke()
         stopBlockListening?.invoke()
-        stopUserObserver?.invoke()
 
         val session = repository.createChatSession(context, otherUserId)
         _chatSession.value = session
-
-        // Update my presence
-        userRepo.updateUserPresence(session.myUserId, true)
-
-        // Observe other user
-        stopUserObserver = userRepo.observeUser(otherUserId) { user ->
-            if (user != null) {
-                _isOtherUserOnline.value = user.isOnline
-                _otherUserLastActive.value = user.lastActive
-            }
-        }
 
         stopListening = repository.listenToChatMessages(
             chatId = session.chatId,
@@ -289,16 +267,10 @@ class MessageDetailsViewModel(
     }
 
     override fun onCleared() {
-        val session = _chatSession.value
-        if (session != null) {
-            userRepo.updateUserPresence(session.myUserId, false)
-        }
         stopListening?.invoke()
         stopBlockListening?.invoke()
-        stopUserObserver?.invoke()
         stopListening = null
         stopBlockListening = null
-        stopUserObserver = null
         super.onCleared()
     }
 }
