@@ -188,6 +188,7 @@ class MessageDetailsViewModel(
 
         stopListening = repository.listenToChatMessages(
             chatId = session.chatId,
+            currentUserId = session.myUserId,
             onMessages = {
                 _messages.value = it
                 repository.markMessagesAsRead(session.chatId, session.myUserId)
@@ -253,6 +254,16 @@ class MessageDetailsViewModel(
         val session = _chatSession.value ?: return
         repository.deleteChat(session.chatId)
         _messages.value = emptyList()
+    }
+    
+    fun deleteMessageForMe(messageId: String) {
+        val session = _chatSession.value ?: return
+        repository.deleteMessageForMe(session.chatId, messageId, session.myUserId)
+    }
+
+    fun deleteMessageForEveryone(messageId: String) {
+        val session = _chatSession.value ?: return
+        repository.deleteMessageForEveryone(session.chatId, messageId)
     }
 
     fun reportUser(reason: String, callback: (Boolean, String) -> Unit) {

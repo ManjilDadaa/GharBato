@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -175,6 +176,8 @@ fun MessageDetailsScreen(
 
     var showReportDialog by remember { mutableStateOf(false) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var selectedMessage by remember { mutableStateOf<ChatMessage?>(null) }
 
     if (showReportDialog) {
         ReportUserDialog(
@@ -303,7 +306,11 @@ fun MessageDetailsScreen(
                 items(messages) { message ->
                     MessageBubble(
                         message = message,
-                        isCurrentUser = message.senderId == currentUserId
+                        isCurrentUser = message.senderId == currentUserId,
+                        onLongPress = {
+                            selectedMessage = it
+                            showDeleteDialog = true
+                        }
                     )
                 }
             }
@@ -329,6 +336,34 @@ fun MessageDetailsScreen(
                     onSendClick = { viewModel.sendTextMessage() },
                     onCameraClick = { checkAndLaunchCamera() },
                     onAttachClick = { imagePickerLauncher.launch("image/*") }
+                )
+            }
+            
+            if (showDeleteDialog && selectedMessage != null) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { androidx.compose.material3.Text("Delete message?") },
+                    text = {
+                        Column {
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    viewModel.deleteMessageForEveryone(selectedMessage!!.id)
+                                    showDeleteDialog = false
+                                }
+                            ) { androidx.compose.material3.Text("Delete for everyone") }
+                            androidx.compose.material3.TextButton(
+                                onClick = {
+                                    viewModel.deleteMessageForMe(selectedMessage!!.id)
+                                    showDeleteDialog = false
+                                }
+                            ) { androidx.compose.material3.Text("Delete for me") }
+                            androidx.compose.material3.TextButton(
+                                onClick = { showDeleteDialog = false }
+                            ) { androidx.compose.material3.Text("Cancel") }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {}
                 )
             }
         }
@@ -505,12 +540,18 @@ fun ChatTopBar(
 @Composable
 fun MessageBubble(
     message: ChatMessage,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    onLongPress: (ChatMessage) -> Unit
 ) {
     val context = LocalContext.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { onLongPress(message) }
+            ),
         horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
     ) {
         Surface(

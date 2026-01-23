@@ -35,12 +35,14 @@ interface MessageRepository {
     // Chat Session Management
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
-    fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+    fun deleteMessageForMe(chatId: String, messageId: String, userId: String)
+    fun deleteMessageForEveryone(chatId: String, messageId: String)
 
     fun navigateToChatWithMessage(
         activity: Activity,
@@ -396,7 +398,7 @@ class MessageRepositoryImpl : MessageRepository {
         }
     }
 
-    override fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
+    override fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
         
         val listener = object : ValueEventListener {
@@ -404,6 +406,10 @@ class MessageRepositoryImpl : MessageRepository {
                 val messageList = mutableListOf<ChatMessage>()
                 snapshot.children.forEach { msgSnapshot ->
                     try {
+                        val deletedForCurrentUser = msgSnapshot.child("deletedFor").child(currentUserId).getValue(Boolean::class.java) == true
+                        if (deletedForCurrentUser) {
+                            return@forEach
+                        }
                         val message = msgSnapshot.getValue(ChatMessage::class.java)
                         if (message != null) {
                             messageList.add(message)
@@ -504,6 +510,15 @@ class MessageRepositoryImpl : MessageRepository {
         chatRef.removeValue()
     }
 
+    override fun deleteMessageForMe(chatId: String, messageId: String, userId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId).child("deletedFor").child(userId)
+        msgRef.setValue(true)
+    }
+
+    override fun deleteMessageForEveryone(chatId: String, messageId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId)
+        msgRef.removeValue()
+    }
 
 
     override fun navigateToChatWithMessage(
