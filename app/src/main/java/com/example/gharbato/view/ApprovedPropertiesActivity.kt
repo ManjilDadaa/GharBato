@@ -15,8 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -42,17 +43,17 @@ import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.repository.UserRepoImpl
 import android.util.Log
 
-class PendingPropertiesActivity : ComponentActivity() {
+class ApprovedPropertiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { PendingPropertiesScreen() }
+        setContent { ApprovedPropertiesScreen() }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PendingPropertiesScreen() {
+fun ApprovedPropertiesScreen() {
     val context = LocalContext.current
     val userRepo = remember { UserRepoImpl() }
     val currentUserId = userRepo.getCurrentUserId()
@@ -71,20 +72,20 @@ fun PendingPropertiesScreen() {
                         try {
                             child.getValue(PropertyModel::class.java)?.copy(firebaseKey = child.key)
                         } catch (e: Exception) {
-                            Log.e("PendingProperties", "Error: ${e.message}")
+                            Log.e("ApprovedProperties", "Error: ${e.message}")
                             null
                         }
                     }
 
                     properties = allProperties.filter { property ->
-                        property.ownerId == currentUserId && property.status == PropertyStatus.PENDING
+                        property.ownerId == currentUserId && property.status == PropertyStatus.APPROVED
                     }.sortedByDescending { it.createdAt }
 
                     isLoading = false
                 }
 
                 override fun onCancelled(error: DatabaseError) {
-                    Log.e("PendingProperties", "Error: ${error.message}")
+                    Log.e("ApprovedProperties", "Error: ${error.message}")
                     isLoading = false
                 }
             })
@@ -98,7 +99,7 @@ fun PendingPropertiesScreen() {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Pending Properties", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text("Approved Properties", fontWeight = FontWeight.Bold, fontSize = 18.sp)
                         Text(
                             "${properties.size} ${if (properties.size == 1) "Property" else "Properties"}",
                             fontSize = 12.sp,
@@ -143,14 +144,14 @@ fun PendingPropertiesScreen() {
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No Pending Properties",
+                        text = "No Approved Properties",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF2C2C2C)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "You don't have any properties pending review.",
+                        text = "You don't have any approved properties yet.",
                         fontSize = 14.sp,
                         color = Color.Gray
                     )
@@ -166,7 +167,7 @@ fun PendingPropertiesScreen() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(properties, key = { it.firebaseKey ?: it.id }) { property ->
-                    PendingPropertyCard(property = property)
+                    ApprovedPropertyCard(property = property)
                 }
             }
         }
@@ -174,10 +175,11 @@ fun PendingPropertiesScreen() {
 }
 
 @Composable
-fun PendingPropertyCard(property: PropertyModel) {
+fun ApprovedPropertyCard(property: PropertyModel) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showStatusDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -257,8 +259,7 @@ fun PendingPropertyCard(property: PropertyModel) {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Surface(
@@ -275,13 +276,36 @@ fun PendingPropertyCard(property: PropertyModel) {
 
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFFF9800).copy(alpha = 0.1f)
+                            color = Color(0xFF4CAF50).copy(alpha = 0.1f)
                         ) {
                             Text(
                                 text = property.status,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFF9800),
+                                color = Color(0xFF4CAF50),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        
+                        val propertyStatus = property.propertyStatus ?: "AVAILABLE"
+                        val (statusColor, statusBgColor) = when(propertyStatus) {
+                            "SOLD" -> Color(0xFFD32F2F) to Color(0xFFD32F2F).copy(alpha = 0.1f)
+                            "ON_HOLD" -> Color(0xFFFF9800) to Color(0xFFFF9800).copy(alpha = 0.1f)
+                            else -> Color(0xFF2196F3) to Color(0xFF2196F3).copy(alpha = 0.1f)
+                        }
+                        
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = statusBgColor
+                        ) {
+                            Text(
+                                text = when(propertyStatus) {
+                                    "ON_HOLD" -> "ON HOLD"
+                                    else -> propertyStatus
+                                },
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -301,22 +325,18 @@ fun PendingPropertyCard(property: PropertyModel) {
                             text = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
-                                        imageVector = Icons.Default.Edit,
+                                        imageVector = Icons.Default.Pause,
                                         contentDescription = null,
-                                        tint = Blue,
+                                        tint = Color(0xFFFF9800),
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
-                                    Text("Edit Property", color = Color(0xFF2C2C2C))
+                                    Text("Change Status", color = Color(0xFF2C2C2C))
                                 }
                             },
                             onClick = {
                                 showMenu = false
-                                val intent = Intent(context, ListingActivity::class.java).apply {
-                                    putExtra("propertyId", property.firebaseKey)
-                                    putExtra("isEdit", true)
-                                }
-                                context.startActivity(intent)
+                                showStatusDialog = true
                             }
                         )
                         HorizontalDivider()
@@ -337,6 +357,217 @@ fun PendingPropertyCard(property: PropertyModel) {
                                 showMenu = false
                                 showDeleteDialog = true
                             }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = Color(0xFFD32F2F),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Delete Property?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete \"${property.title}\"? This action cannot be undone.",
+                    fontSize = 14.sp,
+                    color = Color(0xFF666666)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        property.firebaseKey?.let { key ->
+                            FirebaseDatabase.getInstance()
+                                .getReference("Property")
+                                .child(key)
+                                .removeValue()
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Property deleted successfully", Toast.LENGTH_SHORT).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(context, "Failed to delete property", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteDialog = false },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Cancel", color = Color(0xFF666666))
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+
+    if (showStatusDialog) {
+        var selectedStatus by remember { mutableStateOf(property.propertyStatus ?: "AVAILABLE") }
+        
+        AlertDialog(
+            onDismissRequest = { showStatusDialog = false },
+            title = {
+                Text(
+                    "Property Status",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "Current status for \"${property.title}\":",
+                        fontSize = 14.sp,
+                        color = Color(0xFF666666)
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    
+                    StatusToggleOption(
+                        label = "Available",
+                        icon = Icons.Default.CheckCircle,
+                        color = Color(0xFF4CAF50),
+                        isSelected = selectedStatus == "AVAILABLE",
+                        onClick = { selectedStatus = "AVAILABLE" }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    StatusToggleOption(
+                        label = "On Hold",
+                        icon = Icons.Default.Pause,
+                        color = Color(0xFFFF9800),
+                        isSelected = selectedStatus == "ON_HOLD",
+                        onClick = { selectedStatus = "ON_HOLD" }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    StatusToggleOption(
+                        label = "Sold",
+                        icon = Icons.Default.CheckCircle,
+                        color = Color(0xFFD32F2F),
+                        isSelected = selectedStatus == "SOLD",
+                        onClick = { selectedStatus = "SOLD" }
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showStatusDialog = false
+                        property.firebaseKey?.let { key ->
+                            FirebaseDatabase.getInstance()
+                                .getReference("Property")
+                                .child(key)
+                                .child("propertyStatus")
+                                .setValue(selectedStatus)
+                                .addOnSuccessListener {
+                                    val statusText = when(selectedStatus) {
+                                        "SOLD" -> "sold"
+                                        "ON_HOLD" -> "on hold"
+                                        else -> "available"
+                                    }
+                                    Toast.makeText(context, "Property marked as $statusText", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    shape = RoundedCornerShape(8.dp),
+                    enabled = selectedStatus != (property.propertyStatus ?: "AVAILABLE")
+                ) {
+                    Text("Update Status")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showStatusDialog = false },
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Cancel", color = Color(0xFF666666))
+                }
+            },
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+}
+
+@Composable
+fun StatusToggleOption(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) color.copy(alpha = 0.15f) else Color(0xFFF5F5F5),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (isSelected) 2.dp else 1.dp,
+            color = if (isSelected) color else Color(0xFFE0E0E0)
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) color else Color(0xFF9E9E9E),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    label,
+                    fontSize = 15.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSelected) color else Color(0xFF666666)
+                )
+            }
+            
+            if (isSelected) {
+                Surface(
+                    shape = androidx.compose.foundation.shape.CircleShape,
+                    color = color,
+                    modifier = Modifier.size(24.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Selected",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

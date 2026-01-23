@@ -42,6 +42,7 @@ fun AdminDeleteScreen() {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     var selectedTab by remember { mutableIntStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
 
     // Show success/error messages
     LaunchedEffect(uiState.successMessage, uiState.error) {
@@ -53,7 +54,49 @@ fun AdminDeleteScreen() {
         }
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "Delete Management",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Text(
+                            "Manage rejected properties",
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    }
+                },
+                actions = {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color.White.copy(alpha = 0.2f),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "${uiState.rejectedProperties.size}",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = ReportedRed
+                )
+            )
+        }
+    ) { padding ->
 
         Column(
             modifier = Modifier
@@ -61,52 +104,36 @@ fun AdminDeleteScreen() {
                 .background(Color(0xFFF5F5F5))
                 .padding(top = padding.calculateTopPadding())
         ) {
-            // Header
+            // Search Bar
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = ReportedRed,
-                shadowElevation = 4.dp
+                color = Color.White,
+                shadowElevation = 2.dp
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "Delete Management",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Text(
-                                "Manage rejected properties",
-                                fontSize = 14.sp,
-                                color = Color.White.copy(alpha = 0.8f)
-                            )
-                        }
-
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.2f)
-                        ) {
-                            Box(
-                                modifier = Modifier.padding(12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    "${uiState.rejectedProperties.size}",
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    placeholder = { Text(if (selectedTab == 0) "Search by title, location, or owner..." else "Search by title or owner...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, null, tint = Gray)
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Close, null)
                             }
                         }
-                    }
-                }
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color.Red,
+                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true
+                )
             }
 
             // Tabs
@@ -136,19 +163,32 @@ fun AdminDeleteScreen() {
                 modifier = Modifier.fillMaxSize()
             ) {
                 when (selectedTab) {
-                    0 -> RejectedPropertiesTab(
-                        properties = uiState.rejectedProperties,
-                        isLoading = uiState.isLoading,
-                        error = uiState.error,
-                        onDelete = { propertyId ->
-                            viewModel.deleteProperty(propertyId)
-                        },
-                        onRestore = { propertyId ->
-                            viewModel.restoreProperty(propertyId)
+                    0 -> {
+                        val filteredProperties = remember(uiState.rejectedProperties, searchQuery) {
+                            if (searchQuery.isBlank()) {
+                                uiState.rejectedProperties
+                            } else {
+                                uiState.rejectedProperties.filter {
+                                    it.title.contains(searchQuery, ignoreCase = true) ||
+                                    it.location.contains(searchQuery, ignoreCase = true) ||
+                                    it.ownerName.contains(searchQuery, ignoreCase = true)
+                                }
+                            }
                         }
-                    )
+                        RejectedPropertiesTab(
+                            properties = filteredProperties,
+                            isLoading = uiState.isLoading,
+                            error = uiState.error,
+                            onDelete = { propertyId ->
+                                viewModel.deleteProperty(propertyId)
+                            },
+                            onRestore = { propertyId ->
+                                viewModel.restoreProperty(propertyId)
+                            }
+                        )
+                    }
 
-                    1 -> DeleteHistoryTab()
+                    1 -> DeleteHistoryTab(searchQuery = searchQuery)
                 }
             }
         }
@@ -629,12 +669,23 @@ fun PropertyInfo(label: String, value: String) {
 }
 
 @Composable
-fun DeleteHistoryTab() {
+fun DeleteHistoryTab(searchQuery: String = "") {
     val viewModel: AdminDeleteViewModel = viewModel(
         factory = AdminDeleteViewModelFactory()
     )
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val filteredHistory = remember(uiState.deletionHistory, searchQuery) {
+        if (searchQuery.isBlank()) {
+            uiState.deletionHistory
+        } else {
+            uiState.deletionHistory.filter {
+                it.propertyTitle.contains(searchQuery, ignoreCase = true) ||
+                it.ownerName.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -670,12 +721,37 @@ fun DeleteHistoryTab() {
                     )
                 }
             }
+            filteredHistory.isEmpty() -> {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        Icons.Default.SearchOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp),
+                        tint = Gray.copy(alpha = 0.3f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "No results found",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Gray
+                    )
+                    Text(
+                        "Try a different search term",
+                        fontSize = 14.sp,
+                        color = Gray.copy(alpha = 0.7f)
+                    )
+                }
+            }
             else -> {
                 LazyColumn(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(uiState.deletionHistory) { record ->
+                    items(filteredHistory) { record ->
                         DeletionHistoryCard(record)
                     }
                 }

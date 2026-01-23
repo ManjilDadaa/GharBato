@@ -60,11 +60,17 @@ class MapLocationPickerActivity : ComponentActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // Get current location from intent (for editing)
+        val currentLatitude = intent.getDoubleExtra("CURRENT_LATITUDE", 27.7172)
+        val currentLongitude = intent.getDoubleExtra("CURRENT_LONGITUDE", 85.3240)
+
         // Check and request location permissions
         checkLocationPermission()
 
         setContent {
             MapLocationPickerScreen(
+                initialLatitude = currentLatitude,
+                initialLongitude = currentLongitude,
                 onLocationSelected = { lat, lng, address ->
                     val resultIntent = Intent().apply {
                         putExtra(RESULT_LATITUDE, lat)
@@ -108,6 +114,8 @@ class MapLocationPickerActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapLocationPickerScreen(
+    initialLatitude: Double = 27.7172,
+    initialLongitude: Double = 85.3240,
     onLocationSelected: (Double, Double, String) -> Unit,
     onCancel: () -> Unit,
     fusedLocationClient: FusedLocationProviderClient
@@ -115,8 +123,8 @@ fun MapLocationPickerScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Default location (Kathmandu)
-    var selectedLocation by remember { mutableStateOf(LatLng(27.7172, 85.3240)) }
+    // Initialize with provided location or default
+    var selectedLocation by remember { mutableStateOf(LatLng(initialLatitude, initialLongitude)) }
     var selectedAddress by remember { mutableStateOf("Select a location") }
     var isLoading by remember { mutableStateOf(false) }
 
