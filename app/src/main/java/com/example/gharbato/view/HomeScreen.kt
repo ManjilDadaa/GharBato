@@ -101,7 +101,7 @@ fun HomeScreen(
                     val intent = Intent(context, GeminiChatActivity::class.java)
                     context.startActivity(intent)
                 },
-                backgroundColor = Blue
+                backgroundColor = LightBlue
             )
         },
         floatingActionButtonPosition = FabPosition.End
