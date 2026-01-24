@@ -188,10 +188,7 @@ fun MyActivitiesScreen() {
                             isDarkMode = isDarkMode,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                    putExtra("FILTER_TYPE", "APPROVED")
-                                    putExtra("TITLE", "Approved Properties")
-                                })
+                                context.startActivity(Intent(context, ApprovedPropertiesActivity ::class.java))
                             }
                         )
                         StatCard(
@@ -249,10 +246,8 @@ fun MyActivitiesScreen() {
                         total = totalListings,
                         isDarkMode = isDarkMode,
                         onApprovedClick = {
-                            context.startActivity(Intent(context, FilteredPropertiesActivity::class.java).apply {
-                                putExtra("FILTER_TYPE", "APPROVED")
-                                putExtra("TITLE", "Approved Properties")
-                            })
+                            context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java)
+                            )
                         },
                         onPendingClick = {
                             context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
