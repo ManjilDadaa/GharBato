@@ -65,6 +65,8 @@ fun SavedScreenContent(
     val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F9FF)
     val errorColor = if (isDarkMode) Color(0xFFCF6679) else Color(0xFFE91E63)
     val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+    val soldBgColor = if (isDarkMode) Color(0xFFB71C1C).copy(alpha = 0.2f) else Color(0xFFD32F2F).copy(alpha = 0.1f)
+    val soldTextColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
 
     Scaffold(
         containerColor = backgroundColor,
@@ -151,7 +153,9 @@ fun SavedScreenContent(
                                     textColorPrimary = textColorPrimary,
                                     textColorSecondary = textColorSecondary,
                                     successColor = successColor,
-                                    primaryColor = primaryColor
+                                    primaryColor = primaryColor,
+                                    soldBgColor = soldBgColor,
+                                    soldTextColor = soldTextColor
                                 )
                             }
 
@@ -357,12 +361,16 @@ fun SavedPropertyCard(
     textColorPrimary: Color,
     textColorSecondary: Color,
     successColor: Color,
-    primaryColor: Color
+    primaryColor: Color,
+    soldBgColor: Color,
+    soldTextColor: Color
 ) {
+    val isSold = property.propertyStatus == "SOLD"
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCardClick),
+            .clickable(enabled = !isSold, onClick = onCardClick),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isDarkMode) 0.dp else 4.dp
         ),
@@ -428,6 +436,22 @@ fun SavedPropertyCard(
                             color = textColorSecondary,
                             maxLines = 1
                         )
+                    }
+
+                    if (isSold) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = soldBgColor
+                        ) {
+                            Text(
+                                text = "SOLD",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = soldTextColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
 

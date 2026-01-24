@@ -204,7 +204,10 @@ fun DetailsContentScreen(
             location = state.location,
             hasSelectedLocation = state.hasSelectedLocation,
             onPickLocation = {
-                val intent = android.content.Intent(context, MapLocationPickerActivity::class.java)
+                val intent = android.content.Intent(context, MapLocationPickerActivity::class.java).apply {
+                    putExtra("CURRENT_LATITUDE", state.latitude)
+                    putExtra("CURRENT_LONGITUDE", state.longitude)
+                }
                 mapLocationPickerLauncher.launch(intent)
             },
             isDarkMode = isDarkMode

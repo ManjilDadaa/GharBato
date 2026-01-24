@@ -37,6 +37,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.gharbato.utils.SystemBarUtils
 
 class PropertyDetailsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +50,7 @@ class PropertyDetailsActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             PropertyDetailsScreen(
                 propertyId = propertyId,
@@ -109,7 +111,7 @@ fun PropertyDetailsScreen(
                     Text(
                         "Property Details",
                         fontWeight = FontWeight.Bold,
-                        color = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
+                        color = onSurfaceColor
                     )
                 },
                 navigationIcon = {
@@ -131,6 +133,7 @@ fun PropertyDetailsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(backgroundColor)
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
@@ -140,6 +143,7 @@ fun PropertyDetailsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(backgroundColor)
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {

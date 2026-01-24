@@ -45,6 +45,7 @@ import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.ListingViewModel
 import com.google.firebase.database.FirebaseDatabase
+import com.example.gharbato.utils.SystemBarUtils
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +60,7 @@ class ListingActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 ListingBody(propertyId = propertyId, isEdit = isEdit)

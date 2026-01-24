@@ -309,7 +309,7 @@ class MessageRepositoryImpl : MessageRepository {
             userId = currentUserId,
             userName = currentUserName,
             isVideoCall = isVideoCall,
-            targetUserId = "",
+            targetUserId = targetUserId,
             isIncomingCall = false
         )
         activity.startActivity(intent)

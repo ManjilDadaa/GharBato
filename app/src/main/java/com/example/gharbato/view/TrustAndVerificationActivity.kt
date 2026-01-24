@@ -1,5 +1,6 @@
 package com.example.gharbato.view
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
@@ -39,6 +40,7 @@ import com.example.gharbato.repository.KycRepoImpl
 import com.example.gharbato.viewmodel.KycViewModel
 import com.example.gharbato.viewmodel.UserViewModelProvider
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,6 +51,7 @@ class TrustAndVerificationActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 TrustAndVerificationScreen()
@@ -69,7 +72,7 @@ fun TrustAndVerificationScreen() {
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
-    var trustScore by remember { mutableStateOf(30) }
+    var trustScore by remember { mutableStateOf(60) } // Default score with email and phone verified
     var showSuccessDialog by remember { mutableStateOf(false) }
     var hasSubmittedKyc by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -81,6 +84,12 @@ fun TrustAndVerificationScreen() {
     var submittedBackUrl by remember { mutableStateOf<String?>(null) }
     var submittedDocType by remember { mutableStateOf<String?>(null) }
     var rejectionReason by remember { mutableStateOf<String?>(null) }
+
+    // Constants for trust score calculation
+    val emailVerified = true // Email verified by default
+    val phoneVerified = true // Phone verified by default
+    val profilePhoto = false // Profile photo not set by default
+    val noReports = true // No reports by default
 
     val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF0061FF)
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
@@ -101,20 +110,35 @@ fun TrustAndVerificationScreen() {
                     submittedBackUrl = kycModel.backImageUrl
                     rejectionReason = kycModel.rejectionReason
 
-                    trustScore = when (kycModel.status) {
-                        "Approved" -> 70
-                        "Pending" -> 50
-                        "Rejected" -> 30
-                        else -> 30
-                    }
+                    // Calculate trust score based on status
+                    trustScore = calculateTrustScore(
+                        kycStatus = kycModel.status,
+                        emailVerified = emailVerified,
+                        phoneVerified = phoneVerified,
+                        profilePhoto = profilePhoto,
+                        noReports = noReports
+                    )
                 } else {
                     kycStatus = "Not Verified"
                     hasSubmittedKyc = false
-                    trustScore = 30
+                    trustScore = calculateTrustScore(
+                        kycStatus = "Not Verified",
+                        emailVerified = emailVerified,
+                        phoneVerified = phoneVerified,
+                        profilePhoto = profilePhoto,
+                        noReports = noReports
+                    )
                 }
             }
         } else {
             isLoading = false
+            trustScore = calculateTrustScore(
+                kycStatus = "Not Verified",
+                emailVerified = emailVerified,
+                phoneVerified = phoneVerified,
+                profilePhoto = profilePhoto,
+                noReports = noReports
+            )
         }
     }
 
@@ -296,7 +320,13 @@ fun TrustAndVerificationScreen() {
                                                 submittedFrontUrl = kycModel.frontImageUrl
                                                 submittedBackUrl = kycModel.backImageUrl
                                                 rejectionReason = null
-                                                trustScore = 50
+                                                trustScore = calculateTrustScore(
+                                                    kycStatus = kycModel.status,
+                                                    emailVerified = emailVerified,
+                                                    phoneVerified = phoneVerified,
+                                                    profilePhoto = profilePhoto,
+                                                    noReports = noReports
+                                                )
                                                 showSuccessDialog = true
                                             }
                                         }
@@ -338,12 +368,38 @@ fun TrustAndVerificationScreen() {
 
                 Spacer(modifier = Modifier.height(16.dp))
                 TrustSectionHeader("Profile Trust Meter", isDarkMode)
-                TrustMeterCard(trustScore, kycStatus, isDarkMode, cardBackgroundColor)
+                TrustMeterCard(
+                    score = trustScore,
+                    kycStatus = kycStatus,
+                    emailVerified = emailVerified,
+                    phoneVerified = phoneVerified,
+                    profilePhoto = profilePhoto,
+                    noReports = noReports,
+                    isDarkMode = isDarkMode,
+                    cardBackgroundColor = cardBackgroundColor
+                )
 
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }
+}
+
+// Helper function to calculate trust score
+fun calculateTrustScore(
+    kycStatus: String,
+    emailVerified: Boolean,
+    phoneVerified: Boolean,
+    profilePhoto: Boolean,
+    noReports: Boolean
+): Int {
+    var score = 0
+    if (kycStatus == "Approved") score += 40
+    if (noReports) score += 20
+    if (emailVerified) score += 10
+    if (profilePhoto) score += 15
+    if (phoneVerified) score += 15
+    return score
 }
 
 /* -------------------- UI COMPONENTS -------------------- */
@@ -777,7 +833,16 @@ fun UploadBox(
 }
 
 @Composable
-fun TrustMeterCard(score: Int, kycStatus: String, isDarkMode: Boolean, cardBackgroundColor: Color) {
+fun TrustMeterCard(
+    score: Int,
+    kycStatus: String,
+    emailVerified: Boolean,
+    phoneVerified: Boolean,
+    profilePhoto: Boolean,
+    noReports: Boolean,
+    isDarkMode: Boolean,
+    cardBackgroundColor: Color
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -803,8 +868,8 @@ fun TrustMeterCard(score: Int, kycStatus: String, isDarkMode: Boolean, cardBackg
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp,
                     color = when {
-                        score >= 70 -> Color(0xFF4CAF50)
-                        score >= 50 -> Color(0xFFFF9800)
+                        score >= 80 -> Color(0xFF4CAF50)
+                        score >= 60 -> Color(0xFFFF9800)
                         else -> Color(0xFFD32F2F)
                     }
                 )
@@ -819,8 +884,8 @@ fun TrustMeterCard(score: Int, kycStatus: String, isDarkMode: Boolean, cardBackg
                     .height(8.dp)
                     .clip(RoundedCornerShape(6.dp)),
                 color = when {
-                    score >= 70 -> Color(0xFF4CAF50)
-                    score >= 50 -> Color(0xFFFF9800)
+                    score >= 80 -> Color(0xFF4CAF50)
+                    score >= 60 -> Color(0xFFFF9800)
                     else -> Color(0xFFD32F2F)
                 },
                 trackColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE)
@@ -838,10 +903,10 @@ fun TrustMeterCard(score: Int, kycStatus: String, isDarkMode: Boolean, cardBackg
             Spacer(modifier = Modifier.height(12.dp))
 
             TrustItem("KYC Verified", 40, kycStatus == "Approved", isDarkMode)
-            TrustItem("No Reports", 20, true, isDarkMode)
-            TrustItem("Email Verified", 10, false, isDarkMode)
-            TrustItem("Profile Photo", 15, false, isDarkMode)
-            TrustItem("Phone Verified", 15, false, isDarkMode)
+            TrustItem("No Reports", 20, noReports, isDarkMode)
+            TrustItem("Email Verified", 10, emailVerified, isDarkMode)
+            TrustItem("Profile Photo", 15, profilePhoto, isDarkMode)
+            TrustItem("Phone Verified", 15, phoneVerified, isDarkMode)
         }
     }
 }

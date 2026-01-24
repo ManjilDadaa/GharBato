@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,26 +17,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        enableEdgeToEdge()
         ThemePreference.init(this)
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 ApplicationSettingsScreen()
@@ -67,7 +73,14 @@ fun ApplicationSettingsScreen() {
                 title = {
                     Text(
                         "Application Settings",
-                        color = MaterialTheme.colorScheme.onBackground
+                        style = TextStyle(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = if (isDarkMode)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                Color.DarkGray
+                        )
                     )
                 },
                 navigationIcon = {
@@ -75,14 +88,22 @@ fun ApplicationSettingsScreen() {
                         (context as ComponentActivity).finish()
                     }) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onBackground
+                            tint = if (isDarkMode)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                Color.DarkGray,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backgroundColor
+                ),
+                modifier = Modifier.shadow(
+                    elevation = 1.dp,
+                    spotColor = Color.LightGray
                 )
             )
         }
@@ -237,7 +258,7 @@ object ThemePreference {
     private const val KEY_DARK_MODE = "dark_mode"
 
     private val _isDarkModeState = MutableStateFlow(false)
-    val isDarkModeState: StateFlow<Boolean> = _isDarkModeState
+    val isDarkModeState: StateFlow<Boolean> = _isDarkModeState.asStateFlow()
 
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

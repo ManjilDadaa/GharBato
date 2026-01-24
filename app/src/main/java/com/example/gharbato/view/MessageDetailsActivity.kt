@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,9 @@ import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
@@ -94,6 +97,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.gharbato.utils.SystemBarUtils
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -146,6 +150,7 @@ class MessageDetailsActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 MessageDetailsScreen(
@@ -218,17 +223,44 @@ fun MessageDetailsScreen(
     }
 
     fun launchCamera() {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = context.getExternalFilesDir(null)
-        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+        try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val storageDir = context.getExternalFilesDir(null)
+            val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
 
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        currentPhotoUri = uri
-        cameraLauncher.launch(uri)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            currentPhotoUri = uri
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            Log.e("MessageDetails", "Error launching camera", e)
+            Toast.makeText(context, "Cannot open camera", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(context, "Camera permission needed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun checkAndLaunchCamera() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCamera()
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     LaunchedEffect(otherUserId) {
@@ -269,6 +301,7 @@ fun MessageDetailsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5))
         ) {
             LazyColumn(
@@ -307,7 +340,7 @@ fun MessageDetailsScreen(
                     isDarkMode = isDarkMode,
                     onMessageTextChange = { viewModel.onMessageTextChanged(it) },
                     onSendClick = { viewModel.sendTextMessage() },
-                    onCameraClick = { launchCamera() },
+                    onCameraClick = { checkAndLaunchCamera() },
                     onAttachClick = { imagePickerLauncher.launch("image/*") }
                 )
             }
@@ -567,13 +600,29 @@ fun MessageBubble(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else {
-                        if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                    },
-                    fontSize = 11.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = formatTimestamp(message.timestamp),
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else {
+                            if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        },
+                        fontSize = 11.sp
+                    )
+
+                    if (isCurrentUser) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Check,
+                            contentDescription = if (message.isRead) "Seen" else "Delivered",
+                            tint = if (message.isRead) Color.White else Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -787,8 +836,7 @@ fun MessageInput(
             IconButton(
                 onClick = onSendClick,
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(Blue, CircleShape)
+                    .size(48.dp).background(Blue, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
@@ -799,10 +847,8 @@ fun MessageInput(
         }
     }
 }
-
 private fun formatTimestamp(timestamp: Long): String {
     if (timestamp == 0L) return ""
-
     val calendar = Calendar.getInstance()
     calendar.timeInMillis = timestamp
 
@@ -820,12 +866,10 @@ private fun formatTimestamp(timestamp: Long): String {
         }
     }
 }
-
 private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
             cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
-
 private fun isYesterday(cal1: Calendar, cal2: Calendar): Boolean {
     val yesterday = cal2.clone() as Calendar
     yesterday.add(Calendar.DAY_OF_YEAR, -1)

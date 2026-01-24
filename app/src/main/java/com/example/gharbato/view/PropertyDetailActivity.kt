@@ -50,6 +50,7 @@ import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.util.PropertyViewTracker
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -109,15 +110,15 @@ class PropertyDetailActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-            GharBatoTheme(darkTheme = isDarkMode) {
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            uiState.selectedProperty?.let { property ->
+                LaunchedEffect(property.id) {
+                    viewModel.loadSimilarProperties(property)
+                }
 
-                uiState.selectedProperty?.let { property ->
-                    LaunchedEffect(property.id) {
-                        viewModel.loadSimilarProperties(property)
-                    }
-
+                GharBatoTheme(darkTheme = isDarkMode) {
                     PropertyDetailScreen(
                         property = property,
                         similarProperties = uiState.similarProperties,
@@ -137,16 +138,16 @@ class PropertyDetailActivity : ComponentActivity() {
                         },
                         isDarkMode = isDarkMode
                     )
-                } ?: run {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator()
-                        } else {
-                            Text("Property not found")
-                        }
+                }
+            } ?: run {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator()
+                    } else {
+                        Text("Property not found")
                     }
                 }
             }
@@ -169,6 +170,30 @@ fun PropertyDetailScreen(
     var showReportDialog by remember { mutableStateOf(false) }
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
     val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
+
+    if (showReportDialog) {
+        ReportListingDialog(
+            onDismiss = { showReportDialog = false },
+            onSubmit = { reason, details ->
+                val report = ReportedProperty(
+                    reportId = "",
+                    propertyId = property.id,
+                    propertyTitle = property.developer,
+                    propertyImage = property.images.values.flatten().firstOrNull() ?: "",
+                    ownerId = property.ownerId,
+                    ownerName = property.ownerName.ifBlank { property.developer },
+                    reportedByName = "",
+                    reportedBy = getCurrentUserId(),
+                    reportReason = reason,
+                    reportDetails = details,
+                    reportedAt = System.currentTimeMillis(),
+                    status = ReportStatus.PENDING
+                )
+                reportViewModel.submitReport(report)
+                showReportDialog = false
+            }
+        )
+    }
 
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
     val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White

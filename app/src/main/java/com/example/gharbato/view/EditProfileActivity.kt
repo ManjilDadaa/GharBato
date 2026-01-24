@@ -37,11 +37,17 @@ import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
+import com.example.gharbato.utils.SystemBarUtils
 
 class EditProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { EditProfileScreen() }
+        ThemePreference.init(this)
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            EditProfileScreen()
+        }
     }
 }
 

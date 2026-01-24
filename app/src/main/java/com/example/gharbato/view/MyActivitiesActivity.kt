@@ -34,6 +34,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.repository.UserRepoImpl
 import android.util.Log
+import com.example.gharbato.utils.SystemBarUtils
 
 class MyActivitiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,6 +46,8 @@ class MyActivitiesActivity : ComponentActivity() {
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 MyActivitiesScreen()
