@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,15 +33,16 @@ class TermsAndPoliciesActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize the theme preference
+        // Initialize the theme preference - from 1st code
         ThemePreference.init(this)
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            // SystemBarUtils from 1st code
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
-                TermsAndConditionsScreen(isDarkMode)
+                TermsAndConditionsScreen()
             }
         }
     }
@@ -51,10 +50,11 @@ class TermsAndPoliciesActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TermsAndConditionsScreen(isDarkMode: Boolean) {
+fun TermsAndConditionsScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
-    // Theme-aware colors
+    // Theme-aware colors - from 1st code with improvements
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
     val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val onBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
@@ -64,6 +64,7 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
     val cardBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF8F9FA)
     val cardTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF4A4A4A)
     val blueColor = if (isDarkMode) Color(0xFF90CAF9) else Blue
+    val darkGray = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.DarkGray
 
     Scaffold(
         containerColor = backgroundColor,
@@ -88,15 +89,13 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = onSurfaceColor,
+                            tint = darkGray,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = surfaceColor,
-                    navigationIconContentColor = onSurfaceColor,
-                    titleContentColor = onSurfaceColor
+                    containerColor = surfaceColor
                 ),
                 modifier = Modifier.shadow(
                     elevation = if (isDarkMode) 0.dp else 1.dp,
@@ -117,7 +116,7 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
-                // Welcome Title
+                // Welcome Title - from 1st and 3rd codes
                 Text(
                     text = "Welcome to GharBato",
                     style = TextStyle(
@@ -138,7 +137,7 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 
-                // Terms Content with better formatting
+                // Terms Content with better formatting - from 1st and 3rd codes
                 Column(
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -252,7 +251,7 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
                         dividerColor = dividerColor
                     )
 
-                    // Final Note
+                    // Final Note - with dark mode support from 1st code
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -260,7 +259,10 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
                         colors = CardDefaults.cardColors(
                             containerColor = cardBackgroundColor
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(
+                            defaultElevation = if (isDarkMode) 0.dp else 2.dp
+                        )
                     ) {
                         Column(
                             modifier = Modifier
@@ -282,7 +284,7 @@ fun TermsAndConditionsScreen(isDarkMode: Boolean) {
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Back to Profile Button
+                // Back to Profile Button - from 1st code
                 Button(
                     onClick = { (context as ComponentActivity).finish() },
                     modifier = Modifier.fillMaxWidth(),

@@ -56,7 +56,7 @@ fun SavedScreenContent(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Colors based on theme
+    // Colors based on theme - from 1st and 2nd codes
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA)
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
@@ -120,7 +120,7 @@ fun SavedScreenContent(
                 // List of Saved Properties
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Count
+                        // Count - improved from 1st and 2nd codes
                         Text(
                             text = "${uiState.savedProperties.size} saved ${if (uiState.savedProperties.size == 1) "property" else "properties"}",
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -178,7 +178,7 @@ fun SavedScreenContent(
                 }
             }
 
-            // Error Message
+            // Error Message - improved theming from 1st and 2nd codes
             uiState.error?.let { error ->
                 Snackbar(
                     modifier = Modifier
@@ -214,7 +214,7 @@ fun EmptySavedState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Heart Icon
+        // Heart Icon - with dark mode support from 1st code
         Surface(
             modifier = Modifier.size(120.dp),
             color = if (isDarkMode) errorColor.copy(alpha = 0.1f) else Color(0xFFFFEBEE),
@@ -438,6 +438,7 @@ fun SavedPropertyCard(
                         )
                     }
 
+                    // SOLD badge with dark mode support from 1st code
                     if (isSold) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
@@ -477,7 +478,7 @@ fun SavedPropertyCard(
                 }
             }
 
-            // Remove Button
+            // Remove Button - red color preserved from all codes
             IconButton(
                 onClick = onRemoveClick,
                 modifier = Modifier

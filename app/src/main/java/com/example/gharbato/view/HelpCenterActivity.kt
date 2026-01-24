@@ -9,12 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -37,11 +34,12 @@ class HelpCenterActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize the theme preference
+        // Initialize the theme preference - from 1st code
         ThemePreference.init(this)
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            // SystemBarUtils from 1st code
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
@@ -61,8 +59,16 @@ fun HelpCenterScreen() {
     // State to track which accordion is expanded (null = none expanded)
     var expandedIndex by remember { mutableStateOf<Int?>(null) }
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val subtitleColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+    val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val helpCardColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color(0xFFF8F9FA)
+    val dividerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEEEEEE)
+    val darkGray = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.DarkGray
+
     Scaffold(
-        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
@@ -71,10 +77,7 @@ fun HelpCenterScreen() {
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = if (isDarkMode)
-                                MaterialTheme.colorScheme.onBackground
-                            else
-                                Color.DarkGray
+                            color = textColor
                         )
                     )
                 },
@@ -85,27 +88,13 @@ fun HelpCenterScreen() {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = if (isDarkMode)
-                                MaterialTheme.colorScheme.onBackground
-                            else
-                                Color.DarkGray,
+                            tint = darkGray,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isDarkMode)
-                        MaterialTheme.colorScheme.background
-                    else
-                        Color.White,
-                    navigationIconContentColor = if (isDarkMode)
-                        MaterialTheme.colorScheme.onBackground
-                    else
-                        Color.DarkGray,
-                    titleContentColor = if (isDarkMode)
-                        MaterialTheme.colorScheme.onBackground
-                    else
-                        Color.DarkGray
+                    containerColor = backgroundColor
                 ),
                 modifier = Modifier.shadow(
                     elevation = if (isDarkMode) 0.dp else 1.dp,
@@ -131,10 +120,7 @@ fun HelpCenterScreen() {
                     style = TextStyle(
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDarkMode)
-                            MaterialTheme.colorScheme.onBackground
-                        else
-                            Color.Black
+                        color = textColor
                     ),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -144,10 +130,7 @@ fun HelpCenterScreen() {
                     style = TextStyle(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Normal,
-                        color = if (isDarkMode)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else
-                            Color(0xFF666666)
+                        color = subtitleColor
                     ),
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
@@ -203,12 +186,12 @@ fun HelpCenterScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isDarkMode)
-                        MaterialTheme.colorScheme.surface
-                    else
-                        Color(0xFFF8F9FA)
+                    containerColor = helpCardColor
                 ),
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (isDarkMode) 0.dp else 2.dp
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -221,10 +204,7 @@ fun HelpCenterScreen() {
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isDarkMode)
-                                MaterialTheme.colorScheme.onSurface
-                            else
-                                Color.Black
+                            color = textColor
                         ),
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
@@ -234,10 +214,7 @@ fun HelpCenterScreen() {
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
-                            color = if (isDarkMode)
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            else
-                                Color(0xFF666666)
+                            color = subtitleColor
                         ),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                         modifier = Modifier.padding(bottom = 16.dp)
@@ -266,12 +243,11 @@ fun HelpAccordion(
             .clickable { onToggle() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode)
-                MaterialTheme.colorScheme.surface
-            else
-                Color.White
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDarkMode) 0.dp else 2.dp
+        )
     ) {
         Column(
             modifier = Modifier
@@ -298,10 +274,7 @@ fun HelpAccordion(
                     style = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isDarkMode)
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            Color.Black
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                     ),
                     modifier = Modifier.weight(1f)
                 )
@@ -328,10 +301,7 @@ fun HelpAccordion(
                         .padding(top = 16.dp, start = 32.dp)
                 ) {
                     Divider(
-                        color = if (isDarkMode)
-                            MaterialTheme.colorScheme.surfaceVariant
-                        else
-                            Color(0xFFEEEEEE),
+                        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEEEEEE),
                         thickness = 1.dp,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
@@ -341,10 +311,7 @@ fun HelpAccordion(
                         style = TextStyle(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Normal,
-                            color = if (isDarkMode)
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            else
-                                Color(0xFF666666),
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666),
                             lineHeight = 20.sp
                         )
                     )

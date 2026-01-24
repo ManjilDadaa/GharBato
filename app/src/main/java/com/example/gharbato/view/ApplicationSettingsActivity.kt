@@ -6,17 +6,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -37,11 +33,11 @@ class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        ThemePreference.init(this)
+        ThemePreference.init(this) // Your initialization
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode) // Your system bar utility
 
             GharBatoTheme(darkTheme = isDarkMode) {
                 ApplicationSettingsScreen()
@@ -63,8 +59,11 @@ fun ApplicationSettingsScreen() {
         appVersion = getAppVersion(context)
     }
 
-    val backgroundColor =
-        if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+    val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val subtitleColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+    val dividerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFEEEEEE)
 
     Scaffold(
         containerColor = backgroundColor,
@@ -84,9 +83,11 @@ fun ApplicationSettingsScreen() {
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        (context as ComponentActivity).finish()
-                    }) {
+                    IconButton(
+                        onClick = {
+                            (context as ComponentActivity).finish()
+                        }
+                    ) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
@@ -103,63 +104,321 @@ fun ApplicationSettingsScreen() {
                 ),
                 modifier = Modifier.shadow(
                     elevation = 1.dp,
-                    spotColor = Color.LightGray
+                    spotColor = if (isDarkMode) Color.Transparent else Color.LightGray
                 )
             )
         }
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(backgroundColor)
-                .padding(padding)
-                .padding(16.dp)
+                .padding(paddingValues)
         ) {
-
-            SettingItem(
-                icon = R.drawable.baseline_dark_mode_24,
-                title = "Dark Mode",
-                subtitle = if (isDarkMode) "Enabled" else "Disabled",
-                iconColor = Blue
+            // App Settings Section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardColor
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
             ) {
-                ThemePreference.toggleDarkMode(context)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "App Preferences",
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = subtitleColor
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
+                    )
+
+                    // Dark Mode Setting - Using your ThemePreference system
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { ThemePreference.toggleDarkMode(context) }
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_dark_mode_24),
+                                contentDescription = "Dark Mode",
+                                tint = Blue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Dark Mode",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = textColor
+                                )
+                            )
+                            Text(
+                                text = if (isDarkMode) "Enabled" else "Disabled",
+                                style = TextStyle(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = subtitleColor
+                                )
+                            )
+                        }
+
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { ThemePreference.setDarkMode(context, it) },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Blue,
+                                uncheckedThumbColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFF1F1F1),
+                                uncheckedTrackColor = if (isDarkMode) Color(0xFF666666) else Color(0xFFCCCCCC)
+                            )
+                        )
+                    }
+
+                    Divider(
+                        color = dividerColor,
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+
+                    // Language Setting
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedLanguage = if (selectedLanguage == "English") "Spanish" else "English"
+                            }
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_language_24),
+                                contentDescription = "Language",
+                                tint = Blue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Language",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = textColor
+                                )
+                            )
+                            Text(
+                                text = selectedLanguage,
+                                style = TextStyle(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = subtitleColor
+                                )
+                            )
+                        }
+
+                        Icon(
+                            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
+                            contentDescription = "Arrow",
+                            tint = if (isDarkMode) Color(0xFF888888) else Color(0xFFCCCCCC),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
 
-            SettingItem(
-                icon = R.drawable.baseline_language_24,
-                title = "Language",
-                subtitle = selectedLanguage,
-                iconColor = Blue
+            // App Info Section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardColor
+                ),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
             ) {
-                selectedLanguage =
-                    if (selectedLanguage == "English") "Spanish" else "English"
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "App Information",
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = subtitleColor
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
+                    )
+
+                    // App Name
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_info_24),
+                                contentDescription = "App Name",
+                                tint = Blue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "App Name",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = textColor
+                                )
+                            )
+                            Text(
+                                text = appName,
+                                style = TextStyle(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = subtitleColor
+                                )
+                            )
+                        }
+                    }
+
+                    Divider(
+                        color = dividerColor,
+                        thickness = 1.dp,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+
+                    // App Version
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    shape = RoundedCornerShape(12.dp)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_info_24),
+                                contentDescription = "Version",
+                                tint = Blue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Version",
+                                style = TextStyle(
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = textColor
+                                )
+                            )
+                            Text(
+                                text = appVersion,
+                                style = TextStyle(
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = subtitleColor
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
+            // Footer Note
             Text(
-                "App Info",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 12.dp)
+                text = "App settings are saved automatically",
+                style = TextStyle(
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = if (isDarkMode) Color(0xFFAAAAAA) else Color(0xFF999999)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .align(Alignment.CenterHorizontally),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
-            SettingItem(
-                icon = R.drawable.baseline_info_24,
-                title = "App Name",
-                subtitle = appName,
-                iconColor = Blue
-            ) {}
-
-            SettingItem(
-                icon = R.drawable.baseline_info_24,
-                title = "Version",
-                subtitle = appVersion,
-                iconColor = Blue
-            ) {}
-
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -170,86 +429,6 @@ fun getAppVersion(context: Context): String {
         packageInfo.versionName ?: "N/A"
     } catch (e: Exception) {
         "N/A"
-    }
-}
-
-@Composable
-fun SettingItem(
-    icon: Int,
-    title: String,
-    subtitle: String? = "",
-    iconColor: Color,
-    onClick: () -> Unit
-) {
-    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-            )
-            .border(
-                width = 1.dp,
-                color = if (isDarkMode) Color.Transparent else Color(0xFFF0F0F0),
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clickable { onClick() }
-            .padding(16.dp)
-    ) {
-
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(id = icon),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Medium,
-                color = if (isDarkMode)
-                    MaterialTheme.colorScheme.onSurface
-                else
-                    Color(0xFF2C2C2C)
-            )
-
-            if (!subtitle.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    subtitle,
-                    fontSize = 12.sp,
-                    color = if (isDarkMode)
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    else
-                        Color(0xFF999999)
-                )
-            }
-        }
-
-        Icon(
-            painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
-            contentDescription = null,
-            tint = if (isDarkMode)
-                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            else
-                Color(0xFFCCCCCC),
-            modifier = Modifier.size(16.dp)
-        )
     }
 }
 
