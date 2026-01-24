@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,8 +47,10 @@ import com.example.gharbato.model.*
 import com.example.gharbato.repository.MessageRepositoryImpl
 import com.example.gharbato.repository.NearbyPlacesRepositoryImpl
 import com.example.gharbato.repository.ReportPropertyRepoImpl
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.ui.view.FullMapActivity
 import com.example.gharbato.util.PropertyViewTracker
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.MessageViewModel
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
@@ -57,13 +60,34 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
 import kotlin.collections.emptyMap
-import com.example.gharbato.utils.SystemBarUtils
-
 
 private fun getCurrentUserId(): String {
     return FirebaseAuth.getInstance().currentUser?.uid ?: ""
 }
 
+fun getAmenityIconForPropertyDetail(amenity: String): ImageVector {
+    return when (amenity.lowercase()) {
+        "wifi" -> Icons.Default.Wifi
+        "parking" -> Icons.Default.DirectionsCar
+        "swimming pool" -> Icons.Default.Pool
+        "gym" -> Icons.Default.FitnessCenter
+        "garden" -> Icons.Default.Yard
+        "security" -> Icons.Default.Security
+        "elevator" -> Icons.Default.Elevator
+        "air conditioning" -> Icons.Default.AcUnit
+        "heating" -> Icons.Default.Thermostat
+        "laundry" -> Icons.Default.LocalLaundryService
+        "balcony" -> Icons.Default.Balcony
+        "terrace" -> Icons.Default.Deck
+        "garage" -> Icons.Default.Garage
+        "concierge" -> Icons.Default.SupportAgent
+        "pet friendly" -> Icons.Default.Pets
+        "furnished" -> Icons.Default.Weekend
+        "unfurnished" -> Icons.Default.Weekend
+        "partially furnished" -> Icons.Default.Weekend
+        else -> Icons.Default.CheckCircle
+    }
+}
 
 class PropertyDetailActivity : ComponentActivity() {
 
@@ -74,6 +98,7 @@ class PropertyDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         ThemePreference.init(this)
 
         val propertyId = intent.getIntExtra("propertyId", -1)
@@ -93,24 +118,27 @@ class PropertyDetailActivity : ComponentActivity() {
                     viewModel.loadSimilarProperties(property)
                 }
 
-                PropertyDetailScreen(
-                    property = property,
-                    similarProperties = uiState.similarProperties,
-                    isLoadingSimilar = uiState.isLoadingSimilar,
-                    onBack = {
-                        viewModel.clearSimilarProperties()
-                        finish()
-                    },
-                    onFavoriteToggle = { prop ->
-                        viewModel.toggleFavorite(prop)
-                    },
-                    onSimilarPropertyClick = { similarProperty ->
-                        val intent = Intent(this@PropertyDetailActivity, PropertyDetailActivity::class.java).apply {
-                            putExtra("propertyId", similarProperty.id)
-                        }
-                        startActivity(intent)
-                    }
-                )
+                GharBatoTheme(darkTheme = isDarkMode) {
+                    PropertyDetailScreen(
+                        property = property,
+                        similarProperties = uiState.similarProperties,
+                        isLoadingSimilar = uiState.isLoadingSimilar,
+                        onBack = {
+                            viewModel.clearSimilarProperties()
+                            finish()
+                        },
+                        onFavoriteToggle = { prop ->
+                            viewModel.toggleFavorite(prop)
+                        },
+                        onSimilarPropertyClick = { similarProperty ->
+                            val intent = Intent(this@PropertyDetailActivity, PropertyDetailActivity::class.java).apply {
+                                putExtra("propertyId", similarProperty.id)
+                            }
+                            startActivity(intent)
+                        },
+                        isDarkMode = isDarkMode
+                    )
+                }
             } ?: run {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -135,7 +163,8 @@ fun PropertyDetailScreen(
     isLoadingSimilar: Boolean,
     onBack: () -> Unit,
     onFavoriteToggle: (PropertyModel) -> Unit,
-    onSimilarPropertyClick: (PropertyModel) -> Unit
+    onSimilarPropertyClick: (PropertyModel) -> Unit,
+    isDarkMode: Boolean
 ) {
     val context = LocalContext.current
     var showReportDialog by remember { mutableStateOf(false) }
@@ -166,6 +195,16 @@ fun PropertyDetailScreen(
         )
     }
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val onBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
+    val outlineVariantColor = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE0E0E0)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val successColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
+
     LaunchedEffect(reportUiState.successMessage) {
         reportUiState.successMessage?.let { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -181,11 +220,12 @@ fun PropertyDetailScreen(
     }
 
     Scaffold(
-        containerColor = Color.White
+        containerColor = backgroundColor
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundColor)
                 .padding(paddingValues)
         ) {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -195,34 +235,61 @@ fun PropertyDetailScreen(
                         property = property,
                         isFavorite = property.isFavorite,
                         onFavoriteClick = { onFavoriteToggle(property) },
-                        onBackClick = onBack
+                        onBackClick = onBack,
+                        surfaceColor = surfaceColor,
+                        onSurfaceColor = onSurfaceColor,
+                        isDarkMode = isDarkMode
                     )
                 }
 
                 // Status Chips
                 item {
-                    StatusChipsRow()
+                    StatusChipsRow(isDarkMode = isDarkMode)
                 }
 
                 // Price Section
                 item {
-                    PriceSection(property = property)
+                    PriceSection(
+                        property = property,
+                        surfaceColor = surfaceColor,
+                        surfaceVariantColor = surfaceVariantColor,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        outlineVariantColor = outlineVariantColor,
+                        isDarkMode = isDarkMode,
+                        primaryColor = primaryColor
+                    )
                 }
 
                 // Property Details
                 item {
-                    PropertyDetailsSection(property = property)
+                    PropertyDetailsSection(
+                        property = property,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor
+                    )
                 }
 
                 // Building Info
                 item {
-                    BuildingInfoSection(property = property)
+                    BuildingInfoSection(
+                        property = property,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        isDarkMode = isDarkMode
+                    )
                 }
 
                 // Description Section
                 if (!property.description.isNullOrBlank()) {
                     item {
-                        DescriptionSection(property = property)
+                        DescriptionSection(
+                            property = property,
+                            surfaceVariantColor = surfaceVariantColor,
+                            onBackgroundColor = onBackgroundColor,
+                            onSurfaceVariantColor = onSurfaceVariantColor,
+                            outlineVariantColor = outlineVariantColor
+                        )
                     }
                 }
 
@@ -237,48 +304,86 @@ fun PropertyDetailScreen(
                                 putExtra("propertyName", property.developer)
                             }
                             context.startActivity(intent)
-                        }
+                        },
+                        surfaceColor = surfaceColor,
+                        primaryColor = primaryColor
                     )
                 }
 
                 // Contact Owner Section
                 item {
-                    ContactOwnerSection(property = property)
+                    ContactOwnerSection(
+                        property = property,
+                        surfaceColor = surfaceColor,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        outlineVariantColor = outlineVariantColor,
+                        isDarkMode = isDarkMode,
+                        successColor = successColor
+                    )
                 }
 
                 // Notes Section
                 item {
-                    NotesSection()
+                    NotesSection(
+                        surfaceVariantColor = surfaceVariantColor,
+                        onSurfaceColor = onSurfaceColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        isDarkMode = isDarkMode
+                    )
                 }
 
                 // Property Details Info
                 item {
-                    PropertyDetailsInfoSection(property = property)
+                    PropertyDetailsInfoSection(
+                        property = property,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor
+                    )
                 }
 
                 // Rental Terms
                 item {
-                    RentalTermsSection(property = property)
+                    RentalTermsSection(
+                        property = property,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor
+                    )
                 }
 
                 // Amenities
                 item {
-                    AmenitiesSection(property = property)
+                    AmenitiesSection(
+                        property = property,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceColor = onSurfaceColor,
+                        successColor = successColor
+                    )
                 }
 
-                // Similar Properties Section (NEW - FUNCTIONAL)
+                // Similar Properties Section
                 item {
                     SimilarPropertiesSection(
                         similarProperties = similarProperties,
                         isLoading = isLoadingSimilar,
-                        onPropertyClick = onSimilarPropertyClick
+                        onPropertyClick = onSimilarPropertyClick,
+                        surfaceColor = surfaceColor,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        outlineVariantColor = outlineVariantColor,
+                        successColor = successColor,
+                        primaryColor = primaryColor,
+                        isDarkMode = isDarkMode
                     )
                 }
 
                 // Report Section
                 item {
                     ReportSection(
-                        onReportClick = { showReportDialog = true }
+                        onReportClick = { showReportDialog = true },
+                        backgroundColor = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFCE4EC),
+                        onBackgroundColor = onBackgroundColor,
+                        isDarkMode = isDarkMode
                     )
                 }
 
@@ -288,11 +393,16 @@ fun PropertyDetailScreen(
                 }
             }
 
-            BottomActionButtons(property = property)
+            BottomActionButtons(
+                property = property,
+                surfaceColor = surfaceColor,
+                outlineVariantColor = outlineVariantColor,
+                successColor = successColor,
+                primaryColor = primaryColor
+            )
         }
     }
 }
-
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -300,7 +410,10 @@ fun PropertyImageSection(
     property: PropertyModel,
     isFavorite: Boolean,
     onFavoriteClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    surfaceColor: Color,
+    onSurfaceColor: Color,
+    isDarkMode: Boolean
 ) {
     val context = LocalContext.current
 
@@ -346,15 +459,14 @@ fun PropertyImageSection(
                 onClick = onBackClick,
                 modifier = Modifier
                     .size(40.dp)
-                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                    .background(surfaceColor.copy(alpha = if (isDarkMode) 0.8f else 0.9f), CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.Black
+                    tint = onSurfaceColor
                 )
             }
-
 
             Row {
                 // Favorite Button
@@ -362,12 +474,12 @@ fun PropertyImageSection(
                     onClick = onFavoriteClick,
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                        .background(surfaceColor.copy(alpha = if (isDarkMode) 0.8f else 0.9f), CircleShape)
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Favorite",
-                        tint = if (isFavorite) Color.Red else Color.Black
+                        tint = if (isFavorite) Color.Red else onSurfaceColor
                     )
                 }
 
@@ -379,12 +491,12 @@ fun PropertyImageSection(
                     },
                     modifier = Modifier
                         .size(40.dp)
-                        .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                        .background(surfaceColor.copy(alpha = if (isDarkMode) 0.8f else 0.9f), CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = "Share",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
             }
@@ -464,7 +576,14 @@ private fun shareProperty(context: Context, property: PropertyModel) {
 }
 
 @Composable
-fun StatusChipsRow() {
+fun StatusChipsRow(isDarkMode: Boolean) {
+    val featuredBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFECB3)
+    val featuredText = if (isDarkMode) Color(0xFFFFD54F) else Color(0xFFFF6F00)
+    val verifiedBg = if (isDarkMode) Color(0xFF1B3221) else Color(0xFFE8F5E9)
+    val verifiedText = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+    val ownerBg = if (isDarkMode) Color(0xFF1A237E) else Color(0xFFE3F2FD)
+    val ownerText = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+
     LazyRow(
         modifier = Modifier.padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -473,23 +592,23 @@ fun StatusChipsRow() {
             StatusChip(
                 text = "Featured",
                 icon = Icons.Default.Star,
-                backgroundColor = Color(0xFFFFECB3),
-                textColor = Color(0xFFFF6F00)
+                backgroundColor = featuredBg,
+                textColor = featuredText
             )
         }
         item {
             StatusChip(
                 text = "Verified",
                 icon = Icons.Default.CheckCircle,
-                backgroundColor = Color(0xFFE8F5E9),
-                textColor = Color(0xFF4CAF50)
+                backgroundColor = verifiedBg,
+                textColor = verifiedText
             )
         }
         item {
             StatusChip(
                 text = "Owner",
-                backgroundColor = Color(0xFFE3F2FD),
-                textColor = Color(0xFF2196F3)
+                backgroundColor = ownerBg,
+                textColor = ownerText
             )
         }
     }
@@ -529,9 +648,17 @@ fun StatusChip(
     }
 }
 
-
 @Composable
-fun PriceSection(property: PropertyModel) {
+fun PriceSection(
+    property: PropertyModel,
+    surfaceColor: Color,
+    surfaceVariantColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    outlineVariantColor: Color,
+    isDarkMode: Boolean,
+    primaryColor: Color
+) {
     val context = LocalContext.current
     var offerPrice by remember { mutableStateOf("") }
 
@@ -541,13 +668,13 @@ fun PriceSection(property: PropertyModel) {
                 text = property.price,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = onBackgroundColor
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = "Info",
-                tint = Color.Gray,
+                tint = onSurfaceVariantColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -555,24 +682,38 @@ fun PriceSection(property: PropertyModel) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Surface(
-            color = Color(0xFFF5F5F5),
+            color = surfaceVariantColor,
             shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, outlineVariantColor)
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = "Make an offer",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = onSurfaceVariantColor
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = offerPrice,
                     onValueChange = { offerPrice = it },
-                    placeholder = { Text("e.g., NPR 12,000/month") },
+                    placeholder = {
+                        Text(
+                            "e.g., NPR 12,000/month",
+                            color = onSurfaceVariantColor
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Color.White
+                        unfocusedContainerColor = surfaceColor,
+                        focusedContainerColor = surfaceColor,
+                        unfocusedTextColor = onBackgroundColor,
+                        focusedTextColor = onBackgroundColor,
+                        unfocusedPlaceholderColor = onSurfaceVariantColor,
+                        focusedPlaceholderColor = onSurfaceVariantColor,
+                        unfocusedBorderColor = outlineVariantColor,
+                        focusedBorderColor = primaryColor,
+                        cursorColor = primaryColor
                     ),
                     trailingIcon = {
                         IconButton(
@@ -592,7 +733,7 @@ fun PriceSection(property: PropertyModel) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send Offer",
-                                tint = if (offerPrice.isNotBlank()) Color(0xFF2196F3) else Color.Gray
+                                tint = if (offerPrice.isNotBlank()) primaryColor else onSurfaceVariantColor
                             )
                         }
                     }
@@ -624,42 +765,68 @@ private fun sendOfferMessage(
     )
 }
 
-
-
 @Composable
-fun PropertyDetailsSection(property: PropertyModel) {
+fun PropertyDetailsSection(
+    property: PropertyModel,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        PropertyDetailItem(label = property.sqft, value = "Area")
-        PropertyDetailItem(label = "${property.bedrooms} Bedroom", value = "Apartment")
-        PropertyDetailItem(label = "${property.bathrooms} Bath", value = "Bathroom")
+        PropertyDetailItem(
+            label = property.sqft,
+            value = "Area",
+            onBackgroundColor = onBackgroundColor,
+            onSurfaceVariantColor = onSurfaceVariantColor
+        )
+        PropertyDetailItem(
+            label = "${property.bedrooms} Bedroom",
+            value = "Apartment",
+            onBackgroundColor = onBackgroundColor,
+            onSurfaceVariantColor = onSurfaceVariantColor
+        )
+        PropertyDetailItem(
+            label = "${property.bathrooms} Bath",
+            value = "Bathroom",
+            onBackgroundColor = onBackgroundColor,
+            onSurfaceVariantColor = onSurfaceVariantColor
+        )
     }
 }
 
 @Composable
-fun PropertyDetailItem(label: String, value: String) {
+fun PropertyDetailItem(
+    label: String,
+    value: String,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = onBackgroundColor
         )
         Text(
             text = value,
             fontSize = 12.sp,
-            color = Color.Gray
+            color = onSurfaceVariantColor
         )
     }
 }
 
-
 @Composable
-fun BuildingInfoSection(property: PropertyModel) {
+fun BuildingInfoSection(
+    property: PropertyModel,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    isDarkMode: Boolean
+) {
     val repository = remember { NearbyPlacesRepositoryImpl() }
     var nearbyPlaces by remember { mutableStateOf<Map<PlaceType, List<NearbyPlace>>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -670,12 +837,14 @@ fun BuildingInfoSection(property: PropertyModel) {
         isLoading = false
     }
 
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
             text = property.developer,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF2196F3)
+            color = primaryColor
         )
 
         Spacer(modifier = Modifier.height(4.dp))
@@ -684,14 +853,14 @@ fun BuildingInfoSection(property: PropertyModel) {
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = "Location",
-                tint = Color.Gray,
+                tint = onSurfaceVariantColor,
                 modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = property.location,
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = onSurfaceVariantColor
             )
         }
 
@@ -707,14 +876,14 @@ fun BuildingInfoSection(property: PropertyModel) {
                 text = "Nearby Places",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = Color.Black
+                color = onBackgroundColor
             )
 
             if (!isLoading) {
                 Text(
                     text = "from OpenStreetMap",
                     fontSize = 11.sp,
-                    color = Color.Gray.copy(alpha = 0.7f)
+                    color = onSurfaceVariantColor.copy(alpha = 0.7f)
                 )
             }
         }
@@ -722,15 +891,20 @@ fun BuildingInfoSection(property: PropertyModel) {
         Spacer(modifier = Modifier.height(12.dp))
 
         if (isLoading) {
-            LoadingNearbyPlaces()
+            LoadingNearbyPlaces(onSurfaceVariantColor = onSurfaceVariantColor, isDarkMode = isDarkMode)
         } else {
-            DisplayNearbyPlaces(nearbyPlaces)
+            DisplayNearbyPlaces(
+                nearbyPlaces = nearbyPlaces,
+                onBackgroundColor = onBackgroundColor,
+                onSurfaceVariantColor = onSurfaceVariantColor,
+                isDarkMode = isDarkMode
+            )
         }
     }
 }
 
 @Composable
-private fun LoadingNearbyPlaces() {
+private fun LoadingNearbyPlaces(onSurfaceVariantColor: Color, isDarkMode: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -741,26 +915,31 @@ private fun LoadingNearbyPlaces() {
         CircularProgressIndicator(
             modifier = Modifier.size(20.dp),
             strokeWidth = 2.dp,
-            color = Color(0xFF4CAF50)
+            color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = "Finding nearby places...",
             fontSize = 13.sp,
-            color = Color.Gray
+            color = onSurfaceVariantColor
         )
     }
 }
 
 @Composable
-private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>) {
+private fun DisplayNearbyPlaces(
+    nearbyPlaces: Map<PlaceType, List<NearbyPlace>>,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    isDarkMode: Boolean
+) {
     val hasAnyPlaces = nearbyPlaces.values.any { it.isNotEmpty() }
 
     if (!hasAnyPlaces) {
         Text(
             text = "No nearby places found in this area",
             fontSize = 13.sp,
-            color = Color.Gray,
+            color = onSurfaceVariantColor,
             modifier = Modifier.padding(vertical = 12.dp)
         )
         return
@@ -773,7 +952,10 @@ private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>)
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.School,
-                iconTint = Color(0xFFFF9800) // Orange
+                iconTint = Color(0xFFFF9800), // Orange
+                onBackgroundColor = onBackgroundColor,
+                onSurfaceVariantColor = onSurfaceVariantColor,
+                isDarkMode = isDarkMode
             )
         }
 
@@ -783,7 +965,10 @@ private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>)
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.LocalHospital,
-                iconTint = Color(0xFFF44336) // Red
+                iconTint = Color(0xFFF44336), // Red
+                onBackgroundColor = onBackgroundColor,
+                onSurfaceVariantColor = onSurfaceVariantColor,
+                isDarkMode = isDarkMode
             )
         }
 
@@ -793,7 +978,10 @@ private fun DisplayNearbyPlaces(nearbyPlaces: Map<PlaceType, List<NearbyPlace>>)
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.Store,
-                iconTint = Color(0xFF4CAF50) // Green
+                iconTint = Color(0xFF4CAF50), // Green
+                onBackgroundColor = onBackgroundColor,
+                onSurfaceVariantColor = onSurfaceVariantColor,
+                isDarkMode = isDarkMode
             )
         }
     }
@@ -804,7 +992,10 @@ private fun NearbyPlaceItem(
     name: String,
     distance: String,
     icon: ImageVector,
-    iconTint: Color
+    iconTint: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    isDarkMode: Boolean
 ) {
     Row(
         modifier = Modifier
@@ -814,7 +1005,7 @@ private fun NearbyPlaceItem(
     ) {
         Surface(
             modifier = Modifier.size(32.dp),
-            color = iconTint.copy(alpha = 0.1f),
+            color = iconTint.copy(alpha = if (isDarkMode) 0.2f else 0.1f),
             shape = CircleShape
         ) {
             Icon(
@@ -834,7 +1025,7 @@ private fun NearbyPlaceItem(
                 text = name,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color.Black,
+                color = onBackgroundColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -843,15 +1034,18 @@ private fun NearbyPlaceItem(
         Text(
             text = distance,
             fontSize = 13.sp,
-            color = Color.Gray,
+            color = onSurfaceVariantColor,
             fontWeight = FontWeight.Medium
         )
     }
 }
+
 @Composable
 fun MapPreviewSection(
     property: PropertyModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    surfaceColor: Color,
+    primaryColor: Color
 ) {
     Box(
         modifier = Modifier
@@ -889,7 +1083,7 @@ fun MapPreviewSection(
 
         Surface(
             modifier = Modifier.align(Alignment.Center),
-            color = Color.White,
+            color = surfaceColor,
             shape = RoundedCornerShape(24.dp),
             shadowElevation = 4.dp
         ) {
@@ -900,7 +1094,7 @@ fun MapPreviewSection(
                 Icon(
                     imageVector = Icons.Default.Map,
                     contentDescription = "Map",
-                    tint = Color(0xFF2196F3),
+                    tint = primaryColor,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -908,18 +1102,23 @@ fun MapPreviewSection(
                     text = "View on Map",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2196F3)
+                    color = primaryColor
                 )
             }
         }
     }
 }
 
-
-
-
 @Composable
-fun ContactOwnerSection(property: PropertyModel) {
+fun ContactOwnerSection(
+    property: PropertyModel,
+    surfaceColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    outlineVariantColor: Color,
+    isDarkMode: Boolean,
+    successColor: Color
+) {
     val context = LocalContext.current
 
     Card(
@@ -927,13 +1126,15 @@ fun ContactOwnerSection(property: PropertyModel) {
             .fillMaxWidth()
             .padding(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, outlineVariantColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = "Contact Property Owner",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = onBackgroundColor
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -957,14 +1158,14 @@ fun ContactOwnerSection(property: PropertyModel) {
                     } else {
                         Surface(
                             modifier = Modifier.size(50.dp),
-                            color = Color(0xFFE0E0E0),
+                            color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE0E0E0),
                             shape = CircleShape
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = "Owner",
                                 modifier = Modifier.padding(12.dp),
-                                tint = Color.Gray
+                                tint = onSurfaceVariantColor
                             )
                         }
                     }
@@ -975,12 +1176,13 @@ fun ContactOwnerSection(property: PropertyModel) {
                         Text(
                             text = property.ownerName.ifBlank { property.developer },
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = onBackgroundColor
                         )
                         Text(
                             text = "Property Owner",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = onSurfaceVariantColor
                         )
                     }
                 }
@@ -997,7 +1199,7 @@ fun ContactOwnerSection(property: PropertyModel) {
                     },
                     modifier = Modifier
                         .size(48.dp)
-                        .background(Color(0xFF4CAF50), CircleShape)
+                        .background(successColor, CircleShape)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Phone,
@@ -1009,7 +1211,7 @@ fun ContactOwnerSection(property: PropertyModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Quick Messages", fontSize = 14.sp, color = Color.Gray)
+            Text("Quick Messages", fontSize = 14.sp, color = onSurfaceVariantColor)
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -1026,7 +1228,8 @@ fun ContactOwnerSection(property: PropertyModel) {
                             property = property,
                             message = "Hi, I'm interested in ${property.developer}. Could you please call me back?"
                         )
-                    }
+                    },
+                    isDarkMode = isDarkMode
                 )
                 QuickMessageButton(
                     text = "Still available?",
@@ -1037,7 +1240,8 @@ fun ContactOwnerSection(property: PropertyModel) {
                             property = property,
                             message = "Hello! Is this property still available for ${property.marketType.lowercase()}?"
                         )
-                    }
+                    },
+                    isDarkMode = isDarkMode
                 )
             }
 
@@ -1052,7 +1256,8 @@ fun ContactOwnerSection(property: PropertyModel) {
                         property = property,
                         message = "Hi, I'd like to schedule a visit to view ${property.developer}. When would be a good time?"
                     )
-                }
+                },
+                isDarkMode = isDarkMode
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -1060,22 +1265,21 @@ fun ContactOwnerSection(property: PropertyModel) {
             Text(
                 text = "Updated: ${property.formattedUpdatedTime}",
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = onSurfaceVariantColor
             )
             Text(
                 text = property.viewsText,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = onSurfaceVariantColor
             )
             Text(
                 text = property.uniqueViewersText,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = onSurfaceVariantColor
             )
         }
     }
 }
-
 
 private fun sendQuickMessage(
     context: Context,
@@ -1097,23 +1301,26 @@ private fun sendQuickMessage(
     )
 }
 
-
 @Composable
 fun QuickMessageButton(
     text: String,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isDarkMode: Boolean
 ) {
+    val backgroundColor = if (isDarkMode) Color(0xFF1E3A5F) else Color(0xFFE3F2FD)
+    val textColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+
     Surface(
         modifier = modifier.clickable(onClick = onClick),
-        color = Color(0xFFE3F2FD),
+        color = backgroundColor,
         shape = RoundedCornerShape(8.dp)
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(12.dp),
             fontSize = 14.sp,
-            color = Color(0xFF2196F3),
+            color = textColor,
             fontWeight = FontWeight.Medium,
             textAlign = TextAlign.Center
         )
@@ -1121,13 +1328,20 @@ fun QuickMessageButton(
 }
 
 @Composable
-fun NotesSection() {
+fun NotesSection(
+    surfaceVariantColor: Color,
+    onSurfaceColor: Color,
+    onSurfaceVariantColor: Color,
+    isDarkMode: Boolean
+) {
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clickable { /* Add note */ },
-        color = Color(0xFFF5F5F5),
+        color = surfaceVariantColor,
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -1141,19 +1355,20 @@ fun NotesSection() {
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = "Note",
-                    tint = Color.Gray
+                    tint = onSurfaceVariantColor
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Personal Notes",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = onSurfaceColor
                 )
             }
             Text(
                 text = "Add",
                 fontSize = 14.sp,
-                color = Color(0xFF2196F3),
+                color = primaryColor,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -1161,47 +1376,61 @@ fun NotesSection() {
 }
 
 @Composable
-fun PropertyDetailsInfoSection(property: PropertyModel) {
+fun PropertyDetailsInfoSection(
+    property: PropertyModel,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
+) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             text = "Property Details",
             fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = onBackgroundColor
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        PropertyDetailRow("Property Type", property.propertyType)
-        PropertyDetailRow("Total Area", property.sqft)
-        PropertyDetailRow("Bedrooms", "${property.bedrooms}")
-        PropertyDetailRow("Bathrooms", "${property.bathrooms}")
-        PropertyDetailRow("Floor", property.floor)
-        PropertyDetailRow("Furnishing", property.furnishing)
-        PropertyDetailRow("Parking", if (property.parking) "Available" else "Not Available")
-        PropertyDetailRow("Pets Allowed", if (property.petsAllowed) "Yes" else "No")
+        PropertyDetailRow("Property Type", property.propertyType, onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Total Area", property.sqft, onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Bedrooms", "${property.bedrooms}", onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Bathrooms", "${property.bathrooms}", onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Floor", property.floor, onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Furnishing", property.furnishing, onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Parking", if (property.parking) "Available" else "Not Available", onBackgroundColor, onSurfaceVariantColor)
+        PropertyDetailRow("Pets Allowed", if (property.petsAllowed) "Yes" else "No", onBackgroundColor, onSurfaceVariantColor)
     }
 }
 
 @Composable
-fun PropertyDetailRow(label: String, value: String) {
+fun PropertyDetailRow(
+    label: String,
+    value: String,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(text = label, fontSize = 14.sp, color = Color.Gray)
+        Text(text = label, fontSize = 14.sp, color = onSurfaceVariantColor)
         Text(
             text = value,
             fontSize = 14.sp,
-            color = Color.Black,
+            color = onBackgroundColor,
             fontWeight = FontWeight.Medium
         )
     }
 }
 
 @Composable
-fun RentalTermsSection(property: PropertyModel) {
+fun RentalTermsSection(
+    property: PropertyModel,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color
+) {
     val hasRentalTerms = property.utilitiesIncluded != null ||
             property.commission != null ||
             property.advancePayment != null ||
@@ -1217,53 +1446,57 @@ fun RentalTermsSection(property: PropertyModel) {
         Text(
             text = "Rental Terms",
             fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = onBackgroundColor
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         property.utilitiesIncluded?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Utilities", it)
+                PropertyDetailRow("Utilities", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
 
         property.commission?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Commission", it)
+                PropertyDetailRow("Commission", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
 
         property.advancePayment?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Advance Payment", it)
+                PropertyDetailRow("Advance Payment", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
 
         property.securityDeposit?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Security Deposit", it)
+                PropertyDetailRow("Security Deposit", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
 
         property.minimumLease?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Minimum Lease", it)
+                PropertyDetailRow("Minimum Lease", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
 
         property.availableFrom?.let {
             if (it.isNotEmpty()) {
-                PropertyDetailRow("Available From", it)
+                PropertyDetailRow("Available From", it, onBackgroundColor, onSurfaceVariantColor)
             }
         }
     }
 }
 
-
-
 @Composable
-fun AmenitiesSection(property: PropertyModel) {
+fun AmenitiesSection(
+    property: PropertyModel,
+    onBackgroundColor: Color,
+    onSurfaceColor: Color,
+    successColor: Color
+) {
     // Only show if property has amenities
     if (property.amenities.isEmpty()) {
         return // Don't show section if no amenities
@@ -1274,7 +1507,7 @@ fun AmenitiesSection(property: PropertyModel) {
             text = "Amenities",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = onBackgroundColor
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -1283,14 +1516,21 @@ fun AmenitiesSection(property: PropertyModel) {
         property.amenities.forEach { amenity ->
             AmenityItem(
                 name = amenity,
-                icon = getAmenityIcon(amenity)
+                icon = getAmenityIconForPropertyDetail(amenity),
+                onSurfaceColor = onSurfaceColor,
+                successColor = successColor
             )
         }
     }
 }
 
 @Composable
-fun AmenityItem(name: String, icon: ImageVector) {
+fun AmenityItem(
+    name: String,
+    icon: ImageVector,
+    onSurfaceColor: Color,
+    successColor: Color
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1300,28 +1540,33 @@ fun AmenityItem(name: String, icon: ImageVector) {
         Icon(
             imageVector = icon,
             contentDescription = name,
-            tint = Color(0xFF4CAF50),
+            tint = successColor,
             modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = name,
             fontSize = 15.sp,
-            color = Color.Black
+            color = onSurfaceColor
         )
     }
 }
 
 @Composable
 fun ReportSection(
-    onReportClick: () -> Unit
+    onReportClick: () -> Unit,
+    backgroundColor: Color,
+    onBackgroundColor: Color,
+    isDarkMode: Boolean
 ) {
+    val reportColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clickable(onClick = onReportClick),
-        color = Color(0xFFFCE4EC),
+        color = backgroundColor,
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
@@ -1331,97 +1576,38 @@ fun ReportSection(
             Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Report",
-                tint = Color(0xFFD32F2F),
+                tint = reportColor,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Report this listing",
                 fontSize = 16.sp,
-                color = Color(0xFFD32F2F),
+                color = reportColor,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Help us maintain quality listings",
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = onBackgroundColor.copy(alpha = 0.7f)
             )
         }
     }
 }
 
-
-
-//fun AgentHelperSection() {
-//    Card(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(16.dp),
-//        colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD))
-//    ) {
-//        Column(
-//            modifier = Modifier.padding(20.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally
-//        ) {
-//            Text(
-//                text = "Need Help Finding Property?",
-//                fontSize = 18.sp,
-//                fontWeight = FontWeight.Bold,
-//                color = Color.Black
-//            )
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            Box(
-//                modifier = Modifier
-//                    .size(100.dp)
-//                    .background(Color.White, CircleShape)
-//            ) {
-//                Icon(
-//                    imageVector = Icons.Default.SupportAgent,
-//                    contentDescription = "Agent",
-//                    modifier = Modifier
-//                        .size(60.dp)
-//                        .align(Alignment.Center),
-//                    tint = Color(0xFF2196F3)
-//                )
-//            }
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            Text(
-//                text = "Our agents can help you find the perfect property,schedule visits, and handle all paperwork",
-//                fontSize = 14.sp,
-//                color = Color.Gray,
-//                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-//            )
-//
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            Button(
-//                onClick = { /* Request agent */ },
-//                modifier = Modifier.fillMaxWidth(),
-//                colors = ButtonDefaults.buttonColors(
-//                    containerColor = Color(0xFF2196F3)
-//                ),
-//                shape = RoundedCornerShape(8.dp)
-//            ) {
-//                Text(
-//                    text = "Request Agent Assistance",
-//                    color = Color.White,
-//                    fontWeight = FontWeight.Bold
-//                )
-//            }
-//        }
-//    }
-//}
-
 @Composable
 fun SimilarPropertiesSection(
     similarProperties: List<PropertyModel>,
     isLoading: Boolean,
-    onPropertyClick: (PropertyModel) -> Unit
+    onPropertyClick: (PropertyModel) -> Unit,
+    surfaceColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    outlineVariantColor: Color,
+    successColor: Color,
+    primaryColor: Color,
+    isDarkMode: Boolean
 ) {
     if (similarProperties.isEmpty() && !isLoading) {
         return
@@ -1437,7 +1623,7 @@ fun SimilarPropertiesSection(
             text = "Similar Properties",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black,
+            color = onBackgroundColor,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
@@ -1446,7 +1632,7 @@ fun SimilarPropertiesSection(
         Text(
             text = "You might also be interested in",
             fontSize = 14.sp,
-            color = Color.Gray,
+            color = onSurfaceVariantColor,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
 
@@ -1463,13 +1649,14 @@ fun SimilarPropertiesSection(
             ) {
                 CircularProgressIndicator(
                     modifier = Modifier.size(24.dp),
-                    strokeWidth = 2.dp
+                    strokeWidth = 2.dp,
+                    color = primaryColor
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = "Finding similar properties...",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = onSurfaceVariantColor
                 )
             }
         } else {
@@ -1482,7 +1669,13 @@ fun SimilarPropertiesSection(
                 items(similarProperties) { property ->
                     SimilarPropertyCard(
                         property = property,
-                        onClick = { onPropertyClick(property) }
+                        onClick = { onPropertyClick(property) },
+                        surfaceColor = surfaceColor,
+                        onBackgroundColor = onBackgroundColor,
+                        onSurfaceVariantColor = onSurfaceVariantColor,
+                        outlineVariantColor = outlineVariantColor,
+                        successColor = successColor,
+                        primaryColor = primaryColor
                     )
                 }
             }
@@ -1493,7 +1686,13 @@ fun SimilarPropertiesSection(
 @Composable
 fun SimilarPropertyCard(
     property: PropertyModel,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    surfaceColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    outlineVariantColor: Color,
+    successColor: Color,
+    primaryColor: Color
 ) {
     Card(
         modifier = Modifier
@@ -1501,7 +1700,8 @@ fun SimilarPropertyCard(
             .clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = surfaceColor),
+        border = BorderStroke(1.dp, outlineVariantColor)
     ) {
         Column {
             // Property Image
@@ -1527,7 +1727,7 @@ fun SimilarPropertyCard(
                             .align(Alignment.TopEnd)
                             .padding(8.dp)
                             .size(32.dp),
-                        color = Color.White.copy(alpha = 0.9f),
+                        color = surfaceColor.copy(alpha = 0.9f),
                         shape = CircleShape
                     ) {
                         Icon(
@@ -1547,7 +1747,7 @@ fun SimilarPropertyCard(
                     text = property.price,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50),
+                    color = successColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1559,7 +1759,7 @@ fun SimilarPropertyCard(
                     text = property.developer,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.Black,
+                    color = onBackgroundColor,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1577,13 +1777,13 @@ fun SimilarPropertyCard(
                             imageVector = Icons.Default.Bed,
                             contentDescription = "Bedrooms",
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            tint = onSurfaceVariantColor
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${property.bedrooms}",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = onSurfaceVariantColor
                         )
                     }
 
@@ -1593,13 +1793,13 @@ fun SimilarPropertyCard(
                             imageVector = Icons.Default.Bathroom,
                             contentDescription = "Bathrooms",
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            tint = onSurfaceVariantColor
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${property.bathrooms}",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = onSurfaceVariantColor
                         )
                     }
 
@@ -1609,13 +1809,13 @@ fun SimilarPropertyCard(
                             imageVector = Icons.Default.SquareFoot,
                             contentDescription = "Area",
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            tint = onSurfaceVariantColor
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = property.sqft,
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = onSurfaceVariantColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -1633,13 +1833,13 @@ fun SimilarPropertyCard(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = "Location",
                         modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF2196F3)
+                        tint = primaryColor
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = property.location,
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = onSurfaceVariantColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -1650,15 +1850,22 @@ fun SimilarPropertyCard(
 }
 
 @Composable
-fun BoxScope.BottomActionButtons(property: PropertyModel) {
+fun BoxScope.BottomActionButtons(
+    property: PropertyModel,
+    surfaceColor: Color,
+    outlineVariantColor: Color,
+    successColor: Color,
+    primaryColor: Color
+) {
     val context = LocalContext.current
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .align(Alignment.BottomCenter),
-        color = Color.White,
-        shadowElevation = 8.dp
+        color = surfaceColor,
+        shadowElevation = 8.dp,
+        border = BorderStroke(1.dp, outlineVariantColor)
     ) {
         Row(
             modifier = Modifier
@@ -1680,7 +1887,7 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50)
+                    containerColor = successColor
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -1706,7 +1913,7 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
                     .weight(1f)
                     .height(56.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF2196F3)
+                    containerColor = primaryColor
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -1722,15 +1929,20 @@ fun BoxScope.BottomActionButtons(property: PropertyModel) {
     }
 }
 
-
 @Composable
-fun DescriptionSection(property: PropertyModel) {
+fun DescriptionSection(
+    property: PropertyModel,
+    surfaceVariantColor: Color,
+    onBackgroundColor: Color,
+    onSurfaceVariantColor: Color,
+    outlineVariantColor: Color
+) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
             text = "About this property",
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = onBackgroundColor
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -1738,14 +1950,15 @@ fun DescriptionSection(property: PropertyModel) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F7FA)
+                containerColor = surfaceVariantColor
             ),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            border = BorderStroke(1.dp, outlineVariantColor)
         ) {
             Text(
                 text = property.description ?: "",
                 fontSize = 14.sp,
-                color = Color.DarkGray,
+                color = onSurfaceVariantColor,
                 lineHeight = 22.sp,
                 modifier = Modifier.padding(16.dp)
             )

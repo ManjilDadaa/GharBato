@@ -57,6 +57,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -88,6 +89,7 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.gharbato.model.ChatMessage
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.MessageDetailsViewModel
 import com.google.firebase.auth.FirebaseAuth
 import java.io.File
@@ -129,6 +131,8 @@ class MessageDetailsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize the theme preference
         ThemePreference.init(this)
 
         val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
@@ -147,14 +151,17 @@ class MessageDetailsActivity : ComponentActivity() {
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            MessageDetailsScreen(
-                currentUserId = currentUserId,
-                otherUserId = otherUserId,
-                otherUserName = otherUserName,
-                otherUserImage = otherUserImage,
-                initialMessage = initialMessage,
-                onBackClick = { finish() }
-            )
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                MessageDetailsScreen(
+                    currentUserId = currentUserId,
+                    otherUserId = otherUserId,
+                    otherUserName = otherUserName,
+                    otherUserImage = otherUserImage,
+                    initialMessage = initialMessage,
+                    onBackClick = { finish() }
+                )
+            }
         }
     }
 }
@@ -171,6 +178,7 @@ fun MessageDetailsScreen(
     viewModel: MessageDetailsViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val messages by viewModel.messages
     val messageText by viewModel.messageText
     val isBlockedByMe by viewModel.isBlockedByMe
@@ -183,6 +191,7 @@ fun MessageDetailsScreen(
 
     if (showReportDialog) {
         ReportUserDialog(
+            isDarkMode = isDarkMode,
             onDismiss = { showReportDialog = false },
             onReport = { reason ->
                 viewModel.reportUser(reason) { success, message ->
@@ -254,20 +263,17 @@ fun MessageDetailsScreen(
         }
     }
 
-    // Initialize chat session
     LaunchedEffect(otherUserId) {
         viewModel.startChat(context, otherUserId)
     }
 
-    // Handle initial message - this was missing the proper check
     LaunchedEffect(initialMessage) {
         if (initialMessage.isNotBlank()) {
-            kotlinx.coroutines.delay(300) // Give time for chat to initialize
+            kotlinx.coroutines.delay(300)
             viewModel.setInitialMessage(initialMessage)
         }
     }
 
-    // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -275,11 +281,13 @@ fun MessageDetailsScreen(
     }
 
     Scaffold(
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5),
         topBar = {
             ChatTopBar(
                 userName = otherUserName,
                 userImage = otherUserImage,
                 isBlockedByMe = isBlockedByMe,
+                isDarkMode = isDarkMode,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
                 onDeleteClick = { viewModel.deleteChat() },
@@ -294,9 +302,8 @@ fun MessageDetailsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .imePadding()
-                .background(Color(0xFFF5F5F5))
+                .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5))
         ) {
-            // Messages List
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -308,12 +315,12 @@ fun MessageDetailsScreen(
                 items(messages) { message ->
                     MessageBubble(
                         message = message,
-                        isCurrentUser = message.senderId == currentUserId
+                        isCurrentUser = message.senderId == currentUserId,
+                        isDarkMode = isDarkMode
                     )
                 }
             }
 
-            // Message Input
             if (isBlockedByMe || isBlockedByOther) {
                 Box(
                     modifier = Modifier
@@ -330,6 +337,7 @@ fun MessageDetailsScreen(
             } else {
                 MessageInput(
                     messageText = messageText,
+                    isDarkMode = isDarkMode,
                     onMessageTextChange = { viewModel.onMessageTextChanged(it) },
                     onSendClick = { viewModel.sendTextMessage() },
                     onCameraClick = { checkAndLaunchCamera() },
@@ -340,12 +348,9 @@ fun MessageDetailsScreen(
     }
 }
 
-
-
-
-
 @Composable
 fun ReportUserDialog(
+    isDarkMode: Boolean,
     onDismiss: () -> Unit,
     onReport: (String) -> Unit
 ) {
@@ -353,10 +358,18 @@ fun ReportUserDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Report User") },
+        title = {
+            Text(
+                "Report User",
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+            )
+        },
         text = {
             Column {
-                Text("Why are you reporting this user?")
+                Text(
+                    "Why are you reporting this user?",
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = reason,
@@ -378,7 +391,8 @@ fun ReportUserDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancel")
             }
-        }
+        },
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     )
 }
 
@@ -388,6 +402,7 @@ fun ChatTopBar(
     userName: String,
     userImage: String,
     isBlockedByMe: Boolean,
+    isDarkMode: Boolean,
     onBackClick: () -> Unit,
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -403,12 +418,11 @@ fun ChatTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // User Avatar
                 Box(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFFE0E0E0)),
+                        .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE0E0E0)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (userImage.isNotEmpty()) {
@@ -423,7 +437,7 @@ fun ChatTopBar(
                             text = userName.take(1).uppercase(),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.Gray
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         )
                     }
                 }
@@ -433,12 +447,12 @@ fun ChatTopBar(
                         text = userName,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                     )
                     Text(
                         text = "Online",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                 }
             }
@@ -448,7 +462,7 @@ fun ChatTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.Black
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                 )
             }
         },
@@ -457,18 +471,22 @@ fun ChatTopBar(
                 Icon(
                     imageVector = Icons.Default.VideoCall,
                     contentDescription = "Video Call",
-                    tint = Color.Black
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                 )
             }
             IconButton(onClick = onAudioCallClick) {
                 Icon(
                     imageVector = Icons.Default.Call,
                     contentDescription = "Audio Call",
-                    tint = Color.Black
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                 )
             }
             IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Default.MoreVert, "Menu", tint = Color.Black)
+                Icon(
+                    Icons.Default.MoreVert,
+                    "Menu",
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                )
             }
             DropdownMenu(
                 expanded = menuExpanded,
@@ -501,16 +519,16 @@ fun ChatTopBar(
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
         )
     )
 }
 
-
 @Composable
 fun MessageBubble(
     message: ChatMessage,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    isDarkMode: Boolean
 ) {
     val context = LocalContext.current
 
@@ -525,30 +543,32 @@ fun MessageBubble(
                 bottomStart = if (isCurrentUser) 16.dp else 4.dp,
                 bottomEnd = if (isCurrentUser) 4.dp else 16.dp
             ),
-            color = if (isCurrentUser) Blue else Color.White,
+            color = if (isCurrentUser) Blue else {
+                if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            },
             modifier = Modifier.widthIn(max = 280.dp),
             shadowElevation = 2.dp
         ) {
             Column(
-                modifier = Modifier.padding(2.dp)
+                modifier = Modifier.padding(12.dp)
             ) {
-                // Property Card (if exists) - Check with hasPropertyCard
                 if (message.hasPropertyCard) {
-                    Box(modifier = Modifier.padding(10.dp)) {
-                        PropertyCardInMessage(
-                            message = message,
-                            onClick = {
-                                // Navigate to property details
-                                val intent = Intent(context, PropertyDetailActivity::class.java).apply {
-                                    putExtra("propertyId", message.propertyId)
-                                }
-                                context.startActivity(intent)
+                    PropertyCardInMessage(
+                        message = message,
+                        isDarkMode = isDarkMode,
+                        onClick = {
+                            val intent = Intent(context, PropertyDetailActivity::class.java).apply {
+                                putExtra("propertyId", message.propertyId)
                             }
-                        )
+                            context.startActivity(intent)
+                        }
+                    )
+
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
 
-                // Image (if exists)
                 if (message.imageUrl.isNotEmpty()) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
@@ -560,18 +580,21 @@ fun MessageBubble(
                             .fillMaxWidth()
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color.LightGray),
+                            .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.LightGray),
                         contentScale = ContentScale.Crop
                     )
+                    if (message.text.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
                 }
 
-                // Text message
                 if (message.text.isNotEmpty()) {
                     Text(
                         text = message.text,
-                        color = if (isCurrentUser) Color.White else Color.Black,
-                        fontSize = 15.sp,
-                        modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp)
+                        color = if (isCurrentUser) Color.White else {
+                            if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                        },
+                        fontSize = 15.sp
                     )
                 }
 
@@ -580,13 +603,13 @@ fun MessageBubble(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.End,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
                         text = formatTimestamp(message.timestamp),
-                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else {
+                            if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        },
                         fontSize = 11.sp
                     )
 
@@ -605,10 +628,10 @@ fun MessageBubble(
     }
 }
 
-
 @Composable
 fun PropertyCardInMessage(
     message: ChatMessage,
+    isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
@@ -616,11 +639,10 @@ fun PropertyCardInMessage(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
-        color = Color(0xFFF5F5F5),
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
         shadowElevation = 2.dp
     ) {
         Column {
-            // Property Image
             if (message.propertyImage.isNotEmpty()) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -636,24 +658,22 @@ fun PropertyCardInMessage(
                     placeholder = painterResource(id = android.R.drawable.ic_menu_gallery)
                 )
             } else {
-                // Placeholder image if no image URL
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(120.dp)
-                        .background(Color(0xFFE0E0E0)),
+                        .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE0E0E0)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Home,
                         contentDescription = "Property",
                         modifier = Modifier.size(48.dp),
-                        tint = Color.Gray
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                 }
             }
 
-            // Property Details
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
@@ -661,7 +681,7 @@ fun PropertyCardInMessage(
                     text = message.propertyTitle,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black,
                     maxLines = 2
                 )
 
@@ -683,13 +703,13 @@ fun PropertyCardInMessage(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = message.propertyLocation,
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         maxLines = 1
                     )
                 }
@@ -704,13 +724,13 @@ fun PropertyCardInMessage(
                             imageVector = Icons.Default.Bed,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${message.propertyBedrooms}",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         )
                     }
 
@@ -719,13 +739,13 @@ fun PropertyCardInMessage(
                             imageVector = Icons.Default.Bathroom,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "${message.propertyBathrooms}",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                         )
                     }
                 }
@@ -754,9 +774,11 @@ fun PropertyCardInMessage(
         }
     }
 }
+
 @Composable
 fun MessageInput(
     messageText: String,
+    isDarkMode: Boolean,
     onMessageTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
     onCameraClick: () -> Unit,
@@ -764,7 +786,7 @@ fun MessageInput(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
         shadowElevation = 8.dp
     ) {
         Row(
@@ -775,22 +797,24 @@ fun MessageInput(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(
-                onClick = onCameraClick
+                onClick = onCameraClick,
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = "Camera",
-                    tint = Color.Gray
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                 )
             }
 
             IconButton(
-                onClick = onAttachClick
+                onClick = onAttachClick,
+                modifier = Modifier.size(24.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,
                     contentDescription = "Attach File",
-                    tint = Color.Gray
+                    tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                 )
             }
 
@@ -803,8 +827,8 @@ fun MessageInput(
                 colors = OutlinedTextFieldDefaults.colors(
                     unfocusedBorderColor = Color.Transparent,
                     focusedBorderColor = Blue,
-                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                    focusedContainerColor = Color(0xFFF5F5F5)
+                    unfocusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
                 ),
                 maxLines = 4
             )
@@ -812,8 +836,7 @@ fun MessageInput(
             IconButton(
                 onClick = onSendClick,
                 modifier = Modifier
-                    .size(48.dp)
-                    .background(Blue, CircleShape)
+                    .size(48.dp).background(Blue, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
@@ -824,10 +847,8 @@ fun MessageInput(
         }
     }
 }
-
 private fun formatTimestamp(timestamp: Long): String {
     if (timestamp == 0L) return ""
-
     val calendar = Calendar.getInstance()
     calendar.timeInMillis = timestamp
 
@@ -845,12 +866,10 @@ private fun formatTimestamp(timestamp: Long): String {
         }
     }
 }
-
 private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
             cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)
 }
-
 private fun isYesterday(cal1: Calendar, cal2: Calendar): Boolean {
     val yesterday = cal2.clone() as Calendar
     yesterday.add(Calendar.DAY_OF_YEAR, -1)

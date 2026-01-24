@@ -28,10 +28,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.SavedPropertiesViewModel
 import com.example.gharbato.viewmodel.SavedPropertiesViewModelFactory
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SavedScreen(
     onNavigateToSearch: () -> Unit = {},
@@ -39,22 +39,49 @@ fun SavedScreen(
         factory = SavedPropertiesViewModelFactory()
     )
 ) {
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+    GharBatoTheme(darkTheme = isDarkMode) {
+        SavedScreenContent(isDarkMode, onNavigateToSearch, viewModel)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SavedScreenContent(
+    isDarkMode: Boolean,
+    onNavigateToSearch: () -> Unit = {},
+    viewModel: SavedPropertiesViewModel
+) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Colors based on theme - from 1st and 2nd codes
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA)
+    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val primaryColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+    val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F9FF)
+    val errorColor = if (isDarkMode) Color(0xFFCF6679) else Color(0xFFE91E63)
+    val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+    val soldBgColor = if (isDarkMode) Color(0xFFB71C1C).copy(alpha = 0.2f) else Color(0xFFD32F2F).copy(alpha = 0.1f)
+    val soldTextColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Saved Properties",
                         fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = textColorPrimary
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
                 )
             )
         }
@@ -63,7 +90,7 @@ fun SavedScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = padding.calculateTopPadding())
-                .background(Color(0xFFF8F9FA))
+                .background(backgroundColor)
         ) {
             when {
                 // Loading State
@@ -72,27 +99,34 @@ fun SavedScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = Color(0xFF2196F3))
+                        CircularProgressIndicator(color = primaryColor)
                     }
                 }
 
                 // Empty State
                 uiState.savedProperties.isEmpty() -> {
                     EmptySavedState(
-                        onExploreClick = onNavigateToSearch
+                        onExploreClick = onNavigateToSearch,
+                        isDarkMode = isDarkMode,
+                        primaryColor = primaryColor,
+                        errorColor = errorColor,
+                        textColorPrimary = textColorPrimary,
+                        textColorSecondary = textColorSecondary,
+                        backgroundColor = backgroundColor,
+                        surfaceVariantColor = surfaceVariantColor
                     )
                 }
 
                 // List of Saved Properties
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        // Count
+                        // Count - improved from 1st and 2nd codes
                         Text(
                             text = "${uiState.savedProperties.size} saved ${if (uiState.savedProperties.size == 1) "property" else "properties"}",
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.Gray
+                            color = textColorSecondary
                         )
 
                         // Saved Properties List
@@ -113,7 +147,15 @@ fun SavedScreen(
                                     },
                                     onRemoveClick = {
                                         viewModel.removeFromSaved(property.id)
-                                    }
+                                    },
+                                    isDarkMode = isDarkMode,
+                                    cardBackgroundColor = cardBackgroundColor,
+                                    textColorPrimary = textColorPrimary,
+                                    textColorSecondary = textColorSecondary,
+                                    successColor = successColor,
+                                    primaryColor = primaryColor,
+                                    soldBgColor = soldBgColor,
+                                    soldTextColor = soldTextColor
                                 )
                             }
 
@@ -121,7 +163,13 @@ fun SavedScreen(
                             item {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 ExploreMoreCard(
-                                    onExploreClick = onNavigateToSearch
+                                    onExploreClick = onNavigateToSearch,
+                                    isDarkMode = isDarkMode,
+                                    primaryColor = primaryColor,
+                                    textColorPrimary = textColorPrimary,
+                                    textColorSecondary = textColorSecondary,
+                                    surfaceVariantColor = surfaceVariantColor,
+                                    cardBackgroundColor = cardBackgroundColor
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                             }
@@ -130,14 +178,18 @@ fun SavedScreen(
                 }
             }
 
-            // Error Message
+            // Error Message - improved theming from 1st and 2nd codes
             uiState.error?.let { error ->
                 Snackbar(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
+                        .padding(16.dp),
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.errorContainer else Color(0xFFD32F2F)
                 ) {
-                    Text(text = error)
+                    Text(
+                        text = error,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onErrorContainer else Color.White
+                    )
                 }
             }
         }
@@ -146,7 +198,14 @@ fun SavedScreen(
 
 @Composable
 fun EmptySavedState(
-    onExploreClick: () -> Unit
+    onExploreClick: () -> Unit,
+    isDarkMode: Boolean,
+    primaryColor: Color,
+    errorColor: Color,
+    textColorPrimary: Color,
+    textColorSecondary: Color,
+    backgroundColor: Color,
+    surfaceVariantColor: Color
 ) {
     Column(
         modifier = Modifier
@@ -155,10 +214,10 @@ fun EmptySavedState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Heart Icon
+        // Heart Icon - with dark mode support from 1st code
         Surface(
             modifier = Modifier.size(120.dp),
-            color = Color(0xFFFFEBEE),
+            color = if (isDarkMode) errorColor.copy(alpha = 0.1f) else Color(0xFFFFEBEE),
             shape = CircleShape
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -166,7 +225,7 @@ fun EmptySavedState(
                     imageVector = Icons.Default.FavoriteBorder,
                     contentDescription = "No favorites",
                     modifier = Modifier.size(60.dp),
-                    tint = Color(0xFFE91E63)
+                    tint = errorColor
                 )
             }
         }
@@ -177,7 +236,7 @@ fun EmptySavedState(
             text = "No Saved Properties",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = textColorPrimary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -185,7 +244,7 @@ fun EmptySavedState(
         Text(
             text = "Start exploring properties and save your favorites here for quick access later",
             fontSize = 16.sp,
-            color = Color.Gray,
+            color = textColorSecondary,
             textAlign = TextAlign.Center,
             lineHeight = 24.sp
         )
@@ -195,7 +254,7 @@ fun EmptySavedState(
         Button(
             onClick = onExploreClick,
             colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF2196F3)
+                containerColor = primaryColor
             ),
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier
@@ -212,7 +271,8 @@ fun EmptySavedState(
             Text(
                 text = "Explore Properties",
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
     }
@@ -220,17 +280,24 @@ fun EmptySavedState(
 
 @Composable
 fun ExploreMoreCard(
-    onExploreClick: () -> Unit
+    onExploreClick: () -> Unit,
+    isDarkMode: Boolean,
+    primaryColor: Color,
+    textColorPrimary: Color,
+    textColorSecondary: Color,
+    surfaceVariantColor: Color,
+    cardBackgroundColor: Color
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onExploreClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF5F9FF)
+            containerColor = surfaceVariantColor
         ),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
     ) {
         Row(
             modifier = Modifier
@@ -246,7 +313,7 @@ fun ExploreMoreCard(
             ) {
                 Surface(
                     modifier = Modifier.size(48.dp),
-                    color = Color(0xFF2196F3),
+                    color = primaryColor,
                     shape = CircleShape
                 ) {
                     Box(contentAlignment = Alignment.Center) {
@@ -264,12 +331,12 @@ fun ExploreMoreCard(
                         text = "Explore More Properties",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = textColorPrimary
                     )
                     Text(
                         text = "Find your perfect home",
                         fontSize = 13.sp,
-                        color = Color.Gray
+                        color = textColorSecondary
                     )
                 }
             }
@@ -277,7 +344,7 @@ fun ExploreMoreCard(
             Icon(
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Go",
-                tint = Color(0xFF2196F3),
+                tint = primaryColor,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -288,17 +355,28 @@ fun ExploreMoreCard(
 fun SavedPropertyCard(
     property: PropertyModel,
     onCardClick: () -> Unit,
-    onRemoveClick: () -> Unit
+    onRemoveClick: () -> Unit,
+    isDarkMode: Boolean,
+    cardBackgroundColor: Color,
+    textColorPrimary: Color,
+    textColorSecondary: Color,
+    successColor: Color,
+    primaryColor: Color,
+    soldBgColor: Color,
+    soldTextColor: Color
 ) {
     val isSold = property.propertyStatus == "SOLD"
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = !isSold, onClick = onCardClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp)
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDarkMode) 0.dp else 4.dp
+        ),
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+        shape = RoundedCornerShape(12.dp),
+        border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
     ) {
         Row(
             modifier = Modifier
@@ -329,7 +407,7 @@ fun SavedPropertyCard(
                         text = property.developer,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black,
+                        color = textColorPrimary,
                         maxLines = 1
                     )
 
@@ -339,7 +417,7 @@ fun SavedPropertyCard(
                         text = property.price,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
+                        color = successColor
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
@@ -348,29 +426,30 @@ fun SavedPropertyCard(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = textColorSecondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = property.location,
                             fontSize = 12.sp,
-                            color = Color.Gray,
+                            color = textColorSecondary,
                             maxLines = 1
                         )
                     }
-                    
-                    if (property.propertyStatus == "SOLD") {
+
+                    // SOLD badge with dark mode support from 1st code
+                    if (isSold) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFD32F2F).copy(alpha = 0.1f)
+                            color = soldBgColor
                         ) {
                             Text(
                                 text = "SOLD",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD32F2F),
+                                color = soldTextColor,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
@@ -381,13 +460,25 @@ fun SavedPropertyCard(
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PropertyStat(Icons.Default.Home, property.sqft)
-                    PropertyStat(Icons.Default.Info, "${property.bedrooms} BD")
-                    PropertyStat(Icons.Default.Star, "${property.bathrooms} BA")
+                    PropertyStat(
+                        Icons.Default.Home,
+                        property.sqft,
+                        textColorSecondary
+                    )
+                    PropertyStat(
+                        Icons.Default.Info,
+                        "${property.bedrooms} BD",
+                        textColorSecondary
+                    )
+                    PropertyStat(
+                        Icons.Default.Star,
+                        "${property.bathrooms} BA",
+                        textColorSecondary
+                    )
                 }
             }
 
-            // Remove Button
+            // Remove Button - red color preserved from all codes
             IconButton(
                 onClick = onRemoveClick,
                 modifier = Modifier
@@ -408,20 +499,21 @@ fun SavedPropertyCard(
 @Composable
 fun PropertyStat(
     icon: ImageVector,
-    text: String
+    text: String,
+    iconColor: Color
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color.Gray,
+            tint = iconColor,
             modifier = Modifier.size(14.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
             text = text,
             fontSize = 11.sp,
-            color = Color.Gray
+            color = iconColor
         )
     }
 }

@@ -26,17 +26,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
+
 
 class ContactUsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize the theme preference
         ThemePreference.init(this)
+
         setContent {
-            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
+
+            // Set system bars appearance
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            ContactUsScreen()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    ContactUsScreen()
+                }
+            }
         }
     }
 }
@@ -45,50 +60,52 @@ class ContactUsActivity : ComponentActivity() {
 @Composable
 fun ContactUsScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
 
-    // Email intent (unchanged logic)
+    // Email intent
     val emailIntent = Intent(Intent.ACTION_SENDTO).apply {
-        data = android.net.Uri.parse("mailto:")
-        putExtra(Intent.EXTRA_EMAIL, arrayOf("supportGharBato@gmail.com"))
-        putExtra(Intent.EXTRA_SUBJECT, "Support Request")
+        data = android.net.Uri.parse("mailto:supportGharBato@gmail.com")
+        putExtra(Intent.EXTRA_SUBJECT, "Support Request - GharBato App")
     }
 
+    // Themed colors
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val cardColor = MaterialTheme.colorScheme.surface
+    val dividerColor = MaterialTheme.colorScheme.outline
+    val noteColor = subtitleColor.copy(alpha = 0.7f)
+
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
-            TopAppBar(
+            CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "Contact Us",
+                        text = "Contact Us",
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color.DarkGray
+                            fontSize = 20.sp,
+                            color = textColor
                         )
                     )
                 },
                 navigationIcon = {
                     IconButton(
                         onClick = {
-                            (context as ComponentActivity).finish()
+                            (context as? ComponentActivity)?.finish()
                         }
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
+                            painter = painterResource(id = R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = Color.DarkGray,
+                            tint = textColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    navigationIconContentColor = Color.DarkGray,
-                    titleContentColor = Color.DarkGray
-                ),
-                modifier = Modifier.shadow(
-                    elevation = 1.dp,
-                    spotColor = Color.LightGray
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = backgroundColor
                 )
             )
         }
@@ -98,12 +115,25 @@ fun ContactUsScreen() {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
+                .background(backgroundColor)
         ) {
-            // Content Section
+            // Welcome description
+            Text(
+                text = "If you have any problem or want to contact us regarding a serious matter, feel free to reach out.",
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    color = textColor,
+                    lineHeight = 22.sp
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            )
+
+            // Main content
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 24.dp),
+                    .padding(horizontal = 24.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Contact Icon
@@ -117,7 +147,7 @@ fun ContactUsScreen() {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.baseline_email_24),
+                        painter = painterResource(id = R.drawable.baseline_email_24),
                         contentDescription = "Email Icon",
                         tint = Blue,
                         modifier = Modifier.size(48.dp)
@@ -129,10 +159,9 @@ fun ContactUsScreen() {
                 // Title
                 Text(
                     text = "Get in Touch",
-                    style = TextStyle(
-                        fontSize = 22.sp,
+                    style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = textColor
                     ),
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
@@ -140,10 +169,8 @@ fun ContactUsScreen() {
                 // Description
                 Text(
                     text = "If you have any questions, concerns, or feedback, our support team is here to help.",
-                    style = TextStyle(
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF666666),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = subtitleColor,
                         lineHeight = 22.sp
                     ),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -156,9 +183,12 @@ fun ContactUsScreen() {
                         .fillMaxWidth()
                         .padding(bottom = 32.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF8F9FA)
+                        containerColor = cardColor
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = if (isDarkMode) 0.dp else 4.dp
+                    )
                 ) {
                     Column(
                         modifier = Modifier
@@ -170,7 +200,7 @@ fun ContactUsScreen() {
                             modifier = Modifier.padding(bottom = 16.dp)
                         ) {
                             Icon(
-                                painter = painterResource(R.drawable.baseline_email_24),
+                                painter = painterResource(id = R.drawable.baseline_email_24),
                                 contentDescription = "Email",
                                 tint = Blue,
                                 modifier = Modifier.size(24.dp)
@@ -179,35 +209,30 @@ fun ContactUsScreen() {
                             Column {
                                 Text(
                                     text = "Email Address",
-                                    style = TextStyle(
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = Color(0xFF666666)
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        color = subtitleColor
                                     )
                                 )
                                 Text(
                                     text = "supportGharBato@gmail.com",
-                                    style = TextStyle(
-                                        fontSize = 16.sp,
+                                    style = MaterialTheme.typography.bodyLarge.copy(
                                         fontWeight = FontWeight.Bold,
-                                        color = Color.Black
+                                        color = textColor
                                     )
                                 )
                             }
                         }
 
                         Divider(
-                            color = Color(0xFFEEEEEE),
+                            color = dividerColor,
                             thickness = 1.dp,
                             modifier = Modifier.padding(vertical = 8.dp)
                         )
 
                         Text(
                             text = "We typically respond within 24 hours during business days.",
-                            style = TextStyle(
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = Color(0xFF666666)
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = subtitleColor
                             ),
                             modifier = Modifier.padding(top = 8.dp)
                         )
@@ -217,25 +242,35 @@ fun ContactUsScreen() {
                 // Email Us Button
                 Button(
                     onClick = {
-                        context.startActivity(emailIntent)
+                        try {
+                            context.startActivity(
+                                Intent.createChooser(
+                                    emailIntent,
+                                    "Send email via..."
+                                )
+                            )
+                        } catch (e: Exception) {
+                            // Handle case where no email app is available
+                            // You might want to show a Toast or Snackbar here
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
                         .shadow(
-                            elevation = 6.dp,
+                            elevation = if (isDarkMode) 0.dp else 8.dp,
                             shape = RoundedCornerShape(14.dp),
-                            spotColor = Blue.copy(alpha = 0.3f)
+                            clip = true
                         ),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue
+                        containerColor = Blue,
+                        contentColor = Color.White
                     )
                 ) {
                     Text(
-                        "Email Us",
-                        style = TextStyle(
-                            fontSize = 16.sp,
+                        text = "Email Us",
+                        style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.SemiBold
                         )
                     )
@@ -246,13 +281,11 @@ fun ContactUsScreen() {
                 // Note
                 Text(
                     text = "Alternatively, you can also reach out through our social media channels for general inquiries.",
-                    style = TextStyle(
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Normal,
-                        color = Color(0xFF999999)
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = noteColor
                     ),
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    modifier = Modifier.padding(top = 16.dp)
+                    modifier = Modifier.padding(top = 16.dp, bottom = 32.dp)
                 )
             }
         }
