@@ -42,12 +42,18 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.repository.UserRepoImpl
 import android.util.Log
+import com.example.gharbato.utils.SystemBarUtils
 
 class ApprovedPropertiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { ApprovedPropertiesScreen() }
+        ThemePreference.init(this)
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            ApprovedPropertiesScreen()
+        }
     }
 }
 

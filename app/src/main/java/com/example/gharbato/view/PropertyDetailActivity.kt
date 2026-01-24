@@ -57,6 +57,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
 import kotlin.collections.emptyMap
+import com.example.gharbato.utils.SystemBarUtils
 
 
 private fun getCurrentUserId(): String {
@@ -73,6 +74,7 @@ class PropertyDetailActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         val propertyId = intent.getIntExtra("propertyId", -1)
 
@@ -82,6 +84,8 @@ class PropertyDetailActivity : ComponentActivity() {
         }
 
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
             uiState.selectedProperty?.let { property ->

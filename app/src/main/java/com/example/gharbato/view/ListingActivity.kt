@@ -44,16 +44,20 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.viewmodel.ListingViewModel
 import com.google.firebase.database.FirebaseDatabase
+import com.example.gharbato.utils.SystemBarUtils
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         
         val propertyId = intent.getStringExtra("propertyId")
         val isEdit = intent.getBooleanExtra("isEdit", false)
         
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             ListingBody(propertyId = propertyId, isEdit = isEdit)
         }
     }
