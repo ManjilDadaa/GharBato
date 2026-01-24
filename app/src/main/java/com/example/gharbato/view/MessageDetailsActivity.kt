@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,7 +42,9 @@ import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
@@ -206,17 +209,44 @@ fun MessageDetailsScreen(
     }
 
     fun launchCamera() {
-        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val storageDir = context.getExternalFilesDir(null)
-        val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+        try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val storageDir = context.getExternalFilesDir(null)
+            val file = File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
 
-        val uri = FileProvider.getUriForFile(
-            context,
-            "${context.packageName}.fileprovider",
-            file
-        )
-        currentPhotoUri = uri
-        cameraLauncher.launch(uri)
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            currentPhotoUri = uri
+            cameraLauncher.launch(uri)
+        } catch (e: Exception) {
+            Log.e("MessageDetails", "Error launching camera", e)
+            Toast.makeText(context, "Cannot open camera", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            Toast.makeText(context, "Camera permission needed", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun checkAndLaunchCamera() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.CAMERA
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            launchCamera()
+        } else {
+            permissionLauncher.launch(android.Manifest.permission.CAMERA)
+        }
     }
 
     // Initialize chat session
@@ -258,6 +288,7 @@ fun MessageDetailsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .background(Color(0xFFF5F5F5))
         ) {
             // Messages List
@@ -296,7 +327,7 @@ fun MessageDetailsScreen(
                     messageText = messageText,
                     onMessageTextChange = { viewModel.onMessageTextChanged(it) },
                     onSendClick = { viewModel.sendTextMessage() },
-                    onCameraClick = { launchCamera() },
+                    onCameraClick = { checkAndLaunchCamera() },
                     onAttachClick = { imagePickerLauncher.launch("image/*") }
                 )
             }
@@ -494,23 +525,21 @@ fun MessageBubble(
             shadowElevation = 2.dp
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(2.dp)
             ) {
                 // Property Card (if exists) - Check with hasPropertyCard
                 if (message.hasPropertyCard) {
-                    PropertyCardInMessage(
-                        message = message,
-                        onClick = {
-                            // Navigate to property details
-                            val intent = Intent(context, PropertyDetailActivity::class.java).apply {
-                                putExtra("propertyId", message.propertyId)
+                    Box(modifier = Modifier.padding(10.dp)) {
+                        PropertyCardInMessage(
+                            message = message,
+                            onClick = {
+                                // Navigate to property details
+                                val intent = Intent(context, PropertyDetailActivity::class.java).apply {
+                                    putExtra("propertyId", message.propertyId)
+                                }
+                                context.startActivity(intent)
                             }
-                            context.startActivity(intent)
-                        }
-                    )
-
-                    if (message.text.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(12.dp))
+                        )
                     }
                 }
 
@@ -529,9 +558,6 @@ fun MessageBubble(
                             .background(Color.LightGray),
                         contentScale = ContentScale.Crop
                     )
-                    if (message.text.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
                 }
 
                 // Text message
@@ -539,17 +565,36 @@ fun MessageBubble(
                     Text(
                         text = message.text,
                         color = if (isCurrentUser) Color.White else Color.Black,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 8.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = formatTimestamp(message.timestamp),
-                    color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
-                    fontSize = 11.sp
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .padding(start = 10.dp, end = 10.dp, bottom = 10.dp)
+                ) {
+                    Text(
+                        text = formatTimestamp(message.timestamp),
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.7f) else Color.Gray,
+                        fontSize = 11.sp
+                    )
+
+                    if (isCurrentUser) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Icon(
+                            imageVector = if (message.isRead) Icons.Default.DoneAll else Icons.Default.Check,
+                            contentDescription = if (message.isRead) "Seen" else "Delivered",
+                            tint = if (message.isRead) Color.White else Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -725,8 +770,7 @@ fun MessageInput(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             IconButton(
-                onClick = onCameraClick,
-                modifier = Modifier.size(24.dp)
+                onClick = onCameraClick
             ) {
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
@@ -736,8 +780,7 @@ fun MessageInput(
             }
 
             IconButton(
-                onClick = onAttachClick,
-                modifier = Modifier.size(24.dp)
+                onClick = onAttachClick
             ) {
                 Icon(
                     imageVector = Icons.Default.AttachFile,

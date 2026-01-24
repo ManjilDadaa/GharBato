@@ -17,9 +17,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+import com.example.gharbato.R
+
 class ZegoCallActivity : FragmentActivity() {
 
     private var callId: String = ""
+    private var sessionRef: com.google.firebase.database.DatabaseReference? = null
+    private var sessionListener: com.google.firebase.database.ValueEventListener? = null
+    private var ringPlayer: android.media.MediaPlayer? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -93,7 +98,12 @@ class ZegoCallActivity : FragmentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Clear the active call when activity is destroyed
+        sessionListener?.let { l ->
+            sessionRef?.removeEventListener(l)
+        }
+        sessionListener = null
+        stopRinging()
+        sessionRef?.child("status")?.setValue("ended")
         CallInvitationManager.endCall()
     }
 
@@ -188,6 +198,32 @@ class ZegoCallActivity : FragmentActivity() {
                 if (!isIncomingCall && targetUserId.isNotEmpty()) {
                     sendCallInvitation(targetUserId, callId, isVideoCall, userName)
                 }
+                
+                val database = FirebaseDatabase.getInstance()
+                sessionRef = database.getReference("call_sessions").child(callId)
+                if (!isIncomingCall && targetUserId.isNotEmpty()) {
+                    val session = mapOf(
+                        "status" to "ringing",
+                        "callerId" to userId,
+                        "calleeId" to targetUserId,
+                        "timestamp" to System.currentTimeMillis()
+                    )
+                    sessionRef?.setValue(session)
+                    startRinging()
+                }
+                sessionListener = object : com.google.firebase.database.ValueEventListener {
+                    override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                        val status = snapshot.child("status").getValue(String::class.java) ?: return
+                        if (status == "active") {
+                            stopRinging()
+                        } else if (status == "ended") {
+                            stopRinging()
+                            finish()
+                        }
+                    }
+                    override fun onCancelled(error: com.google.firebase.database.DatabaseError) {}
+                }
+                sessionRef?.addValueEventListener(sessionListener as com.google.firebase.database.ValueEventListener)
             } catch (e: Exception) {
                 android.util.Log.e("ZegoCall", "Failed to create call fragment", e)
                 Toast.makeText(this, "Failed to start call: ${e.message}", Toast.LENGTH_LONG).show()
@@ -218,6 +254,29 @@ class ZegoCallActivity : FragmentActivity() {
             permissions.add(android.Manifest.permission.CAMERA)
         }
         requestPermissions(permissions.toTypedArray(), 100)
+    }
+    
+    private fun startRinging() {
+        try {
+            val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE)
+            ringPlayer = android.media.MediaPlayer().apply {
+                setDataSource(this@ZegoCallActivity, uri)
+                setAudioStreamType(android.media.AudioManager.STREAM_RING)
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (_: Exception) {}
+    }
+    
+    private fun stopRinging() {
+        try {
+            ringPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+        } catch (_: Exception) {}
+        ringPlayer = null
     }
 
     companion object {
@@ -385,6 +444,58 @@ object CallInvitationManager {
             isVideoCall = isVideoCall,
             currentUserId = currentUserId
         )
+
+        showIncomingCallNotification(context, callerName, isVideoCall, callId)
+    }
+
+    private fun showIncomingCallNotification(
+        context: android.content.Context, 
+        callerName: String, 
+        isVideoCall: Boolean,
+        callId: String
+    ) {
+        val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        val channelId = "incoming_call_channel"
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId,
+                "Incoming Calls",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for incoming video and audio calls"
+                enableLights(true)
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE), null)
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val intent = android.content.Intent(context, DashboardActivity::class.java).apply {
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        
+        val pendingIntent = android.app.PendingIntent.getActivity(
+            context,
+            callId.hashCode(),
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notificationBuilder = androidx.core.app.NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.outline_call_24)
+            .setContentTitle("Incoming Call")
+            .setContentText("$callerName is calling you...")
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+            .setCategory(androidx.core.app.NotificationCompat.CATEGORY_CALL)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, true)
+            .setOngoing(true)
+            .setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE))
+        
+        notificationManager.notify(1001, notificationBuilder.build())
     }
 
     fun acceptCurrentCall(context: android.content.Context) {
@@ -396,6 +507,7 @@ object CallInvitationManager {
         startIncomingCall(context, call.callId, call.currentUserId, call.callerId, call.isVideoCall)
         FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
         FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
+        FirebaseDatabase.getInstance().getReference("call_sessions").child(call.callId).child("status").setValue("active")
         _incomingCall.value = null
     }
 
@@ -403,6 +515,7 @@ object CallInvitationManager {
         val call = _incomingCall.value ?: return
         FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
         FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
+        FirebaseDatabase.getInstance().getReference("call_sessions").child(call.callId).child("status").setValue("ended")
         _incomingCall.value = null
     }
 
