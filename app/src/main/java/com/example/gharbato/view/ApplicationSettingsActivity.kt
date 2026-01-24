@@ -2,6 +2,9 @@ package com.example.gharbato.view
 
 import android.content.Context
 import android.os.Bundle
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -23,12 +26,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.utils.SystemBarUtils
 
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             ApplicationSettingsScreen()
         }
     }
@@ -407,5 +414,35 @@ fun getAppVersion(context: Context): String {
         packageInfo.versionName ?: "N/A"
     } catch (e: Exception) {
         "N/A"
+    }
+}
+
+object ThemePreference {
+    private const val PREFS_NAME = "theme_prefs"
+    private const val KEY_DARK_MODE = "dark_mode"
+    private lateinit var context: Context
+    
+    private val _isDarkModeState = MutableStateFlow(false)
+    val isDarkModeState: StateFlow<Boolean> = _isDarkModeState.asStateFlow()
+    
+    fun init(context: Context) {
+        this.context = context.applicationContext
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        _isDarkModeState.value = prefs.getBoolean(KEY_DARK_MODE, false)
+    }
+    
+    fun toggleDarkMode() {
+        setDarkMode(!_isDarkModeState.value)
+    }
+    
+    fun setDarkMode(enabled: Boolean) {
+        _isDarkModeState.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply()
+    }
+    
+    fun getDarkModeSync(): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_DARK_MODE, false)
     }
 }

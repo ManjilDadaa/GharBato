@@ -38,15 +38,19 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import java.text.SimpleDateFormat
 import java.util.*
+import com.example.gharbato.utils.SystemBarUtils
 
 class PropertyDetailsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         val propertyId = intent.getIntExtra("propertyId", 0)
 
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             PropertyDetailsScreen(propertyId = propertyId)
         }
     }

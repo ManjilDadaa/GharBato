@@ -40,12 +40,18 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.KycViewModel
 import com.example.gharbato.viewmodel.UserViewModelProvider
 import com.example.gharbato.viewmodel.UserViewModel
+import com.example.gharbato.utils.SystemBarUtils
 
 class TrustAndVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { TrustAndVerificationScreen() }
+        ThemePreference.init(this)
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            TrustAndVerificationScreen()
+        }
     }
 }
 

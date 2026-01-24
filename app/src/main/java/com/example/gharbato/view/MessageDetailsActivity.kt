@@ -67,6 +67,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.example.gharbato.utils.SystemBarUtils
 
 class MessageDetailsActivity : ComponentActivity() {
 
@@ -127,6 +129,7 @@ class MessageDetailsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         val otherUserId = intent.getStringExtra(EXTRA_OTHER_USER_ID) ?: ""
         val otherUserName = intent.getStringExtra(EXTRA_OTHER_USER_NAME) ?: ""
@@ -142,6 +145,8 @@ class MessageDetailsActivity : ComponentActivity() {
         }
 
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             MessageDetailsScreen(
                 currentUserId = currentUserId,
                 otherUserId = otherUserId,
