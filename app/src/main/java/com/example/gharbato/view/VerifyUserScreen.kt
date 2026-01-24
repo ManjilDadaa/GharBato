@@ -37,6 +37,7 @@ import com.example.gharbato.model.KycModel
 import com.example.gharbato.repository.KycRepoImpl
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.viewmodel.KycViewModel
 import com.example.gharbato.viewmodel.UserViewModel
 import java.text.SimpleDateFormat
@@ -253,7 +254,36 @@ fun VerifyUserScreen() {
         }
     }
 
-    Scaffold { padding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text(
+                            "KYC Verifications",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = { kycViewModel.loadAllKycSubmissions() }
+                    ) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh",
+                            tint = Color.White
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = LightGreen
+                )
+            )
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -261,29 +291,6 @@ fun VerifyUserScreen() {
                 .padding(top = padding.calculateTopPadding())
                 .padding(horizontal = 16.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "KYC Verifications",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF2C2C2C)
-                )
-                IconButton(
-                    onClick = { kycViewModel.loadAllKycSubmissions() }
-                ) {
-                    Icon(
-                        Icons.Default.Refresh,
-                        contentDescription = "Refresh",
-                        tint = Blue
-                    )
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tab Cards - Clickable Status Cards

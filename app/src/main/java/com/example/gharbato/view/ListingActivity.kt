@@ -42,19 +42,29 @@ import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.getDefaultImageCategories
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.ListingViewModel
 import com.google.firebase.database.FirebaseDatabase
+import com.example.gharbato.utils.SystemBarUtils
 
 class ListingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
         val propertyId = intent.getStringExtra("propertyId")
         val isEdit = intent.getBooleanExtra("isEdit", false)
-        
+
         setContent {
-            ListingBody(propertyId = propertyId, isEdit = isEdit)
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ListingBody(propertyId = propertyId, isEdit = isEdit)
+            }
         }
     }
 }
@@ -64,6 +74,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
 
     val context = LocalContext.current
     val activity = context as Activity
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
 
     var step by rememberSaveable { mutableIntStateOf(if (isEdit) 2 else 1) }
@@ -145,7 +156,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
             title = {
                 Text(
                     if (isEdit) "Cancel Editing?" else "Exit Listing?",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                 )
             },
             text = {
@@ -153,7 +165,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     if (isEdit) "Are you sure you want to cancel? Any unsaved changes will be lost."
                     else "Are you sure you want to go back? Your progress won't be saved.",
                     fontSize = 15.sp,
-                    color = Color.DarkGray
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.DarkGray
                 )
             },
             confirmButton = {
@@ -179,7 +191,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     Text("Continue Editing")
                 }
             },
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
         )
     }
 
@@ -190,7 +203,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
             title = {
                 Text(
                     if (isUploading) "Uploading..." else "Submit Listing?",
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                 )
             },
             text = {
@@ -206,19 +220,24 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             uploadProgress,
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black,
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        Text("Review your listing:", fontWeight = FontWeight.Medium)
+                        Text(
+                            "Review your listing:",
+                            fontWeight = FontWeight.Medium,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("• Purpose: ${listingState.selectedPurpose}", fontSize = 14.sp)
-                        Text("• Type: ${listingState.selectedPropertyType}", fontSize = 14.sp)
-                        Text("• Title: ${listingState.title}", fontSize = 14.sp)
-                        Text("• Price: Rs ${listingState.price}", fontSize = 14.sp)
-                        Text("• Location: ${listingState.location}", fontSize = 14.sp)
+                        Text("• Purpose: ${listingState.selectedPurpose}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                        Text("• Type: ${listingState.selectedPropertyType}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                        Text("• Title: ${listingState.title}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                        Text("• Price: Rs ${listingState.price}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                        Text("• Location: ${listingState.location}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
 
                         val totalImages = listingState.imageCategories.sumOf { it.images.size }
-                        Text("• Images: $totalImages photos", fontSize = 14.sp)
+                        Text("• Images: $totalImages photos", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
                     }
                 }
             },
@@ -260,7 +279,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     }
                 }
             },
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
         )
     }
 
@@ -289,7 +309,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         if (isEdit) "Your property has been updated successfully!" else "Your property has been listed successfully!",
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                     )
                 }
             },
@@ -307,12 +328,13 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     Text("Go to Dashboard")
                 }
             },
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
         )
     }
 
     Scaffold(
-        containerColor = Color.White
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
     ) { padding ->
         if (isLoadingProperty) {
             Box(
@@ -331,238 +353,237 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     .animateContentSize()
                     .verticalScroll(rememberScrollState())
             ) {
-            // Header with animation
-            AnimatedVisibility(
-                visible = showHeader,
-                enter = fadeIn(
-                    animationSpec = tween(durationMillis = 600)
-                ) + expandVertically(
-                    animationSpec = tween(
-                        durationMillis = 600,
-                        easing = FastOutSlowInEasing
+                // Header with animation
+                AnimatedVisibility(
+                    visible = showHeader,
+                    enter = fadeIn(
+                        animationSpec = tween(durationMillis = 600)
+                    ) + expandVertically(
+                        animationSpec = tween(
+                            durationMillis = 600,
+                            easing = FastOutSlowInEasing
+                        )
+                    ),
+                    exit = fadeOut(
+                        animationSpec = tween(durationMillis = 600)
+                    ) + shrinkVertically(
+                        animationSpec = tween(
+                            durationMillis = 600,
+                            easing = FastOutSlowInEasing
+                        )
                     )
-                ),
-                exit = fadeOut(
-                    animationSpec = tween(durationMillis = 600)
-                ) + shrinkVertically(
-                    animationSpec = tween(
-                        durationMillis = 600,
-                        easing = FastOutSlowInEasing
-                    )
-                )
-            ) {
-                Column {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp)
-                    ) {
-                        Box(
+                ) {
+                    Column {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
                             modifier = Modifier
-                                .size(64.dp)
-                                .background(color = Blue, shape = RoundedCornerShape(16.dp)),
-                            contentAlignment = Alignment.Center,
+                                .fillMaxWidth()
+                                .padding(top = 20.dp)
                         ) {
-                            Icon(
-                                painter = painterResource(R.drawable.home),
-                                contentDescription = null,
-                                modifier = Modifier.size(25.dp),
-                                tint = Color.White
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .background(color = Blue, shape = RoundedCornerShape(16.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.home),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(25.dp),
+                                    tint = Color.White
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(15.dp))
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                "List Your Property",
+                                style = TextStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 26.sp,
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(5.dp))
+
+                            Text(
+                                "Reach thousands of potential buyers and renters",
+                                style = TextStyle(
+                                    fontSize = 15.sp,
+                                    color = Gray
+                                )
                             )
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(15.dp))
+                Spacer(modifier = Modifier.height(30.dp))
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            "List Your Property",
-                            style = TextStyle(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 26.sp
+                // Progress Indicator - Dynamic based on purpose
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    for (i in 1..totalSteps) {
+                        Column {
+                            val circleColor by animateColorAsState(
+                                targetValue = if (step >= i) Blue else Gray.copy(0.3f),
+                                label = "stepColor"
                             )
-                        )
-
-                        Spacer(modifier = Modifier.height(5.dp))
-
-                        Text(
-                            "Reach thousands of potential buyers and renters",
-                            style = TextStyle(
-                                fontSize = 15.sp,
+                            Box(
+                                modifier = Modifier
+                                    .background(color = circleColor, shape = CircleShape)
+                                    .size(40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$i", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                when {
+                                    i == 1 -> "Purpose"
+                                    i == 2 -> "Details"
+                                    i == 3 -> "Photos"
+                                    i == 4 && !isRent -> "Amenities"
+                                    i == 4 && isRent -> "Terms"
+                                    i == 5 -> "Amenities"
+                                    else -> ""
+                                },
+                                fontSize = 12.sp,
                                 color = Gray
                             )
-                        )
+                        }
+
+                        if (i < totalSteps) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 7.dp)
+                                    .weight(1f)
+                                    .height(2.dp)
+                                    .background(if (step > i) Blue else Gray.copy(0.3f))
+                            )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-            // Progress Indicator - Dynamic based on purpose
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                for (i in 1..totalSteps) {
-                    Column {
-                        val circleColor by animateColorAsState(
-                            targetValue = if (step >= i) Blue else Gray.copy(0.3f),
-                            label = "stepColor"
-                        )
-                        Box(
-                            modifier = Modifier
-                                .background(color = circleColor, shape = CircleShape)
-                                .size(40.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("$i", color = Color.White, fontWeight = FontWeight.Bold)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            when {
-                                i == 1 -> "Purpose"
-                                i == 2 -> "Details"
-                                i == 3 -> "Photos"
-                                i == 4 && !isRent -> "Amenities" // For Sell
-                                i == 4 && isRent -> "Terms" // For Rent
-                                i == 5 -> "Amenities"
-                                else -> ""
+                // Content based on step and purpose
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 10.dp)
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                ) {
+                    when {
+                        step == 1 -> PurposeContentScreen(
+                            selectedPurpose = listingState.selectedPurpose,
+                            selectedPropertyType = listingState.selectedPropertyType,
+                            onPropertyTypeChange = { newType ->
+                                listingState = listingState.copy(selectedPropertyType = newType)
                             },
-                            fontSize = 12.sp,
-                            color = Gray
-                        )
-                    }
-
-                    if (i < totalSteps) {
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 7.dp)
-                                .weight(1f)
-                                .height(2.dp)
-                                .background(if (step > i) Blue else Gray.copy(0.3f))
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Content based on step and purpose
-            Column(
-                modifier = Modifier
-                    .padding(horizontal = 10.dp)
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-            ) {
-                when {
-                    step == 1 -> PurposeContentScreen(
-                        selectedPurpose = listingState.selectedPurpose,
-                        selectedPropertyType = listingState.selectedPropertyType,
-                        onPropertyTypeChange = { newType ->
-                            listingState = listingState.copy(selectedPropertyType = newType)
-                        },
-                        onPurposeChange = { newPurpose ->
-                            listingState = listingState.copy(selectedPurpose = newPurpose)
-                        }
-                    )
-                    step == 2 -> DetailsContentScreen(
-                        state = listingState,
-                        onStateChange = { newState ->
-                            listingState = newState
-                        }
-                    )
-                    step == 3 -> PhotosContentScreen(
-                        imageCategories = listingState.imageCategories,
-                        onCategoriesChange = { newCategories ->
-                            listingState = listingState.copy(imageCategories = newCategories)
-                        }
-                    )
-                    step == 4 && !isRent -> AmenitiesContentScreen(
-                        state = listingState,
-                        onStateChange = { newState ->
-                            listingState = newState
-                        }
-                    )
-                    step == 4 && isRent -> RentalTermsContentScreen(
-                        state = listingState,
-                        onStateChange = { newState ->
-                            listingState = newState
-                        }
-                    )
-                    step == 5 && isRent -> AmenitiesContentScreen(
-                        state = listingState,
-                        onStateChange = { newState ->
-                            listingState = newState
-                        }
-                    )
-                }
-            }
-
-            // Navigation Buttons
-            Row(
-                horizontalArrangement = Arrangement.SpaceAround,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 15.dp, vertical = 10.dp)
-            ) {
-                // Back Button
-                Button(
-                    onClick = {
-                        val newStep = step - 1
-                        val minStep = if (isEdit) 2 else 1
-                        if (newStep < minStep) {
-                            showExitDialog = true
-                        } else {
-                            step -= 1
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Gray.copy(0.7f)
-                    )
-                ) {
-                    Text("Back")
-                }
-
-                Spacer(modifier = Modifier.width(7.dp))
-
-                // Next/Submit Button
-                Button(
-                    onClick = {
-                        val validationResult = listingViewModel.validateStep(step, listingState)
-
-                        if (validationResult.isValid) {
-                            if (step < totalSteps) {
-                                // Move to next step
-                                step += 1
-                            } else {
-                                // Submit at final step
-                                showConfirmDialog = true
+                            onPurposeChange = { newPurpose ->
+                                listingState = listingState.copy(selectedPurpose = newPurpose)
                             }
-                        } else {
-                            Toast.makeText(
-                                context,
-                                validationResult.errorMessage,
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
-                ) {
-                    Text(
-                        if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next"
-                    )
+                        )
+                        step == 2 -> DetailsContentScreen(
+                            state = listingState,
+                            onStateChange = { newState ->
+                                listingState = newState
+                            }
+                        )
+                        step == 3 -> PhotosContentScreen(
+                            imageCategories = listingState.imageCategories,
+                            onCategoriesChange = { newCategories ->
+                                listingState = listingState.copy(imageCategories = newCategories)
+                            }
+                        )
+                        step == 4 && !isRent -> AmenitiesContentScreen(
+                            state = listingState,
+                            onStateChange = { newState ->
+                                listingState = newState
+                            }
+                        )
+                        step == 4 && isRent -> RentalTermsContentScreen(
+                            state = listingState,
+                            onStateChange = { newState ->
+                                listingState = newState
+                            }
+                        )
+                        step == 5 && isRent -> AmenitiesContentScreen(
+                            state = listingState,
+                            onStateChange = { newState ->
+                                listingState = newState
+                            }
+                        )
+                    }
                 }
+
+                // Navigation Buttons
+                Row(
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                ) {
+                    // Back Button
+                    Button(
+                        onClick = {
+                            val newStep = step - 1
+                            val minStep = if (isEdit) 2 else 1
+                            if (newStep < minStep) {
+                                showExitDialog = true
+                            } else {
+                                step -= 1
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Gray.copy(0.7f)
+                        )
+                    ) {
+                        Text("Back")
+                    }
+
+                    Spacer(modifier = Modifier.width(7.dp))
+
+                    // Next/Submit Button
+                    Button(
+                        onClick = {
+                            val validationResult = listingViewModel.validateStep(step, listingState)
+
+                            if (validationResult.isValid) {
+                                if (step < totalSteps) {
+                                    step += 1
+                                } else {
+                                    showConfirmDialog = true
+                                }
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    validationResult.errorMessage,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    ) {
+                        Text(
+                            if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next"
+                        )
+                    }
                 }
             }
         }

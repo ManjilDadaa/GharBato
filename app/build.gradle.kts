@@ -36,7 +36,7 @@ android {
                     ?: localProps.getProperty("ZEGO_APP_ID")
                     ?: System.getenv("ZEGO_APP_ID")
                     ?: System.getProperty("ZEGO_APP_ID")
-                    ?: "554967872"
+                    ?: "1133461036"
                 ).toString().trim()
 
         val zegoAppSign = (
@@ -44,7 +44,7 @@ android {
                     ?: localProps.getProperty("ZEGO_APP_SIGN")
                     ?: System.getenv("ZEGO_APP_SIGN")
                     ?: System.getProperty("ZEGO_APP_SIGN")
-                    ?: "d244d75c0f12cb4eb2c41d74adb071467ba16e82eb9ef2625e06453bd4347873"
+                    ?: "ad619cb6c617136dcf892c2cb4d7fbc6769e2124ca616670283f09c3c6297c45"
                 ).toString().trim()
 
         val zegoAppSignEscaped = zegoAppSign
@@ -146,6 +146,7 @@ dependencies {
 
     // Gemini AI
     implementation("com.google.ai.client.generativeai:generativeai:0.1.2")
+    implementation(libs.androidx.compose.foundation)
 
     // Testing
     testImplementation(libs.junit)

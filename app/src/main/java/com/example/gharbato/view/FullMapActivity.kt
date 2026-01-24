@@ -31,6 +31,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.example.gharbato.utils.SystemBarUtils
+import com.example.gharbato.view.ThemePreference
 
 class FullMapActivity : ComponentActivity() {
 
@@ -41,6 +43,7 @@ class FullMapActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         // Get property location from intent
         val latitude = intent.getDoubleExtra("latitude", 27.7172)
@@ -51,6 +54,8 @@ class FullMapActivity : ComponentActivity() {
         viewModel.initialize(LatLng(latitude, longitude), propertyName)
 
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             FullMapScreen(
                 viewModel = viewModel,
                 onBack = { finish() }
