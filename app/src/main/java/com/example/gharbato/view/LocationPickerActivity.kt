@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,6 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -54,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -62,6 +65,8 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
+import com.example.gharbato.utils.SystemBarUtils
+import com.example.gharbato.ui.theme.Blue
 
 class LocationPickerActivity : ComponentActivity() {
 
@@ -75,9 +80,13 @@ class LocationPickerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsStateWithLifecycle()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             LocationPickerScreen(
+                isDarkMode = isDarkMode,
                 onLocationSelected = { location, address, radius ->
                     val resultIntent = Intent().apply {
                         putExtra(RESULT_LATITUDE, location.latitude)
@@ -100,10 +109,26 @@ class LocationPickerActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationPickerScreen(
+    isDarkMode: Boolean,
     onLocationSelected: (LatLng, String, Float) -> Unit,
     onCancel: () -> Unit
 ) {
     val context = LocalContext.current
+
+    // Theme colors
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF8F9FB)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val fabBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color.White
+    val fabContentColor = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
+    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
+    val circleFillColor = if (isDarkMode) Color(0x4D82B1FF) else Color(0x4D2196F3)
+    val circleStrokeColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
+    val sliderInactiveColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE3F2FD)
+    val disabledButtonColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
+    val cardBorderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
 
     // Default location (Kathmandu)
     var selectedLocation by remember { mutableStateOf(LatLng(27.7172, 85.3240)) }
@@ -149,12 +174,13 @@ fun LocationPickerScreen(
     }
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         "Select Location",
-                        color = Color.White,
+                        color = textColor,
                         fontWeight = FontWeight.Medium
                     )
                 },
@@ -163,12 +189,13 @@ fun LocationPickerScreen(
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = primaryColor
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2196F3)
+                    containerColor = surfaceColor,
+                    titleContentColor = textColor
                 )
             )
         }
@@ -177,6 +204,7 @@ fun LocationPickerScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .background(backgroundColor)
         ) {
             // Google Map
             GoogleMap(
@@ -193,8 +221,8 @@ fun LocationPickerScreen(
                 Circle(
                     center = selectedLocation,
                     radius = searchRadius * 1000.0, // Convert km to meters
-                    fillColor = Color(0x4D2196F3),
-                    strokeColor = Color(0xFF2196F3),
+                    fillColor = circleFillColor,
+                    strokeColor = circleStrokeColor,
                     strokeWidth = 2f
                 )
             }
@@ -203,11 +231,12 @@ fun LocationPickerScreen(
             Icon(
                 imageVector = Icons.Default.MyLocation,
                 contentDescription = "Selected Location",
-                tint = Color(0xFFE53935),
+                tint = if (isDarkMode) Color(0xFFFF5252) else Color(0xFFE53935),
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(48.dp)
                     .offset(y = (-24).dp)
+                    .zIndex(2f)
             )
 
             // Zoom Controls (Left side)
@@ -215,7 +244,7 @@ fun LocationPickerScreen(
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(16.dp)
-                    .zIndex(1f)
+                    .zIndex(3f)
             ) {
                 FloatingActionButton(
                     onClick = {
@@ -224,8 +253,12 @@ fun LocationPickerScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White,
-                    contentColor = Color.Black
+                    containerColor = fabBackgroundColor,
+                    contentColor = fabContentColor,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
@@ -242,8 +275,12 @@ fun LocationPickerScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White,
-                    contentColor = Color.Black
+                    containerColor = fabBackgroundColor,
+                    contentColor = fabContentColor,
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 4.dp,
+                        pressedElevation = 8.dp
+                    )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
@@ -261,9 +298,13 @@ fun LocationPickerScreen(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
-                    .zIndex(1f),
-                containerColor = Color.White,
-                contentColor = Color(0xFF2196F3)
+                    .zIndex(3f),
+                containerColor = fabBackgroundColor,
+                contentColor = primaryColor,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 4.dp,
+                    pressedElevation = 8.dp
+                )
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
@@ -276,10 +317,16 @@ fun LocationPickerScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .zIndex(4f),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (isDarkMode) 4.dp else 8.dp
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor = cardBackgroundColor
+                ),
+                border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp)
@@ -287,7 +334,7 @@ fun LocationPickerScreen(
                     Text(
                         text = "Selected Location",
                         fontSize = 12.sp,
-                        color = Color.Gray,
+                        color = secondaryTextColor,
                         fontWeight = FontWeight.Medium
                     )
 
@@ -298,13 +345,13 @@ fun LocationPickerScreen(
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 strokeWidth = 2.dp,
-                                color = Color(0xFF2196F3)
+                                color = primaryColor
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Getting location...",
                                 fontSize = 14.sp,
-                                color = Color.Gray
+                                color = secondaryTextColor
                             )
                         }
                     } else {
@@ -312,7 +359,7 @@ fun LocationPickerScreen(
                             text = selectedAddress,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.Black,
+                            color = textColor,
                             lineHeight = 22.sp
                         )
                     }
@@ -327,14 +374,14 @@ fun LocationPickerScreen(
                         Text(
                             text = "Search Radius",
                             fontSize = 14.sp,
-                            color = Color.Gray,
+                            color = secondaryTextColor,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
                             text = "${searchRadius.toInt()} km",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2196F3)
+                            color = primaryColor
                         )
                     }
 
@@ -347,9 +394,11 @@ fun LocationPickerScreen(
                         valueRange = 1f..20f,
                         steps = 18,
                         colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF2196F3),
-                            activeTrackColor = Color(0xFF2196F3),
-                            inactiveTrackColor = Color(0xFFE3F2FD)
+                            thumbColor = primaryColor,
+                            activeTrackColor = primaryColor,
+                            inactiveTrackColor = sliderInactiveColor,
+                            activeTickColor = primaryColor,
+                            inactiveTickColor = secondaryTextColor
                         )
                     )
 
@@ -360,12 +409,12 @@ fun LocationPickerScreen(
                         Text(
                             "1 km",
                             fontSize = 11.sp,
-                            color = Color.Gray
+                            color = secondaryTextColor
                         )
                         Text(
                             "20 km",
                             fontSize = 11.sp,
-                            color = Color.Gray
+                            color = secondaryTextColor
                         )
                     }
 
@@ -381,21 +430,27 @@ fun LocationPickerScreen(
                             .height(52.dp),
                         enabled = !isGeocoding,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF2196F3),
-                            disabledContainerColor = Color.Gray
+                            containerColor = primaryColor,
+                            disabledContainerColor = disabledButtonColor,
+                            contentColor = Color.White,
+                            disabledContentColor = if (isDarkMode) Color(0xFF9E9E9E) else Color(0xFF757575)
                         ),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 4.dp,
+                            pressedElevation = 8.dp
+                        )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Confirm",
-                            tint = Color.White
+                            tint = if (isGeocoding) Color(0xFF9E9E9E) else Color.White
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Search in this area",
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = if (isGeocoding) Color(0xFF9E9E9E) else Color.White,
                             fontSize = 16.sp
                         )
                     }
