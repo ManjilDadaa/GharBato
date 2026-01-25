@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -178,6 +179,7 @@ fun MessageDetailsScreen(
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var selectedMessage by remember { mutableStateOf<ChatMessage?>(null) }
+    var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
 
     if (showReportDialog) {
         ReportUserDialog(
@@ -287,13 +289,17 @@ fun MessageDetailsScreen(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding()
-                .background(Color(0xFFF5F5F5))
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .background(Color(0xFFF5F5F5))
+            ) {
             // Messages List
             LazyColumn(
                 state = listState,
@@ -310,6 +316,9 @@ fun MessageDetailsScreen(
                         onLongPress = {
                             selectedMessage = it
                             showDeleteDialog = true
+                        },
+                        onImageClick = { url ->
+                            fullscreenImageUrl = url
                         }
                     )
                 }
@@ -365,6 +374,27 @@ fun MessageDetailsScreen(
                     confirmButton = {},
                     dismissButton = {}
                 )
+            }
+            }
+
+            if (fullscreenImageUrl != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.95f))
+                        .clickable { fullscreenImageUrl = null },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = fullscreenImageUrl,
+                        contentDescription = "Full Image",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(16.dp)
+                    )
+                }
             }
         }
     }
@@ -541,7 +571,8 @@ fun ChatTopBar(
 fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean,
-    onLongPress: (ChatMessage) -> Unit
+    onLongPress: (ChatMessage) -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -596,7 +627,8 @@ fun MessageBubble(
                             .fillMaxWidth()
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color.LightGray),
+                            .background(Color.LightGray)
+                            .clickable { onImageClick(message.imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                 }
