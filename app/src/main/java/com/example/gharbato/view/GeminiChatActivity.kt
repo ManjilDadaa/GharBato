@@ -42,6 +42,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -65,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.gharbato.model.GeminiChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.GeminiChatViewModel
@@ -92,11 +94,12 @@ class GeminiChatActivity : ComponentActivity() {
         val userId = auth.currentUser?.uid ?: "guest"
 
         setContent {
-            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsStateWithLifecycle()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             GeminiChatScreen(
                 userId = userId,
-                onBackClick = { finish() }
+                onBackClick = { finish() },
+                isDarkMode = isDarkMode
             )
         }
     }
@@ -106,7 +109,8 @@ class GeminiChatActivity : ComponentActivity() {
 @Composable
 fun GeminiChatScreen(
     userId: String,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    isDarkMode: Boolean
 ) {
     val context = LocalContext.current
     val viewModel = remember { GeminiChatViewModel(context, userId) }
@@ -120,6 +124,19 @@ fun GeminiChatScreen(
 
     var menuExpanded by remember { mutableStateOf(false) }
 
+    // Colors based on theme
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF5F5F5)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
+    val inputBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5)
+    val aiGradientStart = if (isDarkMode) Color(0xFF6D28D9) else Color(0xFF667EEA)
+    val aiGradientEnd = if (isDarkMode) Color(0xFF8B5CF6) else Color(0xFF764BA2)
+    val userMessageColor = if (isDarkMode) Color(0xFF0D47A1) else Blue
+    val errorBackground = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFFEBEE)
+    val errorText = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+    val borderColor = if (isDarkMode) Color(0xFF424242) else Color.Transparent
+
     // Auto-scroll to bottom when new messages arrive
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -128,12 +145,19 @@ fun GeminiChatScreen(
     }
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
             GeminiChatTopBar(
                 onBackClick = onBackClick,
                 menuExpanded = menuExpanded,
                 onMenuExpandedChange = { menuExpanded = it },
-                onClearChat = { viewModel.clearConversation() }
+                onClearChat = { viewModel.clearConversation() },
+                isDarkMode = isDarkMode,
+                surfaceColor = surfaceColor,
+                textColor = textColor,
+                secondaryTextColor = secondaryTextColor,
+                aiGradientStart = aiGradientStart,
+                aiGradientEnd = aiGradientEnd
             )
         }
     ) { padding ->
@@ -141,7 +165,7 @@ fun GeminiChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5F5))
+                .background(backgroundColor)
         ) {
             // Messages List
             LazyColumn(
@@ -158,7 +182,13 @@ fun GeminiChatScreen(
                         WelcomeSection(
                             onQuickMessageClick = { message ->
                                 viewModel.sendQuickMessage(message)
-                            }
+                            },
+                            isDarkMode = isDarkMode,
+                            textColor = textColor,
+                            secondaryTextColor = secondaryTextColor,
+                            aiGradientStart = aiGradientStart,
+                            aiGradientEnd = aiGradientEnd,
+                            userMessageColor = userMessageColor
                         )
                     }
                 }
@@ -167,7 +197,14 @@ fun GeminiChatScreen(
                 items(messages) { message ->
                     GeminiMessageBubble(
                         message = message,
-                        isCurrentUser = message.isFromUser
+                        isCurrentUser = message.isFromUser,
+                        isDarkMode = isDarkMode,
+                        userMessageColor = userMessageColor,
+                        surfaceColor = surfaceColor,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor,
+                        errorBackground = errorBackground,
+                        errorText = errorText
                     )
                 }
 
@@ -180,9 +217,14 @@ fun GeminiChatScreen(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color.White,
+                                color = surfaceColor,
                                 modifier = Modifier.widthIn(max = 280.dp),
-                                shadowElevation = 2.dp
+                                shadowElevation = if (isDarkMode) 2.dp else 2.dp,
+                                border = if (isDarkMode) {
+                                    CardDefaults.outlinedCardBorder()
+                                } else {
+                                    null
+                                }
                             ) {
                                 Row(
                                     modifier = Modifier.padding(16.dp),
@@ -192,11 +234,11 @@ fun GeminiChatScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(20.dp),
                                         strokeWidth = 2.dp,
-                                        color = Blue
+                                        color = userMessageColor
                                     )
                                     Text(
                                         text = "AI is thinking...",
-                                        color = Color.Gray,
+                                        color = secondaryTextColor,
                                         fontSize = 14.sp
                                     )
                                 }
@@ -211,7 +253,14 @@ fun GeminiChatScreen(
                 messageText = messageText,
                 onMessageTextChange = { viewModel.onMessageTextChanged(it) },
                 onSendClick = { viewModel.sendMessage() },
-                enabled = !isLoading
+                enabled = !isLoading,
+                isDarkMode = isDarkMode,
+                surfaceColor = surfaceColor,
+                inputBackgroundColor = inputBackgroundColor,
+                userMessageColor = userMessageColor,
+                textColor = textColor,
+                secondaryTextColor = secondaryTextColor,
+                borderColor = borderColor
             )
         }
     }
@@ -223,7 +272,13 @@ fun GeminiChatTopBar(
     onBackClick: () -> Unit,
     menuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
-    onClearChat: () -> Unit
+    onClearChat: () -> Unit,
+    isDarkMode: Boolean,
+    surfaceColor: Color,
+    textColor: Color,
+    secondaryTextColor: Color,
+    aiGradientStart: Color,
+    aiGradientEnd: Color
 ) {
     TopAppBar(
         title = {
@@ -238,8 +293,8 @@ fun GeminiChatTopBar(
                         .background(
                             brush = Brush.linearGradient(
                                 colors = listOf(
-                                    Color(0xFF667EEA),
-                                    Color(0xFF764BA2)
+                                    aiGradientStart,
+                                    aiGradientEnd
                                 )
                             ),
                             shape = CircleShape
@@ -259,12 +314,12 @@ fun GeminiChatTopBar(
                         text = "AI Assistant",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = textColor
                     )
                     Text(
                         text = "Powered by Gemini",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = secondaryTextColor
                     )
                 }
             }
@@ -274,37 +329,59 @@ fun GeminiChatTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = Color.Black
+                    tint = textColor
                 )
             }
         },
         actions = {
             IconButton(onClick = { onMenuExpandedChange(true) }) {
-                Icon(Icons.Default.MoreVert, "Menu", tint = Color.Black)
+                Icon(
+                    Icons.Default.MoreVert,
+                    "Menu",
+                    tint = textColor
+                )
             }
             DropdownMenu(
                 expanded = menuExpanded,
                 onDismissRequest = { onMenuExpandedChange(false) }
             ) {
                 DropdownMenuItem(
-                    text = { Text("Clear Conversation") },
+                    text = {
+                        Text(
+                            "Clear Conversation",
+                            color = if (isDarkMode) Color.White else Color.Black
+                        )
+                    },
                     onClick = {
                         onMenuExpandedChange(false)
                         onClearChat()
                     },
-                    leadingIcon = { Icon(Icons.Default.Delete, null) }
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Delete,
+                            null,
+                            tint = if (isDarkMode) Color.White else Color.Black
+                        )
+                    }
                 )
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White
+            containerColor = surfaceColor,
+            titleContentColor = textColor
         )
     )
 }
 
 @Composable
 fun WelcomeSection(
-    onQuickMessageClick: (String) -> Unit
+    onQuickMessageClick: (String) -> Unit,
+    isDarkMode: Boolean,
+    textColor: Color,
+    secondaryTextColor: Color,
+    aiGradientStart: Color,
+    aiGradientEnd: Color,
+    userMessageColor: Color
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -320,8 +397,8 @@ fun WelcomeSection(
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
-                            Color(0xFF667EEA),
-                            Color(0xFF764BA2)
+                            aiGradientStart,
+                            aiGradientEnd
                         )
                     ),
                     shape = CircleShape
@@ -340,13 +417,13 @@ fun WelcomeSection(
             text = "Hello! I'm your AI Assistant",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color.Black
+            color = textColor
         )
 
         Text(
             text = "I can help you with real estate questions, property advice, and more!",
             fontSize = 14.sp,
-            color = Color.Gray,
+            color = secondaryTextColor,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 32.dp)
         )
@@ -357,7 +434,7 @@ fun WelcomeSection(
             text = "Try asking me:",
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = Color.Black
+            color = textColor
         )
 
         // Quick message cards
@@ -371,7 +448,10 @@ fun WelcomeSection(
         quickMessages.forEach { message ->
             QuickMessageCard(
                 message = message,
-                onClick = { onQuickMessageClick(message) }
+                onClick = { onQuickMessageClick(message) },
+                isDarkMode = isDarkMode,
+                surfaceColor = if (isDarkMode) Color(0xFF2C2C2C) else Color.White,
+                textColor = userMessageColor
             )
         }
     }
@@ -380,16 +460,19 @@ fun WelcomeSection(
 @Composable
 fun QuickMessageCard(
     message: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isDarkMode: Boolean,
+    surfaceColor: Color,
+    textColor: Color
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = surfaceColor
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 2.dp else 2.dp),
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
@@ -402,13 +485,13 @@ fun QuickMessageCard(
             Text(
                 text = message,
                 fontSize = 14.sp,
-                color = Blue,
+                color = textColor,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Send,
                 contentDescription = "Send",
-                tint = Blue,
+                tint = textColor,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -418,7 +501,14 @@ fun QuickMessageCard(
 @Composable
 fun GeminiMessageBubble(
     message: GeminiChatMessage,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    isDarkMode: Boolean,
+    userMessageColor: Color,
+    surfaceColor: Color,
+    textColor: Color,
+    secondaryTextColor: Color,
+    errorBackground: Color,
+    errorText: Color
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -432,12 +522,12 @@ fun GeminiMessageBubble(
                 bottomEnd = if (isCurrentUser) 4.dp else 16.dp
             ),
             color = when {
-                message.isError -> Color(0xFFFFEBEE)
-                isCurrentUser -> Blue
-                else -> Color.White
+                message.isError -> errorBackground
+                isCurrentUser -> userMessageColor
+                else -> surfaceColor
             },
             modifier = Modifier.widthIn(max = 280.dp),
-            shadowElevation = 2.dp
+            shadowElevation = if (isDarkMode) 2.dp else 2.dp
         ) {
             Column(
                 modifier = Modifier.padding(12.dp)
@@ -447,7 +537,7 @@ fun GeminiMessageBubble(
                         text = "⚠️ Error",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFD32F2F)
+                        color = errorText
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -456,9 +546,9 @@ fun GeminiMessageBubble(
                 FormattedText(
                     text = message.text,
                     color = when {
-                        message.isError -> Color(0xFFD32F2F)
+                        message.isError -> errorText
                         isCurrentUser -> Color.White
-                        else -> Color.Black
+                        else -> textColor
                     },
                     fontSize = 15.sp
                 )
@@ -468,9 +558,9 @@ fun GeminiMessageBubble(
                 Text(
                     text = formatGeminiTimestamp(message.timestamp),
                     color = when {
-                        message.isError -> Color(0xFFD32F2F).copy(alpha = 0.7f)
+                        message.isError -> errorText.copy(alpha = 0.7f)
                         isCurrentUser -> Color.White.copy(alpha = 0.7f)
-                        else -> Color.Gray
+                        else -> secondaryTextColor
                     },
                     fontSize = 11.sp
                 )
@@ -623,12 +713,20 @@ fun GeminiMessageInput(
     messageText: String,
     onMessageTextChange: (String) -> Unit,
     onSendClick: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    isDarkMode: Boolean,
+    surfaceColor: Color,
+    inputBackgroundColor: Color,
+    userMessageColor: Color,
+    textColor: Color,
+    secondaryTextColor: Color,
+    borderColor: Color
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
-        shadowElevation = 8.dp
+        color = surfaceColor,
+        shadowElevation = if (isDarkMode) 8.dp else 8.dp,
+        tonalElevation = if (isDarkMode) 4.dp else 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -641,14 +739,24 @@ fun GeminiMessageInput(
                 value = messageText,
                 onValueChange = onMessageTextChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Ask me anything...") },
+                placeholder = {
+                    Text(
+                        "Ask me anything...",
+                        color = secondaryTextColor
+                    )
+                },
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedBorderColor = Blue,
-                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                    focusedContainerColor = Color(0xFFF5F5F5),
-                    disabledContainerColor = Color(0xFFE0E0E0)
+                    focusedBorderColor = userMessageColor,
+                    unfocusedBorderColor = borderColor,
+                    focusedContainerColor = inputBackgroundColor,
+                    unfocusedContainerColor = inputBackgroundColor,
+                    disabledContainerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFE0E0E0),
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    focusedPlaceholderColor = secondaryTextColor,
+                    unfocusedPlaceholderColor = secondaryTextColor,
+                    cursorColor = userMessageColor
                 ),
                 maxLines = 4,
                 enabled = enabled
@@ -659,7 +767,8 @@ fun GeminiMessageInput(
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        if (enabled && messageText.isNotBlank()) Blue else Color.Gray,
+                        if (enabled && messageText.isNotBlank()) userMessageColor else
+                            if (isDarkMode) Color(0xFF424242) else Color.Gray,
                         CircleShape
                     ),
                 enabled = enabled && messageText.isNotBlank()
