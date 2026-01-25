@@ -44,6 +44,10 @@ interface MessageRepository {
     fun deleteMessageForMe(chatId: String, messageId: String, userId: String)
     fun deleteMessageForEveryone(chatId: String, messageId: String)
 
+    // Presence
+    fun setUserOnline(userId: String): () -> Unit
+    fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit
+
     fun navigateToChatWithMessage(
         activity: Activity,
         targetUserId: String,
@@ -518,6 +522,44 @@ class MessageRepositoryImpl : MessageRepository {
     override fun deleteMessageForEveryone(chatId: String, messageId: String) {
         val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId)
         msgRef.removeValue()
+    }
+
+    override fun setUserOnline(userId: String): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        try {
+            ref.child("online").setValue(true)
+            ref.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+            ref.onDisconnect().updateChildren(
+                mapOf(
+                    "online" to false,
+                    "lastSeen" to ServerValue.TIMESTAMP
+                )
+            )
+        } catch (_: Exception) { }
+        return {
+            try {
+                ref.updateChildren(
+                    mapOf(
+                        "online" to false,
+                        "lastSeen" to ServerValue.TIMESTAMP
+                    )
+                )
+            } catch (_: Exception) { }
+        }
+    }
+
+    override fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val online = snapshot.child("online").getValue(Boolean::class.java) ?: false
+                val lastSeen = snapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                callback(online, lastSeen)
+            }
+            override fun onCancelled(error: DatabaseError) { }
+        }
+        ref.addValueEventListener(listener)
+        return { ref.removeEventListener(listener) }
     }
 
 
