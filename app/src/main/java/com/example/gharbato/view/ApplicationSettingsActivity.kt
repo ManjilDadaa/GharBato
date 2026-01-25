@@ -23,13 +23,25 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 class ApplicationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this) // Your initialization
+
         setContent {
-            ApplicationSettingsScreen()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode) // Your system bar utility
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ApplicationSettingsScreen()
+            }
         }
     }
 }
@@ -38,8 +50,7 @@ class ApplicationSettingsActivity : ComponentActivity() {
 @Composable
 fun ApplicationSettingsScreen() {
     val context = LocalContext.current
-
-    var isDarkMode by remember { mutableStateOf(false) }
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     var selectedLanguage by remember { mutableStateOf("English") }
     var appVersion by remember { mutableStateOf("") }
     val appName = "GharBato"
@@ -48,8 +59,14 @@ fun ApplicationSettingsScreen() {
         appVersion = getAppVersion(context)
     }
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+    val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val subtitleColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+    val dividerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFEEEEEE)
+
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
@@ -58,7 +75,10 @@ fun ApplicationSettingsScreen() {
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = Color.DarkGray
+                            color = if (isDarkMode)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                Color.DarkGray
                         )
                     )
                 },
@@ -71,19 +91,20 @@ fun ApplicationSettingsScreen() {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = Color.DarkGray,
+                            tint = if (isDarkMode)
+                                MaterialTheme.colorScheme.onBackground
+                            else
+                                Color.DarkGray,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White,
-                    navigationIconContentColor = Color.DarkGray,
-                    titleContentColor = Color.DarkGray
+                    containerColor = backgroundColor
                 ),
                 modifier = Modifier.shadow(
                     elevation = 1.dp,
-                    spotColor = Color.LightGray
+                    spotColor = if (isDarkMode) Color.Transparent else Color.LightGray
                 )
             )
         }
@@ -91,6 +112,7 @@ fun ApplicationSettingsScreen() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .background(backgroundColor)
                 .padding(paddingValues)
         ) {
             // App Settings Section
@@ -99,10 +121,10 @@ fun ApplicationSettingsScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 20.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = cardColor
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -114,18 +136,18 @@ fun ApplicationSettingsScreen() {
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF666666)
+                            color = subtitleColor
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
                     )
 
-                    // Dark Mode Setting
+                    // Dark Mode Setting - Using your ThemePreference system
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { isDarkMode = !isDarkMode }
+                            .clickable { ThemePreference.toggleDarkMode(context) }
                             .padding(horizontal = 20.dp, vertical = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -133,7 +155,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -156,7 +178,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Black
+                                    color = textColor
                                 )
                             )
                             Text(
@@ -164,25 +186,25 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
-                                    color = Color(0xFF666666)
+                                    color = subtitleColor
                                 )
                             )
                         }
 
                         Switch(
                             checked = isDarkMode,
-                            onCheckedChange = { isDarkMode = it },
+                            onCheckedChange = { ThemePreference.setDarkMode(context, it) },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = Blue,
-                                uncheckedThumbColor = Color(0xFFF1F1F1),
-                                uncheckedTrackColor = Color(0xFFCCCCCC)
+                                uncheckedThumbColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFF1F1F1),
+                                uncheckedTrackColor = if (isDarkMode) Color(0xFF666666) else Color(0xFFCCCCCC)
                             )
                         )
                     }
 
                     Divider(
-                        color = Color(0xFFEEEEEE),
+                        color = dividerColor,
                         thickness = 1.dp,
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )
@@ -201,7 +223,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -224,7 +246,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Black
+                                    color = textColor
                                 )
                             )
                             Text(
@@ -232,7 +254,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
-                                    color = Color(0xFF666666)
+                                    color = subtitleColor
                                 )
                             )
                         }
@@ -240,7 +262,7 @@ fun ApplicationSettingsScreen() {
                         Icon(
                             painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
                             contentDescription = "Arrow",
-                            tint = Color(0xFFCCCCCC),
+                            tint = if (isDarkMode) Color(0xFF888888) else Color(0xFFCCCCCC),
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -253,10 +275,10 @@ fun ApplicationSettingsScreen() {
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White
+                    containerColor = cardColor
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -268,7 +290,7 @@ fun ApplicationSettingsScreen() {
                         style = TextStyle(
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF666666)
+                            color = subtitleColor
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -286,7 +308,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -309,7 +331,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Black
+                                    color = textColor
                                 )
                             )
                             Text(
@@ -317,14 +339,14 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
-                                    color = Color(0xFF666666)
+                                    color = subtitleColor
                                 )
                             )
                         }
                     }
 
                     Divider(
-                        color = Color(0xFFEEEEEE),
+                        color = dividerColor,
                         thickness = 1.dp,
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )
@@ -340,7 +362,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -363,7 +385,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
-                                    color = Color.Black
+                                    color = textColor
                                 )
                             )
                             Text(
@@ -371,7 +393,7 @@ fun ApplicationSettingsScreen() {
                                 style = TextStyle(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Normal,
-                                    color = Color(0xFF666666)
+                                    color = subtitleColor
                                 )
                             )
                         }
@@ -387,7 +409,7 @@ fun ApplicationSettingsScreen() {
                 style = TextStyle(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
-                    color = Color(0xFF999999)
+                    color = if (isDarkMode) Color(0xFFAAAAAA) else Color(0xFF999999)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -407,5 +429,38 @@ fun getAppVersion(context: Context): String {
         packageInfo.versionName ?: "N/A"
     } catch (e: Exception) {
         "N/A"
+    }
+}
+
+object ThemePreference {
+    private const val PREFS_NAME = "theme_preferences"
+    private const val KEY_DARK_MODE = "dark_mode"
+
+    private val _isDarkModeState = MutableStateFlow(false)
+    val isDarkModeState: StateFlow<Boolean> = _isDarkModeState.asStateFlow()
+
+    fun init(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        _isDarkModeState.value = prefs.getBoolean(KEY_DARK_MODE, false)
+    }
+
+    fun toggleDarkMode(context: Context) {
+        val newValue = !_isDarkModeState.value
+        _isDarkModeState.value = newValue
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, newValue).apply()
+    }
+
+    fun setDarkMode(context: Context, isDark: Boolean) {
+        _isDarkModeState.value = isDark
+
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_DARK_MODE, isDark).apply()
+    }
+
+    fun getDarkModeSync(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(KEY_DARK_MODE, false)
     }
 }

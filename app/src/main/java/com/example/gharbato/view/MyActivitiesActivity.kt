@@ -27,18 +27,32 @@ import com.example.gharbato.R
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.repository.UserRepoImpl
 import android.util.Log
+import com.example.gharbato.utils.SystemBarUtils
 
 class MyActivitiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { MyActivitiesScreen() }
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
+        setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                MyActivitiesScreen()
+            }
+        }
     }
 }
 
@@ -46,6 +60,7 @@ class MyActivitiesActivity : ComponentActivity() {
 @Composable
 fun MyActivitiesScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val userRepo = remember { UserRepoImpl() }
     val currentUserId = userRepo.getCurrentUserId()
 
@@ -68,7 +83,6 @@ fun MyActivitiesScreen() {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     Log.d("MyActivities", "Total properties in Firebase: ${snapshot.childrenCount}")
 
-                    // Get all properties and filter by ownerId
                     val allProperties = snapshot.children.mapNotNull { child ->
                         try {
                             child.getValue(PropertyModel::class.java)
@@ -80,14 +94,12 @@ fun MyActivitiesScreen() {
 
                     Log.d("MyActivities", "Parsed ${allProperties.size} properties")
 
-                    // Filter properties belonging to current user
                     userProperties = allProperties.filter { property ->
                         property.ownerId == currentUserId
                     }
 
                     Log.d("MyActivities", "User has ${userProperties.size} properties")
 
-                    // Count by status
                     totalListings = userProperties.size
                     approvedListings = userProperties.count { it.status == PropertyStatus.APPROVED }
                     pendingListings = userProperties.count { it.status == PropertyStatus.PENDING }
@@ -110,15 +122,28 @@ fun MyActivitiesScreen() {
     }
 
     Scaffold(
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
         topBar = {
             TopAppBar(
-                title = { Text("My Activities", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        "My Activities",
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { (context as ComponentActivity).finish() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Blue)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Blue
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+                )
             )
         }
     ) { padding ->
@@ -135,21 +160,19 @@ fun MyActivitiesScreen() {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF8F9FB))
+                    .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB))
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Total Listings Summary Card
-                ActivitySectionHeader("Listing Overview")
-                TotalListingsCard(totalListings)
+                ActivitySectionHeader("Listing Overview", isDarkMode)
+                TotalListingsCard(totalListings, isDarkMode)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Statistics Cards
                 if (totalListings > 0) {
-                    ActivitySectionHeader("Listing Statistics")
+                    ActivitySectionHeader("Listing Statistics", isDarkMode)
 
                     Row(
                         modifier = Modifier
@@ -162,9 +185,10 @@ fun MyActivitiesScreen() {
                             count = approvedListings,
                             color = Color(0xFF4CAF50),
                             icon = R.drawable.baseline_check_24,
+                            isDarkMode = isDarkMode,
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java))
+                                context.startActivity(Intent(context, ApprovedPropertiesActivity ::class.java))
                             }
                         )
                         StatCard(
@@ -172,6 +196,7 @@ fun MyActivitiesScreen() {
                             count = pendingListings,
                             color = Color(0xFFFF9800),
                             icon = R.drawable.baseline_pending_actions_24,
+                            isDarkMode = isDarkMode,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
@@ -192,6 +217,7 @@ fun MyActivitiesScreen() {
                             count = rejectedListings,
                             color = Color(0xFFD32F2F),
                             icon = R.drawable.baseline_close_24,
+                            isDarkMode = isDarkMode,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 context.startActivity(Intent(context, RejectedPropertiesActivity::class.java))
@@ -202,6 +228,7 @@ fun MyActivitiesScreen() {
                             count = totalListings,
                             color = Blue,
                             icon = R.drawable.baseline_home_24,
+                            isDarkMode = isDarkMode,
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 context.startActivity(Intent(context, AllPropertiesActivity::class.java))
@@ -211,15 +238,16 @@ fun MyActivitiesScreen() {
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Detailed Breakdown
-                    ActivitySectionHeader("Status Breakdown")
+                    ActivitySectionHeader("Status Breakdown", isDarkMode)
                     StatusBreakdownCard(
                         approved = approvedListings,
                         pending = pendingListings,
                         rejected = rejectedListings,
                         total = totalListings,
+                        isDarkMode = isDarkMode,
                         onApprovedClick = {
-                            context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java))
+                            context.startActivity(Intent(context, ApprovedPropertiesActivity::class.java)
+                            )
                         },
                         onPendingClick = {
                             context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
@@ -229,9 +257,8 @@ fun MyActivitiesScreen() {
                         }
                     )
                 } else {
-                    // Empty State
                     Spacer(modifier = Modifier.height(32.dp))
-                    EmptyStateCard {
+                    EmptyStateCard(isDarkMode) {
                         context.startActivity(Intent(context, ListingActivity::class.java))
                         (context as ComponentActivity).finish()
                     }
@@ -246,23 +273,25 @@ fun MyActivitiesScreen() {
 /* -------------------- UI COMPONENTS -------------------- */
 
 @Composable
-fun ActivitySectionHeader(title: String) {
+fun ActivitySectionHeader(title: String, isDarkMode: Boolean) {
     Text(
         title,
         fontSize = 16.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFF2C2C2C),
+        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C),
         modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp)
     )
 }
 
 @Composable
-fun TotalListingsCard(totalListings: Int) {
+fun TotalListingsCard(totalListings: Int, isDarkMode: Boolean) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = Blue.copy(alpha = 0.1f)),
+        colors = CardDefaults.cardColors(
+            containerColor = Blue.copy(alpha = 0.1f)
+        ),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
@@ -290,7 +319,7 @@ fun TotalListingsCard(totalListings: Int) {
                 Text(
                     "Total Listings",
                     fontSize = 14.sp,
-                    color = Color.Gray,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(4.dp))
@@ -306,7 +335,7 @@ fun TotalListingsCard(totalListings: Int) {
                     else if (totalListings == 1) "1 property listed"
                     else "$totalListings properties listed",
                     fontSize = 12.sp,
-                    color = Color.Gray
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                 )
             }
         }
@@ -319,13 +348,18 @@ fun StatCard(
     count: Int,
     color: Color,
     icon: Int,
+    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
     Card(
         modifier = modifier.clickable(enabled = count > 0) { onClick() },
         colors = CardDefaults.cardColors(
-            containerColor = if (count > 0) Color.White else Color.White.copy(alpha = 0.6f)
+            containerColor = if (count > 0) {
+                if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            } else {
+                if (isDarkMode) MaterialTheme.colorScheme.surface.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f)
+            }
         ),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(if (count > 0) 2.dp else 1.dp)
@@ -362,7 +396,7 @@ fun StatCard(
             Text(
                 title,
                 fontSize = 12.sp,
-                color = Color.Gray,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -375,6 +409,7 @@ fun StatusBreakdownCard(
     pending: Int,
     rejected: Int,
     total: Int,
+    isDarkMode: Boolean,
     onApprovedClick: () -> Unit,
     onPendingClick: () -> Unit,
     onRejectedClick: () -> Unit
@@ -383,7 +418,9 @@ fun StatusBreakdownCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        ),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -392,39 +429,39 @@ fun StatusBreakdownCard(
                 "Property Status Distribution",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2C2C2C)
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Approved
             StatusBreakdownItem(
                 label = "Approved & Live",
                 count = approved,
                 total = total,
                 color = Color(0xFF4CAF50),
+                isDarkMode = isDarkMode,
                 onClick = onApprovedClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Pending
             StatusBreakdownItem(
                 label = "Pending Review",
                 count = pending,
                 total = total,
                 color = Color(0xFFFF9800),
+                isDarkMode = isDarkMode,
                 onClick = onPendingClick
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Rejected
             StatusBreakdownItem(
                 label = "Rejected",
                 count = rejected,
                 total = total,
                 color = Color(0xFFD32F2F),
+                isDarkMode = isDarkMode,
                 onClick = onRejectedClick
             )
         }
@@ -437,6 +474,7 @@ fun StatusBreakdownItem(
     count: Int,
     total: Int,
     color: Color,
+    isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     Column(
@@ -444,7 +482,9 @@ fun StatusBreakdownItem(
             .fillMaxWidth()
             .clickable(enabled = count > 0) { onClick() }
             .background(
-                if (count > 0) Color.Transparent else Color.Gray.copy(alpha = 0.05f),
+                if (count > 0) Color.Transparent
+                else if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                else Color.Gray.copy(alpha = 0.05f),
                 RoundedCornerShape(8.dp)
             )
             .padding(8.dp)
@@ -464,7 +504,7 @@ fun StatusBreakdownItem(
                 Text(
                     label,
                     fontSize = 14.sp,
-                    color = Color(0xFF2C2C2C)
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
                 )
             }
 
@@ -480,7 +520,7 @@ fun StatusBreakdownItem(
                     Icon(
                         painter = painterResource(R.drawable.baseline_chevron_right_24),
                         contentDescription = "View",
-                        tint = Color.Gray,
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -489,13 +529,15 @@ fun StatusBreakdownItem(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Progress bar
         val percentage = if (total > 0) (count.toFloat() / total.toFloat()) else 0f
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .background(Color(0xFFF5F5F5), RoundedCornerShape(4.dp))
+                .background(
+                    if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    RoundedCornerShape(4.dp)
+                )
         ) {
             Box(
                 modifier = Modifier
@@ -510,18 +552,20 @@ fun StatusBreakdownItem(
         Text(
             "${(percentage * 100).toInt()}% of total",
             fontSize = 11.sp,
-            color = Color.Gray
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
         )
     }
 }
 
 @Composable
-fun EmptyStateCard(onAddListing: () -> Unit) {
+fun EmptyStateCard(isDarkMode: Boolean, onAddListing: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        ),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
@@ -534,7 +578,7 @@ fun EmptyStateCard(onAddListing: () -> Unit) {
             Icon(
                 painter = painterResource(R.drawable.baseline_home_24),
                 contentDescription = null,
-                tint = Color.LightGray,
+                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.LightGray,
                 modifier = Modifier.size(80.dp)
             )
 
@@ -544,7 +588,7 @@ fun EmptyStateCard(onAddListing: () -> Unit) {
                 "No Listings Yet",
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF2C2C2C)
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -552,7 +596,7 @@ fun EmptyStateCard(onAddListing: () -> Unit) {
             Text(
                 "You haven't listed any properties yet.\nStart by adding your first listing!",
                 fontSize = 14.sp,
-                color = Color.Gray,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 

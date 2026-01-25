@@ -38,34 +38,38 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.MessageViewModel
 
 class MessageScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Initialize the theme preference
+        ThemePreference.init(this)
+
         setContent {
-            MessageScreen()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                MessageScreen()
+            }
         }
     }
 }
@@ -73,6 +77,7 @@ class MessageScreenActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val searchText by messageViewModel.searchText
     val users by messageViewModel.users
     val isLoading by messageViewModel.isLoading
@@ -107,7 +112,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.White
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
     ) { padding ->
         Column(
             modifier = Modifier
@@ -118,7 +123,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             // Header Title
             Text(
                 text = "Messages",
-                color = Blue, // Light Purple color
+                color = Blue,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.W500,
                 fontFamily = FontFamily.SansSerif,
@@ -132,27 +137,32 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(28.dp)),
+                    .background(
+                        if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                        RoundedCornerShape(28.dp)
+                    ),
                 placeholder = {
                     Text(
-                        "Search Property Owners",
-                        color = Color.Gray
+                        "",
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = Color.Gray,
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         modifier = Modifier.size(24.dp)
                     )
                 },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent,
-                    focusedContainerColor = Color.Transparent, // Using background modifier
+                    focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    cursorColor = Color.Black
+                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
+                    focusedTextColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
+                    unfocusedTextColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                 ),
                 shape = RoundedCornerShape(28.dp),
                 singleLine = true
@@ -165,7 +175,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Color(0xFFE0B0FF))
+                    CircularProgressIndicator(color = Blue)
                 }
             } else if (errorMessage.isNotEmpty() && users.isEmpty()) {
                 Box(
@@ -174,7 +184,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 ) {
                     Text(
                         text = errorMessage,
-                        color = Color.Gray,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -185,6 +195,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 ) {
                     item {
                         AIAssistantItem(
+                            isDarkMode = isDarkMode,
                             onClick = {
                                 activity.startActivity(GeminiChatActivity.newIntent(activity))
                             }
@@ -213,6 +224,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                             message = previewMessage,
                             time = previewTime,
                             imageUrl = user.profileImageUrl,
+                            isDarkMode = isDarkMode,
                             onClick = {
                                 messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
                             }
@@ -230,6 +242,7 @@ fun ChatListItem(
     message: String,
     time: String,
     imageUrl: String,
+    isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     Row(
@@ -244,7 +257,7 @@ fun ChatListItem(
             modifier = Modifier
                 .size(56.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFF0F0F0)),
+                .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0F0F0)),
             contentAlignment = Alignment.Center
         ) {
             if (imageUrl.isNotEmpty()) {
@@ -255,12 +268,11 @@ fun ChatListItem(
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                // Initials or placeholder
                 Text(
                     text = name.take(1).uppercase(),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Gray
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                 )
             }
         }
@@ -275,11 +287,10 @@ fun ChatListItem(
                 text = name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // We can add an icon here if needed, e.g., for "Video call"
                 Text(
                     text = message,
                     fontSize = 14.sp,
@@ -294,7 +305,7 @@ fun ChatListItem(
         Text(
             text = time,
             fontSize = 12.sp,
-            color = Color.Gray,
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
             modifier = Modifier.align(Alignment.Top)
         )
     }
@@ -333,16 +344,17 @@ private fun isYesterday(cal: java.util.Calendar, now: java.util.Calendar): Boole
             cal.get(java.util.Calendar.DAY_OF_YEAR) == yesterday.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
-
 @Composable
-fun AIAssistantItem(onClick: () -> Unit) {
+fun AIAssistantItem(isDarkMode: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+        )
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -371,7 +383,7 @@ fun AIAssistantItem(onClick: () -> Unit) {
                         text = "AI Assistant",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = Color.Black
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
@@ -393,16 +405,9 @@ fun AIAssistantItem(onClick: () -> Unit) {
                 Text(
                     text = "Start a conversation with AI",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                 )
             }
         }
     }
 }
-
-@Preview(showBackground = true)
-@Composable
-fun PreviewMessageScreen() {
-    MessageScreen()
-}
-

@@ -9,7 +9,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,13 +30,13 @@ import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.model.ImageCategory
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
 
 @Composable
 fun PhotosContentScreen(
     imageCategories: List<ImageCategory>,
     onCategoriesChange: (List<ImageCategory>) -> Unit
 ) {
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val totalImages = imageCategories.sumOf { it.images.size }
     val requiredCategoriesFilled = imageCategories
         .filter { it.isRequired }
@@ -62,26 +61,36 @@ fun PhotosContentScreen(
                     "Property Photos",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.onBackground
+                        else
+                            Color(0xFF2C2C2C)
                     )
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     "Add photos to attract more buyers",
                     fontSize = 14.sp,
-                    color = Gray
+                    color = if (isDarkMode)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        Color(0xFF999999)
                 )
             }
 
             // Photo counter badge
             Surface(
                 shape = RoundedCornerShape(20.dp),
-                color = Blue.copy(alpha = 0.1f)
+                color = if (isDarkMode)
+                    Color(0xFF1A2F3A)
+                else
+                    Blue.copy(alpha = 0.1f)
             ) {
                 Text(
                     "$totalImages Photos",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    color = Blue,
+                    color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
@@ -94,10 +103,11 @@ fun PhotosContentScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = if (requiredCategoriesFilled)
-                    Color(0xFFE8F5E9)
-                else
-                    Color(0xFFFFF3E0)
+                containerColor = if (requiredCategoriesFilled) {
+                    if (isDarkMode) Color(0xFF1B3A1F) else Color(0xFFE8F5E9)
+                } else {
+                    if (isDarkMode) Color(0xFF3A2E1A) else Color(0xFFFFF3E0)
+                }
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -128,10 +138,11 @@ fun PhotosContentScreen(
                     else
                         "Cover Photo and Bedroom photos are required",
                     fontSize = 13.sp,
-                    color = if (requiredCategoriesFilled)
-                        Color(0xFF2E7D32)
-                    else
-                        Color(0xFFE65100)
+                    color = if (requiredCategoriesFilled) {
+                        if (isDarkMode) Color(0xFF66BB6A) else Color(0xFF2E7D32)
+                    } else {
+                        if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFE65100)
+                    }
                 )
             }
         }
@@ -146,7 +157,7 @@ fun PhotosContentScreen(
                     val updatedCategories = imageCategories.toMutableList()
                     val currentImages = category.images.toMutableList()
 
-                    //  Add only images that aren't already in the list
+                    // Add only images that aren't already in the list
                     uris.forEach { uri ->
                         val uriString = uri.toString()
                         if (!currentImages.contains(uriString) && currentImages.size < category.maxImages) {
@@ -163,7 +174,8 @@ fun PhotosContentScreen(
                     currentImages.remove(uriString)
                     updatedCategories[index] = category.copy(images = currentImages)
                     onCategoriesChange(updatedCategories)
-                }
+                },
+                isDarkMode = isDarkMode
             )
 
             if (index < imageCategories.size - 1) {
@@ -177,7 +189,10 @@ fun PhotosContentScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F5F5)
+                containerColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.surface
+                else
+                    Color(0xFFF5F5F5)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -195,7 +210,11 @@ fun PhotosContentScreen(
                     Text(
                         "Photo Tips",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        fontSize = 16.sp,
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            Color(0xFF2C2C2C)
                     )
                 }
 
@@ -215,13 +234,16 @@ fun PhotosContentScreen(
                         Text(
                             "•",
                             fontSize = 16.sp,
-                            color = Blue,
+                            color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
                             tip,
                             fontSize = 13.sp,
-                            color = Color.DarkGray,
+                            color = if (isDarkMode)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                Color.DarkGray,
                             lineHeight = 18.sp
                         )
                     }
@@ -237,14 +259,15 @@ fun PhotosContentScreen(
 fun ImageCategorySection(
     category: ImageCategory,
     onImagesSelected: (List<Uri>) -> Unit,
-    onImageRemoved: (String) -> Unit
+    onImageRemoved: (String) -> Unit,
+    isDarkMode: Boolean
 ) {
-    //  For cover photo, only allow single selection
+    // For cover photo, only allow single selection
     val isCoverPhoto = category.id == "cover"
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = if (isCoverPhoto) {
-            ActivityResultContracts.GetContent() //  Single selection for cover
+            ActivityResultContracts.GetContent() // Single selection for cover
         } else {
             ActivityResultContracts.GetMultipleContents() // Multiple for others
         }
@@ -260,7 +283,7 @@ fun ImageCategorySection(
                 // Multiple URIs (other categories)
                 val uris = result.filterIsInstance<Uri>()
                 if (uris.isNotEmpty()) {
-                    //  Filter out already selected images
+                    // Filter out already selected images
                     val newUris = uris.filter { uri ->
                         !category.images.contains(uri.toString())
                     }
@@ -277,15 +300,22 @@ fun ImageCategorySection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = if (isDarkMode)
+                MaterialTheme.colorScheme.surface
+            else
+                Color.White
         ),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             width = 1.dp,
-            color = if (category.isRequired && category.images.isEmpty())
+            color = if (category.isRequired && category.images.isEmpty()) {
                 Color(0xFFFF9800)
-            else
-                Color(0xFFE0E0E0)
+            } else {
+                if (isDarkMode)
+                    MaterialTheme.colorScheme.outline
+                else
+                    Color(0xFFE0E0E0)
+            }
         )
     ) {
         Column(
@@ -303,14 +333,17 @@ fun ImageCategorySection(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Blue.copy(alpha = 0.1f),
+                        color = if (isDarkMode)
+                            Color(0xFF1A2F3A)
+                        else
+                            Blue.copy(alpha = 0.1f),
                         modifier = Modifier.size(40.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 painter = painterResource(category.icon),
                                 contentDescription = null,
-                                tint = Blue,
+                                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -323,13 +356,17 @@ fun ImageCategorySection(
                             Text(
                                 category.title,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                                fontSize = 16.sp,
+                                color = if (isDarkMode)
+                                    MaterialTheme.colorScheme.onSurface
+                                else
+                                    Color(0xFF2C2C2C)
                             )
                             if (category.isRequired) {
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Surface(
                                     shape = RoundedCornerShape(4.dp),
-                                    color = Color(0xFFFF5252).copy(alpha = 0.1f)
+                                    color = Color(0xFFFF5252).copy(alpha = 0.15f)
                                 ) {
                                     Text(
                                         "Required",
@@ -347,7 +384,10 @@ fun ImageCategorySection(
                         Text(
                             category.description,
                             fontSize = 12.sp,
-                            color = Gray
+                            color = if (isDarkMode)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                Color(0xFF999999)
                         )
                     }
                 }
@@ -356,10 +396,14 @@ fun ImageCategorySection(
                 Text(
                     "${category.images.size}/${category.maxImages}",
                     fontSize = 13.sp,
-                    color = if (category.images.size == category.maxImages)
-                        Blue
-                    else
-                        Gray,
+                    color = if (category.images.size == category.maxImages) {
+                        if (isDarkMode) Color(0xFF82B1FF) else Blue
+                    } else {
+                        if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
+                            Color(0xFF999999)
+                    },
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -385,7 +429,8 @@ fun ImageCategorySection(
                     if (canAddMore && !isCoverPhoto) {
                         item {
                             AddImageButton(
-                                onClick = { imagePickerLauncher.launch("image/*") }
+                                onClick = { imagePickerLauncher.launch("image/*") },
+                                isDarkMode = isDarkMode
                             )
                         }
                     }
@@ -399,11 +444,17 @@ fun ImageCategorySection(
                         .height(80.dp),
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color(0xFFFAFAFA)
+                        containerColor = if (isDarkMode)
+                            MaterialTheme.colorScheme.surfaceVariant
+                        else
+                            Color(0xFFFAFAFA)
                     ),
                     border = BorderStroke(
                         width = 1.5.dp,
-                        color = Blue.copy(alpha = 0.3f)
+                        color = if (isDarkMode)
+                            Color(0xFF82B1FF).copy(alpha = 0.5f)
+                        else
+                            Blue.copy(alpha = 0.3f)
                     )
                 ) {
                     Column(
@@ -412,13 +463,13 @@ fun ImageCategorySection(
                         Icon(
                             painter = painterResource(R.drawable.baseline_add_24),
                             contentDescription = null,
-                            tint = Blue,
+                            tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "Add ${category.title}",
-                            color = Blue,
+                            color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -454,7 +505,7 @@ fun ImageThumbnail(
                 .padding(4.dp)
                 .size(28.dp)
                 .background(
-                    color = Color.Black.copy(alpha = 0.6f),
+                    color = Color.Black.copy(alpha = 0.7f),
                     shape = RoundedCornerShape(14.dp)
                 )
         ) {
@@ -469,15 +520,26 @@ fun ImageThumbnail(
 }
 
 @Composable
-fun AddImageButton(onClick: () -> Unit) {
+fun AddImageButton(
+    onClick: () -> Unit,
+    isDarkMode: Boolean
+) {
     Box(
         modifier = Modifier
             .size(100.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFFF5F5F5))
+            .background(
+                if (isDarkMode)
+                    MaterialTheme.colorScheme.surfaceVariant
+                else
+                    Color(0xFFF5F5F5)
+            )
             .border(
                 width = 1.5.dp,
-                color = Blue.copy(alpha = 0.3f),
+                color = if (isDarkMode)
+                    Color(0xFF82B1FF).copy(alpha = 0.5f)
+                else
+                    Blue.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(8.dp)
             )
             .clickable(onClick = onClick),
@@ -489,13 +551,13 @@ fun AddImageButton(onClick: () -> Unit) {
             Icon(
                 painter = painterResource(R.drawable.baseline_add_24),
                 contentDescription = null,
-                tint = Blue,
+                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                 modifier = Modifier.size(32.dp)
             )
             Text(
                 "Add More",
                 fontSize = 11.sp,
-                color = Blue,
+                color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                 textAlign = TextAlign.Center
             )
         }

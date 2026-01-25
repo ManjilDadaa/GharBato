@@ -52,9 +52,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -67,7 +70,6 @@ import com.example.gharbato.R
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.getDefaultAmenities
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +77,7 @@ fun AmenitiesContentScreen(
     state: PropertyListingState,
     onStateChange: (PropertyListingState) -> Unit
 ) {
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val allAmenities = getDefaultAmenities()
     val selectedCount = state.amenities.size
 
@@ -88,7 +91,11 @@ fun AmenitiesContentScreen(
         Text(
             "Amenities",
             fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
+            color = if (isDarkMode)
+                MaterialTheme.colorScheme.onBackground
+            else
+                Color(0xFF2C2C2C)
         )
 
         Spacer(Modifier.height(4.dp))
@@ -96,14 +103,20 @@ fun AmenitiesContentScreen(
         Text(
             "Select features available in your property",
             fontSize = 14.sp,
-            color = Gray
+            color = if (isDarkMode)
+                MaterialTheme.colorScheme.onSurfaceVariant
+            else
+                Color(0xFF999999)
         )
 
         Spacer(Modifier.height(8.dp))
 
         // Selection counter badge
         Surface(
-            color = Blue.copy(alpha = 0.1f),
+            color = if (isDarkMode)
+                Color(0xFF1A2F3A)
+            else
+                Blue.copy(alpha = 0.1f),
             shape = RoundedCornerShape(20.dp)
         ) {
             Row(
@@ -114,13 +127,13 @@ fun AmenitiesContentScreen(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Blue,
+                    tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     "$selectedCount selected",
                     fontSize = 13.sp,
-                    color = Blue,
+                    color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -163,13 +176,34 @@ fun AmenitiesContentScreen(
                         }
                     },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = Blue.copy(alpha = 0.12f),
-                        selectedLabelColor = Blue
+                        selectedContainerColor = if (isDarkMode)
+                            Color(0xFF1A2F3A)
+                        else
+                            Blue.copy(alpha = 0.12f),
+                        selectedLabelColor = if (isDarkMode)
+                            Color(0xFF82B1FF)
+                        else
+                            Blue,
+                        containerColor = if (isDarkMode)
+                            MaterialTheme.colorScheme.surfaceVariant
+                        else
+                            Color.White,
+                        labelColor = if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            Color(0xFF2C2C2C)
                     ),
                     border = FilterChipDefaults.filterChipBorder(
                         enabled = true,
                         selected = selected,
-                        borderColor = if (selected) Blue else Gray.copy(0.3f)
+                        borderColor = if (selected) {
+                            if (isDarkMode) Color(0xFF82B1FF) else Blue
+                        } else {
+                            if (isDarkMode)
+                                MaterialTheme.colorScheme.outline
+                            else
+                                Color(0xFF999999).copy(0.3f)
+                        }
                     ),
                     leadingIcon = if (selected) {
                         {
@@ -187,7 +221,8 @@ fun AmenitiesContentScreen(
         Spacer(Modifier.height(24.dp))
 
         InfoHint(
-            text = "Amenities increase visibility and tenant interest."
+            text = "Amenities increase visibility and tenant interest.",
+            isDarkMode = isDarkMode
         )
 
         Spacer(Modifier.height(80.dp))
@@ -267,11 +302,14 @@ fun getAmenityIcon(amenityName: String): ImageVector {
 
 
 @Composable
-fun InfoHint(text: String) {
+fun InfoHint(text: String, isDarkMode: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF0F9FF)
+            containerColor = if (isDarkMode)
+                Color(0xFF1A2F3A)
+            else
+                Color(0xFFF0F9FF)
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -282,13 +320,16 @@ fun InfoHint(text: String) {
             Icon(
                 painter = painterResource(R.drawable.baseline_info_24),
                 contentDescription = null,
-                tint = Blue,
+                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
                 modifier = Modifier.size(24.dp)
             )
             Text(
                 text,
                 fontSize = 13.sp,
-                color = Color.DarkGray,
+                color = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    Color.DarkGray,
                 lineHeight = 18.sp
             )
         }

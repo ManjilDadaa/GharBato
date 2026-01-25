@@ -63,6 +63,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -71,6 +72,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,7 +112,6 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
@@ -119,6 +120,7 @@ fun SearchScreen(
     )
 ) {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     val searchHistoryViewModel: SearchHistoryViewModel = viewModel(
         factory = SearchHistoryViewModelFactory()
@@ -129,7 +131,7 @@ fun SearchScreen(
 
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
-    var isSearchBarFocused by remember { mutableStateOf(false) } // Track focus
+    var isSearchBarFocused by remember { mutableStateOf(false) }
 
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
@@ -164,13 +166,13 @@ fun SearchScreen(
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
         topBar = {
             SearchTopBar(
                 searchQuery = uiState.searchQuery,
                 onSearchQueryChange = { query ->
                     viewModel.updateSearchQuery(query)
-                    isSearchBarFocused = query.isNotEmpty() // Show history when typing
+                    isSearchBarFocused = query.isNotEmpty()
                 },
                 onFilterClick = {
                     showFilterSheet = true
@@ -199,7 +201,8 @@ fun SearchScreen(
                 onSearchBarFocused = { focused ->
                     isSearchBarFocused = focused
                 },
-                hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null
+                hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null,
+                isDarkMode = isDarkMode
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
@@ -208,7 +211,7 @@ fun SearchScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .background(Color(0xFFF8F9FA))
+                .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA))
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 if (isSearchBarFocused && uiState.properties.isEmpty() && !uiState.isLoading) {
@@ -238,8 +241,6 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-
-
                     // Map Section
                     if (mapHeight > 0.dp && uiState.properties.isNotEmpty()) {
                         Box(
@@ -256,7 +257,8 @@ fun SearchScreen(
                                 onMapClick = {
                                     val intent = Intent(context, FullSearchMapActivity::class.java)
                                     context.startActivity(intent)
-                                }
+                                },
+                                isDarkMode = isDarkMode
                             )
 
                             uiState.selectedProperty?.let { property ->
@@ -272,7 +274,8 @@ fun SearchScreen(
                                     },
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
-                                        .padding(16.dp)
+                                        .padding(16.dp),
+                                    isDarkMode = isDarkMode
                                 )
                             }
                         }
@@ -283,7 +286,8 @@ fun SearchScreen(
                         currentSort = uiState.currentSort,
                         onSortClick = {
                             showSortSheet = true
-                        }
+                        },
+                        isDarkMode = isDarkMode
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -298,9 +302,12 @@ fun SearchScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    CircularProgressIndicator(color = Color(0xFF2196F3))
+                                    CircularProgressIndicator(color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3))
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Text("Searching properties...", color = Color.Gray)
+                                    Text(
+                                        "Searching properties...",
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
+                                    )
                                 }
                             }
                         }
@@ -318,20 +325,20 @@ fun SearchScreen(
                                         imageVector = Icons.Default.SearchOff,
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
-                                        tint = Color.Gray
+                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         "No results found",
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color.Gray
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         "Try adjusting your search or filters",
                                         fontSize = 14.sp,
-                                        color = Color.Gray
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
 
                                     if (uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null) {
@@ -342,7 +349,7 @@ fun SearchScreen(
                                                 viewModel.clearSearch()
                                             },
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = Color(0xFF2196F3)
+                                                containerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
                                             )
                                         ) {
                                             Icon(Icons.Default.Clear, contentDescription = null)
@@ -367,20 +374,20 @@ fun SearchScreen(
                                         imageVector = Icons.Default.Home,
                                         contentDescription = null,
                                         modifier = Modifier.size(64.dp),
-                                        tint = Color.Gray
+                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         "No properties found",
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Medium,
-                                        color = Color.Gray
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
                                     Text(
                                         "Try different filters or search terms",
                                         fontSize = 14.sp,
-                                        color = Color.Gray
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
                                 }
                             }
@@ -397,7 +404,8 @@ fun SearchScreen(
                                 },
                                 onFavoriteClick = { property ->
                                     viewModel.toggleFavorite(property)
-                                }
+                                },
+                                isDarkMode = isDarkMode
                             )
                         }
                     }
@@ -447,8 +455,7 @@ fun SearchScreen(
     }
 }
 
-//Helper function to convert PropertyFilters to Map for storage
-
+// Helper function to convert PropertyFilters to Map for storage
 private fun convertFiltersToMap(filters: com.example.gharbato.model.PropertyFilters): Map<String, String> {
     val map = mutableMapOf<String, String>()
 
@@ -471,7 +478,6 @@ private fun convertFiltersToMap(filters: com.example.gharbato.model.PropertyFilt
     return map
 }
 
-
 @Composable
 fun SearchTopBar(
     searchQuery: String,
@@ -480,17 +486,28 @@ fun SearchTopBar(
     onLocationClick: () -> Unit,
     onSearchClick: () -> Unit,
     onClearSearch: () -> Unit,
-    onSearchBarFocused: (Boolean) -> Unit, // NEW: Track focus
-    hasActiveSearch: Boolean
+    onSearchBarFocused: (Boolean) -> Unit,
+    hasActiveSearch: Boolean,
+    isDarkMode: Boolean
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
+
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val hintColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF9E9E9E)
+    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+    val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFAFAFA)
+    val buttonBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars),
-        color = Color.White,
+        color = backgroundColor,
         shadowElevation = 1.dp
     ) {
         Column(
@@ -509,7 +526,7 @@ fun SearchTopBar(
                 placeholder = {
                     Text(
                         text = "Search location, property type...",
-                        color = Color(0xFF9E9E9E),
+                        color = hintColor,
                         fontSize = 15.sp
                     )
                 },
@@ -517,7 +534,7 @@ fun SearchTopBar(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = Color(0xFF757575),
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
                         modifier = Modifier.size(24.dp)
                     )
                 },
@@ -530,18 +547,28 @@ fun SearchTopBar(
                             Icon(
                                 imageVector = Icons.Default.Clear,
                                 contentDescription = "Clear search",
-                                tint = Color(0xFF757575)
+                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
                             )
                         }
                     }
                 },
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedBorderColor = Color(0xFFE0E0E0),
-                    focusedBorderColor = Color(0xFF2196F3),
-                    unfocusedContainerColor = Color(0xFFFAFAFA),
-                    focusedContainerColor = Color.White,
-                    cursorColor = Color(0xFF2196F3)
+                    focusedBorderColor = focusedBorderColor,
+                    unfocusedBorderColor = borderColor,
+                    focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+                    unfocusedContainerColor = containerColor,
+                    cursorColor = focusedBorderColor,
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    focusedLabelColor = hintColor,
+                    unfocusedLabelColor = hintColor,
+                    focusedPlaceholderColor = hintColor,
+                    unfocusedPlaceholderColor = hintColor,
+                    focusedLeadingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
+                    unfocusedLeadingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
+                    focusedTrailingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
+                    unfocusedTrailingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
                 ),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -565,9 +592,9 @@ fun SearchTopBar(
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = Color.Transparent,
-                        contentColor = Color(0xFF2196F3)
+                        contentColor = buttonBorderColor
                     ),
-                    border = BorderStroke(1.5.dp, Color(0xFF2196F3))
+                    border = BorderStroke(1.5.dp, buttonBorderColor)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
@@ -583,7 +610,7 @@ fun SearchTopBar(
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF2196F3),
+                        containerColor = buttonContainerColor,
                         contentColor = Color.White
                     ),
                     elevation = ButtonDefaults.buttonElevation(
@@ -604,14 +631,13 @@ fun SearchTopBar(
     }
 }
 
-
-
 @Composable
 fun PropertiesMapSection(
     properties: List<PropertyModel>,
     context: Context,
     onMarkerClick: (PropertyModel) -> Unit,
-    onMapClick: () -> Unit
+    onMapClick: () -> Unit,
+    isDarkMode: Boolean
 ) {
     // Calculate center position based on all property locations
     val centerLocation = remember(properties) {
@@ -646,6 +672,10 @@ fun PropertiesMapSection(
             }
         }
     }
+
+    val fabBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val fabContentColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val badgeBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
 
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
@@ -687,12 +717,12 @@ fun PropertiesMapSection(
                     cameraPositionState.move(CameraUpdateFactory.zoomIn())
                 },
                 modifier = Modifier.size(40.dp),
-                containerColor = Color.White
+                containerColor = fabBackgroundColor
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = "Zoom In",
-                    tint = Color.Black
+                    tint = fabContentColor
                 )
             }
 
@@ -703,12 +733,12 @@ fun PropertiesMapSection(
                     cameraPositionState.move(CameraUpdateFactory.zoomOut())
                 },
                 modifier = Modifier.size(40.dp),
-                containerColor = Color.White
+                containerColor = fabBackgroundColor
             ) {
                 Icon(
                     imageVector = Icons.Default.Remove,
                     contentDescription = "Zoom Out",
-                    tint = Color.Black
+                    tint = fabContentColor
                 )
             }
         }
@@ -721,12 +751,12 @@ fun PropertiesMapSection(
                 .padding(16.dp)
                 .size(40.dp)
                 .zIndex(1f),
-            containerColor = Color.White
+            containerColor = fabBackgroundColor
         ) {
             Icon(
                 imageVector = Icons.Default.Fullscreen,
                 contentDescription = "Full Screen",
-                tint = Color.Black
+                tint = fabContentColor
             )
         }
 
@@ -737,7 +767,7 @@ fun PropertiesMapSection(
                     .align(Alignment.TopCenter)
                     .padding(16.dp)
                     .zIndex(1f),
-                color = Color(0xFF2196F3),
+                color = badgeBackgroundColor,
                 shape = RoundedCornerShape(20.dp),
                 shadowElevation = 4.dp
             ) {
@@ -764,16 +794,22 @@ fun PropertiesMapSection(
     }
 }
 
-
 @Composable
 fun SortBar(
     propertiesCount: Int,
     currentSort: SortOption,
-    onSortClick: () -> Unit
+    onSortClick: () -> Unit,
+    isDarkMode: Boolean
 ) {
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
+    val chipTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val iconColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = backgroundColor,
         shadowElevation = 1.dp
     ) {
         Row(
@@ -787,13 +823,13 @@ fun SortBar(
                 text = "$propertiesCount Listings",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,
-                color = Color.Black
+                color = textColor
             )
 
             Surface(
                 onClick = onSortClick,
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF5F5F5),
+                color = chipBackgroundColor,
                 modifier = Modifier.height(40.dp)
             ) {
                 Row(
@@ -804,19 +840,19 @@ fun SortBar(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Sort,
                         contentDescription = "Sort",
-                        tint = Color(0xFF2196F3),
+                        tint = iconColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
                         text = currentSort.getShortName(),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color.Black
+                        color = chipTextColor
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = null,
-                        tint = Color.Gray,
+                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -830,7 +866,8 @@ fun PropertyList(
     properties: List<PropertyModel>,
     listState: LazyListState,
     onPropertyClick: (PropertyModel) -> Unit,
-    onFavoriteClick: (PropertyModel) -> Unit
+    onFavoriteClick: (PropertyModel) -> Unit,
+    isDarkMode: Boolean
 ) {
     LazyColumn(
         state = listState,
@@ -841,7 +878,8 @@ fun PropertyList(
             PropertyCard(
                 property = property,
                 onClick = { onPropertyClick(property) },
-                onFavoriteClick = { onFavoriteClick(property) }
+                onFavoriteClick = { onFavoriteClick(property) },
+                isDarkMode = isDarkMode
             )
         }
     }
@@ -851,14 +889,23 @@ fun PropertyList(
 fun PropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
-    onFavoriteClick: (PropertyModel) -> Unit
+    onFavoriteClick: (PropertyModel) -> Unit,
+    isDarkMode: Boolean
 ) {
     val context = LocalContext.current
+
+    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val priceColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
+    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
+    val overlayBackgroundColor = if (isDarkMode) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.6f)
+    val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column {
@@ -877,14 +924,14 @@ fun PropertyCard(
                     IconButton(
                         onClick = { onFavoriteClick(property) },
                         modifier = Modifier.size(36.dp)
-                            .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                            .background(iconButtonBackgroundColor, CircleShape)
                     ) {
                         Icon(
                             imageVector = if (property.isFavorite) Icons.Default.Favorite
                             else Icons.Default.FavoriteBorder,
                             contentDescription = if (property.isFavorite) "Remove from favorites"
                             else "Add to favorites",
-                            tint = if (property.isFavorite) Color.Red else Color.Gray,
+                            tint = if (property.isFavorite) Color.Red else secondaryTextColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -894,12 +941,12 @@ fun PropertyCard(
                     IconButton(
                         onClick = { },
                         modifier = Modifier.size(36.dp)
-                            .background(Color.White.copy(alpha = 0.9f), CircleShape)
+                            .background(iconButtonBackgroundColor, CircleShape)
                     ) {
                         Icon(
                             imageVector = Icons.Default.MoreVert,
                             contentDescription = "More options",
-                            tint = Color.Gray,
+                            tint = secondaryTextColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -907,7 +954,7 @@ fun PropertyCard(
 
                 Row(
                     modifier = Modifier.align(Alignment.BottomStart)
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(topEnd = 12.dp))
+                        .background(overlayBackgroundColor, RoundedCornerShape(topEnd = 12.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -936,23 +983,23 @@ fun PropertyCard(
                     verticalAlignment = Alignment.Top
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(property.developer, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                        Text("Developer", fontSize = 12.sp, color = Color.Gray)
+                        Text(property.developer, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = textColor)
+                        Text("Developer", fontSize = 12.sp, color = secondaryTextColor)
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        Text(property.price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                        Text(property.price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = priceColor)
 
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                            Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                            Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(property.location, fontSize = 12.sp, color = Color.Gray)
+                            Text(property.location, fontSize = 12.sp, color = secondaryTextColor)
                         }
                     }
 
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF4CAF50),
+                        color = priceColor,
                         modifier = Modifier.size(48.dp).clickable {
                             if (property.ownerId.isNotEmpty()) {
                                 val intent = MessageDetailsActivity.newIntent(
@@ -985,13 +1032,21 @@ fun PropertyDetailOverlay(
     property: PropertyModel,
     onClose: () -> Unit,
     onViewDetails: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean
 ) {
+    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val priceColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
+    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
+    val buttonColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1009,23 +1064,23 @@ fun PropertyDetailOverlay(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(property.price, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                    Text(property.price, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = priceColor)
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(property.location, fontSize = 14.sp, color = Color.Gray)
+                        Text(property.location, fontSize = 14.sp, color = secondaryTextColor)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PropertyInfoChip(Icons.Default.Home, property.sqft)
-                        PropertyInfoChip(Icons.Default.Info, "${property.bedrooms} BD")
-                        PropertyInfoChip(Icons.Default.Star, "${property.bathrooms} BA")
+                        PropertyInfoChip(Icons.Default.Home, property.sqft, chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.Info, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.Star, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
                     }
                 }
 
                 IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = Color.Gray)
+                    Icon(Icons.Default.Close, "Close", tint = secondaryTextColor)
                 }
             }
 
@@ -1034,7 +1089,7 @@ fun PropertyDetailOverlay(
             Button(
                 onClick = onViewDetails,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Text("View Details", fontWeight = FontWeight.Bold)
@@ -1044,15 +1099,20 @@ fun PropertyDetailOverlay(
 }
 
 @Composable
-fun PropertyInfoChip(icon: ImageVector, text: String) {
-    Surface(color = Color(0xFFF5F5F5), shape = RoundedCornerShape(8.dp)) {
+fun PropertyInfoChip(
+    icon: ImageVector,
+    text: String,
+    backgroundColor: Color,
+    contentColor: Color
+) {
+    Surface(color = backgroundColor, shape = RoundedCornerShape(8.dp)) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+            Icon(icon, null, tint = contentColor, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
-            Text(text, fontSize = 12.sp, color = Color.Gray)
+            Text(text, fontSize = 12.sp, color = contentColor)
         }
     }
 }

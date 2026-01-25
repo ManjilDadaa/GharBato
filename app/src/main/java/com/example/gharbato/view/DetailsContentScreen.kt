@@ -25,7 +25,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
 
 @Composable
 fun DetailsContentScreen(
@@ -33,6 +32,7 @@ fun DetailsContentScreen(
     onStateChange: (PropertyListingState) -> Unit
 ) {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     // Launcher for Map Location Picker
     val mapLocationPickerLauncher = rememberLauncherForActivityResult(
@@ -72,7 +72,7 @@ fun DetailsContentScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color.White)
             .padding(horizontal = 8.dp)
             .verticalScroll(rememberScrollState())
             .imePadding()
@@ -81,7 +81,8 @@ fun DetailsContentScreen(
             "Property Details",
             style = TextStyle(
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                fontSize = 18.sp,
+                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C)
             ),
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -92,7 +93,10 @@ fun DetailsContentScreen(
                 .fillMaxWidth()
                 .padding(bottom = 16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF0F9FF)
+                containerColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.surfaceVariant
+                else
+                    Color(0xFFF0F9FF)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -104,28 +108,40 @@ fun DetailsContentScreen(
                     Text(
                         "Purpose",
                         fontSize = 12.sp,
-                        color = Gray,
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
+                            Color(0xFF999999),
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         state.selectedPurpose,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Blue
+                        color = if (isDarkMode)
+                            Color(0xFF82B1FF)
+                        else
+                            Blue
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "Property Type",
                         fontSize = 12.sp,
-                        color = Gray,
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        else
+                            Color(0xFF999999),
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         state.selectedPropertyType,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Blue
+                        color = if (isDarkMode)
+                            Color(0xFF82B1FF)
+                        else
+                            Blue
                     )
                 }
             }
@@ -137,7 +153,8 @@ fun DetailsContentScreen(
             onValueChange = { onStateChange(state.copy(title = it)) },
             label = "Property Title",
             placeholder = "e.g., Modern 2BHK ${state.selectedPropertyType}",
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isDarkMode = isDarkMode
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -148,7 +165,8 @@ fun DetailsContentScreen(
             onValueChange = { onStateChange(state.copy(developer = it)) },
             label = "Owner/Developer Name",
             placeholder = "e.g., Ram Sharma",
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isDarkMode = isDarkMode
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -164,7 +182,8 @@ fun DetailsContentScreen(
                 label = "$priceLabel (रु)",
                 placeholder = pricePlaceholder,
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
 
             CustomOutlinedTextField(
@@ -173,7 +192,8 @@ fun DetailsContentScreen(
                 label = "Area (sq ft)",
                 placeholder = "1200",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
         }
 
@@ -189,7 +209,8 @@ fun DetailsContentScreen(
                     putExtra("CURRENT_LONGITUDE", state.longitude)
                 }
                 mapLocationPickerLauncher.launch(intent)
-            }
+            },
+            isDarkMode = isDarkMode
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -204,7 +225,8 @@ fun DetailsContentScreen(
                 onValueChange = { onStateChange(state.copy(floor = it)) },
                 label = "Floor",
                 placeholder = "e.g., 5 floors",
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode
             )
 
             // Furnishing Dropdown
@@ -212,6 +234,7 @@ fun DetailsContentScreen(
                 selectedFurnishing = state.furnishing,
                 onFurnishingChange = { onStateChange(state.copy(furnishing = it)) },
                 modifier = Modifier.weight(1f),
+                isDarkMode = isDarkMode
             )
         }
 
@@ -228,7 +251,8 @@ fun DetailsContentScreen(
                 label = "Total Rooms",
                 placeholder = "10",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
 
             CustomOutlinedTextField(
@@ -237,7 +261,8 @@ fun DetailsContentScreen(
                 label = "Bedrooms",
                 placeholder = "2",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
         }
 
@@ -254,7 +279,8 @@ fun DetailsContentScreen(
                 label = "Bathrooms",
                 placeholder = "2",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
 
             CustomOutlinedTextField(
@@ -263,7 +289,8 @@ fun DetailsContentScreen(
                 label = "Kitchen",
                 placeholder = "1",
                 modifier = Modifier.weight(1f),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isDarkMode = isDarkMode
             )
         }
 
@@ -273,7 +300,10 @@ fun DetailsContentScreen(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF9FAFB)
+                containerColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.surface
+                else
+                    Color(0xFFF9FAFB)
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -282,8 +312,13 @@ fun DetailsContentScreen(
                     "Additional Features",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    color = if (isDarkMode)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        Color(0xFF2C2C2C)
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Parking Checkbox
                 Row(
@@ -291,37 +326,64 @@ fun DetailsContentScreen(
                         .fillMaxWidth()
                         .clickable { onStateChange(state.copy(parking = !state.parking)) }
                         .padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Parking Available", fontSize = 14.sp)
+                    Text(
+                        "Parking Available",
+                        fontSize = 14.sp,
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.onSurface
+                        else
+                            Color(0xFF2C2C2C)
+                    )
                     Checkbox(
                         checked = state.parking,
                         onCheckedChange = { onStateChange(state.copy(parking = it)) },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = Blue,
-                            uncheckedColor = Gray
+                            checkedColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                            uncheckedColor = if (isDarkMode)
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            else
+                                Color(0xFF999999)
                         )
                     )
                 }
 
-                //  Only show Pets Allowed for Rent or Book
+                // Only show Pets Allowed for Rent or Book
                 if (state.selectedPurpose == "Rent" || state.selectedPurpose == "Book") {
-                    HorizontalDivider(color = Gray.copy(0.3f))
+                    HorizontalDivider(
+                        color = if (isDarkMode)
+                            MaterialTheme.colorScheme.outline
+                        else
+                            Color(0xFF999999).copy(0.3f)
+                    )
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { onStateChange(state.copy(petsAllowed = !state.petsAllowed)) }
                             .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Pets Allowed", fontSize = 14.sp)
+                        Text(
+                            "Pets Allowed",
+                            fontSize = 14.sp,
+                            color = if (isDarkMode)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                Color(0xFF2C2C2C)
+                        )
                         Checkbox(
                             checked = state.petsAllowed,
                             onCheckedChange = { onStateChange(state.copy(petsAllowed = it)) },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = Blue,
-                                uncheckedColor = Gray
+                                checkedColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                                uncheckedColor = if (isDarkMode)
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else
+                                    Color(0xFF999999)
                             )
                         )
                     }
@@ -341,7 +403,8 @@ fun DetailsContentScreen(
                 .fillMaxWidth()
                 .height(120.dp),
             maxLines = 5,
-            singleLine = false
+            singleLine = false,
+            isDarkMode = isDarkMode
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -352,19 +415,28 @@ fun DetailsContentScreen(
 fun LocationPickerField(
     location: String,
     hasSelectedLocation: Boolean,
-    onPickLocation: () -> Unit
+    onPickLocation: () -> Unit,
+    isDarkMode: Boolean
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onPickLocation),
         colors = CardDefaults.cardColors(
-            containerColor = if (hasSelectedLocation) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+            containerColor = if (hasSelectedLocation) {
+                if (isDarkMode) Color(0xFF1B3A1F) else Color(0xFFE8F5E9)
+            } else {
+                if (isDarkMode) MaterialTheme.colorScheme.surface else Color(0xFFF5F5F5)
+            }
         ),
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
-            color = if (hasSelectedLocation) Color(0xFF4CAF50) else Gray.copy(0.5f)
+            color = if (hasSelectedLocation) {
+                if (isDarkMode) Color(0xFF4CAF50) else Color(0xFF4CAF50)
+            } else {
+                if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFF999999).copy(0.5f)
+            }
         )
     ) {
         Row(
@@ -376,7 +448,9 @@ fun LocationPickerField(
             Icon(
                 imageVector = if (hasSelectedLocation) Icons.Default.LocationOn else Icons.Default.AddLocation,
                 contentDescription = "Location",
-                tint = if (hasSelectedLocation) Color(0xFF4CAF50) else Gray,
+                tint = if (hasSelectedLocation) Color(0xFF4CAF50) else {
+                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
+                },
                 modifier = Modifier.size(32.dp)
             )
 
@@ -387,7 +461,11 @@ fun LocationPickerField(
                     text = if (hasSelectedLocation) "Location Selected" else "Select Property Location",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (hasSelectedLocation) Color(0xFF4CAF50) else Color.Black
+                    color = if (hasSelectedLocation) {
+                        Color(0xFF4CAF50)
+                    } else {
+                        if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -395,7 +473,10 @@ fun LocationPickerField(
                 Text(
                     text = if (location.isNotEmpty()) location else "Tap to pin exact location on map",
                     fontSize = 13.sp,
-                    color = Gray,
+                    color = if (isDarkMode)
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    else
+                        Color(0xFF999999),
                     maxLines = 2
                 )
             }
@@ -405,7 +486,10 @@ fun LocationPickerField(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = "Open Map",
-                tint = Gray,
+                tint = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else
+                    Color(0xFF999999),
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -418,7 +502,10 @@ fun LocationPickerField(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF0F9FF)
+                containerColor = if (isDarkMode)
+                    Color(0xFF1A2F3A)
+                else
+                    Color(0xFFF0F9FF)
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
@@ -438,7 +525,10 @@ fun LocationPickerField(
                 Text(
                     text = "Exact coordinates saved - Your property will appear at this location on the map",
                     fontSize = 12.sp,
-                    color = Color.Black,
+                    color = if (isDarkMode)
+                        MaterialTheme.colorScheme.onSurface
+                    else
+                        Color.Black,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -451,7 +541,8 @@ fun LocationPickerField(
 fun FurnishingDropdown(
     selectedFurnishing: String,
     onFurnishingChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
     val furnishingOptions = listOf("Fully Furnished", "Semi Furnished", "Unfurnished")
@@ -464,7 +555,16 @@ fun FurnishingDropdown(
         OutlinedTextField(
             value = selectedFurnishing,
             onValueChange = {},
-            label = { Text("Furnishing") },
+            label = {
+                Text(
+                    "Furnishing",
+                    color = if (expanded) {
+                        if (isDarkMode) Color(0xFF82B1FF) else Blue
+                    } else {
+                        if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
+                    }
+                )
+            },
             readOnly = true,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
@@ -474,12 +574,26 @@ fun FurnishingDropdown(
                 .menuAnchor(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Blue,
-                unfocusedBorderColor = Gray.copy(0.5f),
-                focusedLabelColor = Blue,
-                unfocusedLabelColor = Gray,
+                focusedBorderColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                unfocusedBorderColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.outline
+                else
+                    Color(0xFF999999).copy(0.5f),
+                focusedLabelColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                unfocusedLabelColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                else
+                    Color(0xFF999999),
                 focusedContainerColor = Color.Transparent,
-                unfocusedContainerColor = Color.Transparent
+                unfocusedContainerColor = Color.Transparent,
+                focusedTextColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    Color(0xFF2C2C2C),
+                unfocusedTextColor = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurface
+                else
+                    Color(0xFF2C2C2C)
             )
         )
 
@@ -488,7 +602,7 @@ fun FurnishingDropdown(
             onDismissRequest = { expanded = false },
             modifier = Modifier
                 .background(
-                    color = Color.White,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
                     shape = RoundedCornerShape(12.dp)
                 )
         ) {
@@ -501,7 +615,11 @@ fun FurnishingDropdown(
                             option,
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) Blue else Color.DarkGray
+                            color = if (isSelected) {
+                                if (isDarkMode) Color(0xFF82B1FF) else Blue
+                            } else {
+                                if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.DarkGray
+                            }
                         )
                     },
                     onClick = {
@@ -511,7 +629,9 @@ fun FurnishingDropdown(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            if (isSelected) Blue.copy(alpha = 0.08f) else Color.Transparent,
+                            if (isSelected) {
+                                if (isDarkMode) Color(0xFF1A2F3A) else Blue.copy(alpha = 0.08f)
+                            } else Color.Transparent,
                             RoundedCornerShape(8.dp)
                         )
                         .padding(horizontal = 8.dp)
@@ -530,22 +650,55 @@ fun CustomOutlinedTextField(
     modifier: Modifier = Modifier,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     maxLines: Int = 1,
-    singleLine: Boolean = true
+    singleLine: Boolean = true,
+    isDarkMode: Boolean
 ) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
+        label = {
+            Text(
+                label,
+                color = if (value.isNotEmpty()) {
+                    if (isDarkMode) Color(0xFF82B1FF) else Blue
+                } else {
+                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
+                }
+            )
+        },
+        placeholder = {
+            Text(
+                placeholder,
+                color = if (isDarkMode)
+                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                else
+                    Color(0xFF999999).copy(alpha = 0.6f)
+            )
+        },
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = Blue,
-            unfocusedBorderColor = Gray.copy(0.5f),
-            focusedLabelColor = Blue,
-            unfocusedLabelColor = Gray,
+            focusedBorderColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+            unfocusedBorderColor = if (isDarkMode)
+                MaterialTheme.colorScheme.outline
+            else
+                Color(0xFF999999).copy(0.5f),
+            focusedLabelColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+            unfocusedLabelColor = if (isDarkMode)
+                MaterialTheme.colorScheme.onSurfaceVariant
+            else
+                Color(0xFF999999),
             focusedContainerColor = Color.Transparent,
-            unfocusedContainerColor = Color.Transparent
+            unfocusedContainerColor = Color.Transparent,
+            focusedTextColor = if (isDarkMode)
+                MaterialTheme.colorScheme.onSurface
+            else
+                Color(0xFF2C2C2C),
+            unfocusedTextColor = if (isDarkMode)
+                MaterialTheme.colorScheme.onSurface
+            else
+                Color(0xFF2C2C2C),
+            cursorColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
         ),
         maxLines = maxLines,
         singleLine = singleLine,
