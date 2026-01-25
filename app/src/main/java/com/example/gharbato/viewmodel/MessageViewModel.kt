@@ -166,6 +166,14 @@ class MessageDetailsViewModel(
 
     private var stopListening: (() -> Unit)? = null
     private var stopBlockListening: (() -> Unit)? = null
+    private var stopPresenceListening: (() -> Unit)? = null
+    private var stopPresenceUpdate: (() -> Unit)? = null
+
+    private val _isOtherUserOnline = mutableStateOf(false)
+    val isOtherUserOnline: State<Boolean> = _isOtherUserOnline
+
+    private val _otherUserLastSeen = mutableStateOf(0L)
+    val otherUserLastSeen: State<Long> = _otherUserLastSeen
 
     fun initiateCall(
         activity: android.app.Activity,
@@ -186,8 +194,17 @@ class MessageDetailsViewModel(
         val session = repository.createChatSession(context, otherUserId)
         _chatSession.value = session
 
+        stopPresenceUpdate?.invoke()
+        stopPresenceListening?.invoke()
+        stopPresenceUpdate = repository.setUserOnline(session.myUserId)
+        stopPresenceListening = repository.listenToUserPresence(session.otherUserId) { online, lastSeen ->
+            _isOtherUserOnline.value = online
+            _otherUserLastSeen.value = lastSeen
+        }
+
         stopListening = repository.listenToChatMessages(
             chatId = session.chatId,
+            currentUserId = session.myUserId,
             onMessages = {
                 _messages.value = it
                 repository.markMessagesAsRead(session.chatId, session.myUserId)
@@ -254,6 +271,16 @@ class MessageDetailsViewModel(
         repository.deleteChat(session.chatId)
         _messages.value = emptyList()
     }
+    
+    fun deleteMessageForMe(messageId: String) {
+        val session = _chatSession.value ?: return
+        repository.deleteMessageForMe(session.chatId, messageId, session.myUserId)
+    }
+
+    fun deleteMessageForEveryone(messageId: String) {
+        val session = _chatSession.value ?: return
+        repository.deleteMessageForEveryone(session.chatId, messageId)
+    }
 
     fun reportUser(reason: String, callback: (Boolean, String) -> Unit) {
         val session = _chatSession.value ?: return
@@ -269,8 +296,12 @@ class MessageDetailsViewModel(
     override fun onCleared() {
         stopListening?.invoke()
         stopBlockListening?.invoke()
+        stopPresenceListening?.invoke()
+        stopPresenceUpdate?.invoke()
         stopListening = null
         stopBlockListening = null
+        stopPresenceListening = null
+        stopPresenceUpdate = null
         super.onCleared()
     }
 }
