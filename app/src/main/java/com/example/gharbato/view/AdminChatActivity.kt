@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -86,7 +86,7 @@ fun AdminChatScreen(
     var messageText by remember { mutableStateOf("") }
     var messages by remember { mutableStateOf<List<SupportMessage>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var isSending by remember { mutableStateOf(false) }
+    var showUserInfo by remember { mutableStateOf(false) }
 
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages").child(userId)
@@ -98,18 +98,14 @@ fun AdminChatScreen(
     val textColor = MaterialTheme.colorScheme.onBackground
     val surfaceColor = MaterialTheme.colorScheme.surface
 
-    // Load messages from Firebase
+    // Load messages
     LaunchedEffect(Unit) {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val loadedMessages = mutableListOf<SupportMessage>()
                 snapshot.children.forEach { data ->
                     val message = data.getValue(SupportMessage::class.java)
-                    message?.let {
-                        loadedMessages.add(it)
-                        // Log to see message data
-                        println("MESSAGE DATA - Text: ${message.message}, isAdmin: ${message.isAdmin}, sender: ${message.senderName}")
-                    }
+                    message?.let { loadedMessages.add(it) }
                 }
                 messages = loadedMessages.sortedBy { it.timestamp }
                 isLoading = false
@@ -122,7 +118,7 @@ fun AdminChatScreen(
         })
     }
 
-    // Auto scroll to bottom when new message arrives
+    // Auto scroll to bottom
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(messages.size - 1)
@@ -132,43 +128,60 @@ fun AdminChatScreen(
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            Surface(
-                color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 2.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    // Header - Center aligned
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Admin Support",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = textColor
-                            )
-                        )
-                        Text(
-                            text = "We're here to help",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                color = textColor.copy(alpha = 0.6f)
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // User info row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Back button
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.clickable { showUserInfo = !showUserInfo }
+                        ) {
+                            if (userImage.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userImage,
+                                    contentDescription = userName,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(Blue.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = userName.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Blue
+                                        )
+                                    )
+                                }
+                            }
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text(
+                                    text = userName,
+                                    style = TextStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = textColor
+                                    )
+                                )
+                                Text(
+                                    text = if (showUserInfo) "Hide user info" else "Tap for user info",
+                                    style = TextStyle(
+                                        fontSize = 11.sp,
+                                        color = Blue
+                                    )
+                                )
+                            }
+                        }
+                    },
+                    navigationIcon = {
                         IconButton(
                             onClick = {
                                 (context as? ComponentActivity)?.finish()
@@ -181,64 +194,89 @@ fun AdminChatScreen(
                                 modifier = Modifier.size(24.dp)
                             )
                         }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = backgroundColor
+                    )
+                )
 
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        // User profile
-                        if (userImage.isNotEmpty()) {
-                            AsyncImage(
-                                model = userImage,
-                                contentDescription = userName,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Blue.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = userName.take(1).uppercase(),
-                                    style = TextStyle(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = Blue
-                                    )
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(12.dp))
-
+                // User Info Card (collapsible)
+                if (showUserInfo) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = surfaceColor
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
                         Column(
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = userName,
-                                style = TextStyle(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = textColor
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
                             if (userEmail.isNotEmpty()) {
-                                Text(
-                                    text = userEmail,
-                                    style = TextStyle(
-                                        fontSize = 12.sp,
-                                        color = textColor.copy(alpha = 0.6f)
-                                    ),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_email_24),
+                                        contentDescription = null,
+                                        tint = Blue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Email",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = textColor.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                        Text(
+                                            text = userEmail,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = textColor
+                                            )
+                                        )
+                                    }
+                                }
                             }
+
+                            if (userPhone.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_phone_24),
+                                        contentDescription = null,
+                                        tint = Blue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Phone",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = textColor.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                        Text(
+                                            text = userPhone,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = textColor
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "User ID: $userId",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = textColor.copy(alpha = 0.5f)
+                                )
+                            )
                         }
                     }
                 }
@@ -247,8 +285,7 @@ fun AdminChatScreen(
         bottomBar = {
             Surface(
                 color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 4.dp,
-                shadowElevation = 8.dp
+                tonalElevation = if (isDarkMode) 0.dp else 4.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -264,7 +301,7 @@ fun AdminChatScreen(
                             .heightIn(min = 56.dp, max = 120.dp),
                         placeholder = {
                             Text(
-                                "Reply to $userName...",
+                                "Type your response...",
                                 color = textColor.copy(alpha = 0.5f)
                             )
                         },
@@ -276,37 +313,33 @@ fun AdminChatScreen(
                             cursorColor = Blue
                         ),
                         shape = RoundedCornerShape(28.dp),
-                        maxLines = 4,
-                        enabled = !isSending
+                        maxLines = 4
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     IconButton(
                         onClick = {
-                            if (messageText.isNotBlank() && !isSending) {
-                                isSending = true
+                            if (messageText.isNotBlank()) {
                                 val messageId = messagesRef.push().key ?: return@IconButton
                                 val newMessage = SupportMessage(
                                     id = messageId,
                                     senderId = "admin",
-                                    senderName = "Admin", // This is important!
+                                    senderName = "Admin",
                                     senderEmail = "",
                                     senderPhone = "",
                                     senderImage = "",
                                     message = messageText.trim(),
                                     timestamp = System.currentTimeMillis(),
-                                    isAdmin = true // This is important!
+                                    isAdmin = true
                                 )
 
                                 messagesRef.child(messageId).setValue(newMessage)
                                     .addOnSuccessListener {
                                         messageText = ""
-                                        isSending = false
                                     }
                                     .addOnFailureListener {
                                         Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
-                                        isSending = false
                                     }
                             }
                         },
@@ -317,25 +350,17 @@ fun AdminChatScreen(
                                 shape = RoundedCornerShape(28.dp)
                             )
                             .background(
-                                color = if (messageText.isBlank() || isSending) Blue.copy(alpha = 0.5f) else Blue,
+                                color = if (messageText.isBlank()) Blue.copy(alpha = 0.5f) else Blue,
                                 shape = RoundedCornerShape(28.dp)
                             ),
-                        enabled = messageText.isNotBlank() && !isSending
+                        enabled = messageText.isNotBlank()
                     ) {
-                        if (isSending) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                painter = painterResource(id = R.drawable.baseline_send_24),
-                                contentDescription = "Send",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(id = R.drawable.baseline_send_24),
+                            contentDescription = "Send",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -348,21 +373,11 @@ fun AdminChatScreen(
                 .background(backgroundColor)
         ) {
             if (isLoading) {
-                Column(
+                CircularProgressIndicator(
                     modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(color = Blue)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Loading conversation...",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
-                        )
-                    )
-                }
+                    color = Blue
+                )
             } else if (messages.isEmpty()) {
-                // Empty state
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -378,19 +393,18 @@ fun AdminChatScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Start Conversation",
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        text = "Start the conversation",
+                        style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = textColor
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Send a message to assist $userName with their inquiry",
+                        text = "Send a message to help this user",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = textColor.copy(alpha = 0.6f)
-                        ),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     )
                 }
             } else {
@@ -398,7 +412,7 @@ fun AdminChatScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(messages) { message ->
                         AdminMessageBubble(
@@ -426,10 +440,14 @@ fun AdminMessageBubble(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isAdminMessage) Alignment.End else Alignment.Start
     ) {
-        // Message bubble
         Card(
             modifier = Modifier.widthIn(max = 280.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isAdminMessage) 16.dp else 4.dp,
+                bottomEnd = if (isAdminMessage) 4.dp else 16.dp
+            ),
             colors = CardDefaults.cardColors(
                 containerColor = if (isAdminMessage) Blue else MaterialTheme.colorScheme.surfaceVariant
             ),
@@ -440,17 +458,17 @@ fun AdminMessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Show sender name
+                // Show sender label
                 Text(
-                    text = if (isAdminMessage) "Admin" else "User",
+                    text = if (isAdminMessage) "Admin" else (message.senderName.ifEmpty { userName }),
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = if (isAdminMessage) Color.White.copy(alpha = 0.9f) else textColor.copy(alpha = 0.7f)
+                        color = if (isAdminMessage) Color.White.copy(alpha = 0.9f)
+                        else textColor.copy(alpha = 0.7f)
                     ),
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
 
-                // Message text
                 Text(
                     text = message.message,
                     style = MaterialTheme.typography.bodyMedium.copy(
@@ -460,42 +478,17 @@ fun AdminMessageBubble(
             }
         }
 
-        // Timestamp below the bubble
         Text(
-            text = formatMessageTimestamp(message.timestamp),
+            text = formatAdminMessageTimestamp(message.timestamp),
             style = MaterialTheme.typography.labelSmall.copy(
                 color = textColor.copy(alpha = 0.5f)
             ),
-            modifier = Modifier.padding(
-                top = 2.dp,
-                start = if (isAdminMessage) 0.dp else 8.dp,
-                end = if (isAdminMessage) 8.dp else 0.dp
-            )
+            modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp)
         )
     }
 }
 
-private fun formatMessageTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-
-    return when {
-        diff < 60000 -> "Just now"
-        diff < 3600000 -> {
-            val minutes = diff / 60000
-            "$minutes min ago"
-        }
-        diff < 86400000 -> {
-            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            "Today at ${sdf.format(Date(timestamp))}"
-        }
-        diff < 172800000 -> {
-            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            "Yesterday at ${sdf.format(Date(timestamp))}"
-        }
-        else -> {
-            val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
-            sdf.format(Date(timestamp))
-        }
-    }
+private fun formatAdminMessageTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 }
