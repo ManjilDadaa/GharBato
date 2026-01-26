@@ -35,12 +35,18 @@ interface MessageRepository {
     // Chat Session Management
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
-    fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+    fun deleteMessageForMe(chatId: String, messageId: String, userId: String)
+    fun deleteMessageForEveryone(chatId: String, messageId: String)
+
+    // Presence
+    fun setUserOnline(userId: String): () -> Unit
+    fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit
 
     fun navigateToChatWithMessage(
         activity: Activity,
@@ -396,7 +402,7 @@ class MessageRepositoryImpl : MessageRepository {
         }
     }
 
-    override fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
+    override fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
         
         val listener = object : ValueEventListener {
@@ -404,6 +410,10 @@ class MessageRepositoryImpl : MessageRepository {
                 val messageList = mutableListOf<ChatMessage>()
                 snapshot.children.forEach { msgSnapshot ->
                     try {
+                        val deletedForCurrentUser = msgSnapshot.child("deletedFor").child(currentUserId).getValue(Boolean::class.java) == true
+                        if (deletedForCurrentUser) {
+                            return@forEach
+                        }
                         val message = msgSnapshot.getValue(ChatMessage::class.java)
                         if (message != null) {
                             messageList.add(message)
@@ -504,6 +514,53 @@ class MessageRepositoryImpl : MessageRepository {
         chatRef.removeValue()
     }
 
+    override fun deleteMessageForMe(chatId: String, messageId: String, userId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId).child("deletedFor").child(userId)
+        msgRef.setValue(true)
+    }
+
+    override fun deleteMessageForEveryone(chatId: String, messageId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId)
+        msgRef.removeValue()
+    }
+
+    override fun setUserOnline(userId: String): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        try {
+            ref.child("online").setValue(true)
+            ref.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+            ref.onDisconnect().updateChildren(
+                mapOf(
+                    "online" to false,
+                    "lastSeen" to ServerValue.TIMESTAMP
+                )
+            )
+        } catch (_: Exception) { }
+        return {
+            try {
+                ref.updateChildren(
+                    mapOf(
+                        "online" to false,
+                        "lastSeen" to ServerValue.TIMESTAMP
+                    )
+                )
+            } catch (_: Exception) { }
+        }
+    }
+
+    override fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val online = snapshot.child("online").getValue(Boolean::class.java) ?: false
+                val lastSeen = snapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                callback(online, lastSeen)
+            }
+            override fun onCancelled(error: DatabaseError) { }
+        }
+        ref.addValueEventListener(listener)
+        return { ref.removeEventListener(listener) }
+    }
 
 
     override fun navigateToChatWithMessage(

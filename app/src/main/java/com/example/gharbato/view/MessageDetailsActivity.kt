@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -183,10 +184,13 @@ fun MessageDetailsScreen(
     val messageText by viewModel.messageText
     val isBlockedByMe by viewModel.isBlockedByMe
     val isBlockedByOther by viewModel.isBlockedByOther
+    val isOtherOnline by viewModel.isOtherUserOnline
+    val otherLastSeen by viewModel.otherUserLastSeen
 
     val listState = rememberLazyListState()
 
     var showReportDialog by remember { mutableStateOf(false) }
+    var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
     var currentPhotoUri by remember { mutableStateOf<Uri?>(null) }
 
     if (showReportDialog) {
@@ -288,6 +292,8 @@ fun MessageDetailsScreen(
                 userImage = otherUserImage,
                 isBlockedByMe = isBlockedByMe,
                 isDarkMode = isDarkMode,
+                isOnline = isOtherOnline,
+                lastSeen = otherLastSeen,
                 onBackClick = onBackClick,
                 onBlockClick = { viewModel.toggleBlockUser() },
                 onDeleteClick = { viewModel.deleteChat() },
@@ -297,26 +303,31 @@ fun MessageDetailsScreen(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .imePadding()
-                .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5))
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding()
+                    .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5))
+            ) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                contentPadding = PaddingValues(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 items(messages) { message ->
                     MessageBubble(
                         message = message,
                         isCurrentUser = message.senderId == currentUserId,
-                        isDarkMode = isDarkMode
+                        isDarkMode = isDarkMode,
+                        onImageClick = { url -> fullscreenImageUrl = url }
                     )
                 }
             }
@@ -343,6 +354,27 @@ fun MessageDetailsScreen(
                     onCameraClick = { checkAndLaunchCamera() },
                     onAttachClick = { imagePickerLauncher.launch("image/*") }
                 )
+            }
+            }
+
+            if (fullscreenImageUrl != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.95f))
+                        .clickable { fullscreenImageUrl = null },
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = fullscreenImageUrl,
+                        contentDescription = "Full Image",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(16.dp)
+                    )
+                }
             }
         }
     }
@@ -403,6 +435,8 @@ fun ChatTopBar(
     userImage: String,
     isBlockedByMe: Boolean,
     isDarkMode: Boolean,
+    isOnline: Boolean,
+    lastSeen: Long,
     onBackClick: () -> Unit,
     onBlockClick: () -> Unit,
     onDeleteClick: () -> Unit,
@@ -450,7 +484,7 @@ fun ChatTopBar(
                         color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
                     )
                     Text(
-                        text = "Online",
+                        text = if (isOnline) "Online" else if (lastSeen > 0L) "Last seen ${formatTimestamp(lastSeen)}" else "Offline",
                         fontSize = 12.sp,
                         color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
@@ -528,7 +562,8 @@ fun ChatTopBar(
 fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    onImageClick: (String) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -546,11 +581,11 @@ fun MessageBubble(
             color = if (isCurrentUser) Blue else {
                 if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
             },
-            modifier = Modifier.widthIn(max = 280.dp),
+            modifier = Modifier.widthIn(min = 56.dp, max = 280.dp),
             shadowElevation = 2.dp
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(8.dp)
             ) {
                 if (message.hasPropertyCard) {
                     PropertyCardInMessage(
@@ -580,7 +615,8 @@ fun MessageBubble(
                             .fillMaxWidth()
                             .height(200.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.LightGray),
+                            .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.LightGray)
+                            .clickable { onImageClick(message.imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotEmpty()) {
@@ -598,12 +634,12 @@ fun MessageBubble(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.align(Alignment.End)
                 ) {
                     Text(
                         text = formatTimestamp(message.timestamp),
