@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.gharbato.R
+import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
@@ -80,7 +81,7 @@ fun AdminChatScreen(
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
 
     var messageText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<SupportMessage>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var showUserInfo by remember { mutableStateOf(false) }
 
@@ -98,9 +99,9 @@ fun AdminChatScreen(
     LaunchedEffect(Unit) {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val loadedMessages = mutableListOf<Message>()
+                val loadedMessages = mutableListOf<SupportMessage>()
                 snapshot.children.forEach { data ->
-                    val message = data.getValue(Message::class.java)
+                    val message = data.getValue(SupportMessage::class.java)
                     message?.let { loadedMessages.add(it) }
                 }
                 messages = loadedMessages.sortedBy { it.timestamp }
@@ -318,10 +319,13 @@ fun AdminChatScreen(
                         onClick = {
                             if (messageText.isNotBlank()) {
                                 val messageId = messagesRef.push().key ?: return@IconButton
-                                val newMessage = Message(
+                                val newMessage = SupportMessage(
                                     id = messageId,
                                     senderId = "admin",
                                     senderName = "Admin",
+                                    senderEmail = "",
+                                    senderPhone = "",
+                                    senderImage = "",
                                     message = messageText.trim(),
                                     timestamp = System.currentTimeMillis(),
                                     isAdmin = true

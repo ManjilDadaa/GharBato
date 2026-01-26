@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
+import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
@@ -31,15 +32,6 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class Message(
-    val id: String = "",
-    val senderId: String = "",
-    val senderName: String = "",
-    val message: String = "",
-    val timestamp: Long = 0,
-    val isAdmin: Boolean = false
-)
 
 class MessageAdminActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,27 +62,40 @@ fun MessageAdminScreen() {
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
 
     var messageText by remember { mutableStateOf("") }
-    var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<SupportMessage>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
     val currentUser = FirebaseAuth.getInstance().currentUser
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages").child(currentUser?.uid ?: "")
+    val usersRef = database.getReference("users").child(currentUser?.uid ?: "")
 
     val listState = rememberLazyListState()
+
+    var userProfile by remember { mutableStateOf<Map<String, Any>?>(null) }
 
     // Themed colors
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val surfaceColor = MaterialTheme.colorScheme.surface
 
+    // Load user profile
+    LaunchedEffect(Unit) {
+        usersRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                userProfile = snapshot.value as? Map<String, Any>
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
     // Load messages from Firebase
     LaunchedEffect(Unit) {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val loadedMessages = mutableListOf<Message>()
+                val loadedMessages = mutableListOf<SupportMessage>()
                 snapshot.children.forEach { data ->
-                    val message = data.getValue(Message::class.java)
+                    val message = data.getValue(SupportMessage::class.java)
                     message?.let { loadedMessages.add(it) }
                 }
                 messages = loadedMessages.sortedBy { it.timestamp }
@@ -191,12 +196,15 @@ fun MessageAdminScreen() {
 
                     IconButton(
                         onClick = {
-                            if (messageText.isNotBlank() && currentUser != null) {
+                            if (messageText.isNotBlank() && currentUser != null && userProfile != null) {
                                 val messageId = messagesRef.push().key ?: return@IconButton
-                                val newMessage = Message(
+                                val newMessage = SupportMessage(
                                     id = messageId,
                                     senderId = currentUser.uid,
-                                    senderName = currentUser.displayName ?: "User",
+                                    senderName = userProfile?.get("fullName") as? String ?: currentUser.displayName ?: "User",
+                                    senderEmail = userProfile?.get("email") as? String ?: currentUser.email ?: "",
+                                    senderPhone = userProfile?.get("phoneNo") as? String ?: "",
+                                    senderImage = userProfile?.get("profileImageUrl") as? String ?: "",
                                     message = messageText.trim(),
                                     timestamp = System.currentTimeMillis(),
                                     isAdmin = false
@@ -299,7 +307,7 @@ fun MessageAdminScreen() {
 
 @Composable
 fun MessageBubble(
-    message: Message,
+    message: SupportMessage,
     isCurrentUser: Boolean,
     isDarkMode: Boolean
 ) {
@@ -328,13 +336,13 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
+                // Show sender name for user messages (not for current user's own messages)
                 if (!isCurrentUser) {
                     Text(
-                        text = "Admin",
+                        text = message.senderName.ifEmpty { "User" },
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isCurrentUser) Color.White.copy(alpha = 0.9f)
-                            else textColor.copy(alpha = 0.7f)
+                            color = textColor.copy(alpha = 0.7f)
                         ),
                         modifier = Modifier.padding(bottom = 4.dp)
                     )

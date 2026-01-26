@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,25 +18,15 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import com.example.gharbato.R
+import com.example.gharbato.model.SupportMessage
+import com.example.gharbato.model.SupportConversation
 import com.example.gharbato.ui.theme.Blue
 import com.google.firebase.database.*
 import java.text.SimpleDateFormat
 import java.util.*
-
-data class SupportConversation(
-    val userId: String = "",
-    val userName: String = "",
-    val userEmail: String = "",
-    val userPhone: String = "",
-    val userImage: String = "",
-    val lastMessage: String = "",
-    val lastMessageTime: Long = 0,
-    val unreadCount: Int = 0
-)
 
 @Composable
 fun AdminSupportScreen() {
@@ -63,10 +52,10 @@ fun AdminSupportScreen() {
 
                 snapshot.children.forEach { userSnapshot ->
                     val userId = userSnapshot.key ?: return@forEach
-                    val messages = mutableListOf<Message>()
+                    val messages = mutableListOf<SupportMessage>()
 
                     userSnapshot.children.forEach { messageSnapshot ->
-                        val message = messageSnapshot.getValue(Message::class.java)
+                        val message = messageSnapshot.getValue(SupportMessage::class.java)
                         message?.let { messages.add(it) }
                     }
 
@@ -192,7 +181,7 @@ fun AdminSupportScreen() {
                             context.startActivity(intent)
                         }
                     )
-                    Divider(
+                    HorizontalDivider(
                         color = textColor.copy(alpha = 0.1f),
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
