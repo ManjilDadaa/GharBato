@@ -350,7 +350,7 @@ fun MessageBubble(
         }
 
         Text(
-            text = formatTimestamp(message.timestamp),
+            text = formatMessageTimestamp(message.timestamp),
             style = MaterialTheme.typography.labelSmall.copy(
                 color = textColor.copy(alpha = 0.5f)
             ),
@@ -359,7 +359,7 @@ fun MessageBubble(
     }
 }
 
-fun formatTimestamp(timestamp: Long): String {
+private fun formatMessageTimestamp(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
     return sdf.format(Date(timestamp))
 }

@@ -245,7 +245,7 @@ fun ConversationItem(
                 )
 
                 Text(
-                    text = formatTime(conversation.lastMessageTime),
+                    text = formatConversationTime(conversation.lastMessageTime),
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = textColor.copy(alpha = 0.5f)
                     )
@@ -285,7 +285,7 @@ fun ConversationItem(
     }
 }
 
-fun formatTime(timestamp: Long): String {
+private fun formatConversationTime(timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
 

@@ -98,7 +98,7 @@ fun AdminBody() {
                 1 -> AdminSearchScreen()
                 2 -> VerifyUserScreen()
                 3 -> AdminDeleteScreen()
-//                4 -> AdminSupportScreen()
+                4 -> AdminSupportScreen()
             }
         }
     }
