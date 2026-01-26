@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,14 +16,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
@@ -37,6 +41,9 @@ class AdminChatActivity : ComponentActivity() {
 
         val userId = intent.getStringExtra("userId") ?: ""
         val userName = intent.getStringExtra("userName") ?: "User"
+        val userEmail = intent.getStringExtra("userEmail") ?: ""
+        val userPhone = intent.getStringExtra("userPhone") ?: ""
+        val userImage = intent.getStringExtra("userImage") ?: ""
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
@@ -47,7 +54,13 @@ class AdminChatActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AdminChatScreen(userId = userId, userName = userName)
+                    AdminChatScreen(
+                        userId = userId,
+                        userName = userName,
+                        userEmail = userEmail,
+                        userPhone = userPhone,
+                        userImage = userImage
+                    )
                 }
             }
         }
@@ -56,13 +69,20 @@ class AdminChatActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminChatScreen(userId: String, userName: String) {
+fun AdminChatScreen(
+    userId: String,
+    userName: String,
+    userEmail: String,
+    userPhone: String,
+    userImage: String
+) {
     val context = LocalContext.current
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
 
     var messageText by remember { mutableStateOf("") }
     var messages by remember { mutableStateOf<List<Message>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var showUserInfo by remember { mutableStateOf(false) }
 
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages").child(userId)
@@ -104,44 +124,159 @@ fun AdminChatScreen(userId: String, userName: String) {
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = userName,
-                            style = TextStyle(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = textColor
-                            )
-                        )
-                        Text(
-                            text = "Support Chat",
-                            style = TextStyle(
-                                fontSize = 12.sp,
-                                color = textColor.copy(alpha = 0.6f)
-                            )
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            (context as? ComponentActivity)?.finish()
+            Column {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.clickable { showUserInfo = !showUserInfo }
+                        ) {
+                            if (userImage.isNotEmpty()) {
+                                AsyncImage(
+                                    model = userImage,
+                                    contentDescription = userName,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape),
+                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(androidx.compose.foundation.shape.CircleShape)
+                                        .background(Blue.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = userName.take(1).uppercase(),
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Blue
+                                        )
+                                    )
+                                }
+                            }
+                            Column(horizontalAlignment = Alignment.Start) {
+                                Text(
+                                    text = userName,
+                                    style = TextStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = textColor
+                                    )
+                                )
+                                Text(
+                                    text = if (showUserInfo) "Hide user info" else "Tap for user info",
+                                    style = TextStyle(
+                                        fontSize = 11.sp,
+                                        color = Blue
+                                    )
+                                )
+                            }
                         }
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.baseline_arrow_back_ios_24),
-                            contentDescription = "Back",
-                            tint = textColor,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = backgroundColor
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = {
+                                (context as? ComponentActivity)?.finish()
+                            }
+                        ) {
+                            Icon(
+                                painter = painterResource(id = R.drawable.baseline_arrow_back_ios_24),
+                                contentDescription = "Back",
+                                tint = textColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = backgroundColor
+                    )
                 )
-            )
+
+                // User Info Card (collapsible)
+                if (showUserInfo) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = surfaceColor
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            if (userEmail.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_email_24),
+                                        contentDescription = null,
+                                        tint = Blue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Email",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = textColor.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                        Text(
+                                            text = userEmail,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = textColor
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (userPhone.isNotEmpty()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.baseline_phone_24),
+                                        contentDescription = null,
+                                        tint = Blue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = "Phone",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = textColor.copy(alpha = 0.6f)
+                                            )
+                                        )
+                                        Text(
+                                            text = userPhone,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = textColor
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Text(
+                                text = "User ID: $userId",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = textColor.copy(alpha = 0.5f)
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         },
         bottomBar = {
             Surface(

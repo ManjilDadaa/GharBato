@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.google.firebase.database.*
@@ -29,6 +31,9 @@ import java.util.*
 data class SupportConversation(
     val userId: String = "",
     val userName: String = "",
+    val userEmail: String = "",
+    val userPhone: String = "",
+    val userImage: String = "",
     val lastMessage: String = "",
     val lastMessageTime: Long = 0,
     val unreadCount: Int = 0
@@ -73,7 +78,10 @@ fun AdminSupportScreen() {
                         conversationList.add(
                             SupportConversation(
                                 userId = userId,
-                                userName = lastMessage.senderName,
+                                userName = lastMessage.senderName.ifEmpty { "User" },
+                                userEmail = lastMessage.senderEmail,
+                                userPhone = lastMessage.senderPhone,
+                                userImage = lastMessage.senderImage,
                                 lastMessage = lastMessage.message,
                                 lastMessageTime = lastMessage.timestamp,
                                 unreadCount = 0 // You can implement read/unread tracking
@@ -177,6 +185,9 @@ fun AdminSupportScreen() {
                             val intent = Intent(context, AdminChatActivity::class.java).apply {
                                 putExtra("userId", conversation.userId)
                                 putExtra("userName", conversation.userName)
+                                putExtra("userEmail", conversation.userEmail)
+                                putExtra("userPhone", conversation.userPhone)
+                                putExtra("userImage", conversation.userImage)
                             }
                             context.startActivity(intent)
                         }
@@ -206,21 +217,32 @@ fun ConversationItem(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(Blue.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = conversation.userName.take(1).uppercase(),
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = Blue
-                )
+        // Avatar with user image support
+        if (conversation.userImage.isNotEmpty()) {
+            AsyncImage(
+                model = conversation.userImage,
+                contentDescription = conversation.userName,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape),
+                contentScale = ContentScale.Crop
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .background(Blue.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = conversation.userName.take(1).uppercase(),
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Blue
+                    )
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
