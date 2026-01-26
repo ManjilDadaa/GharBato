@@ -52,6 +52,7 @@ fun AdminBody() {
         navItem("Search", R.drawable.outline_search_24),
         navItem("Verify",R.drawable.baseline_verified_user_24),
         navItem("Delete",R.drawable.baseline_delete_forever_24),
+        navItem("Support",R.drawable.baseline_support_agent_24),
     )
     Scaffold (
         containerColor = Color.White,
@@ -97,6 +98,7 @@ fun AdminBody() {
                 1 -> AdminSearchScreen()
                 2 -> VerifyUserScreen()
                 3 -> AdminDeleteScreen()
+//                4 -> AdminSupportScreen()
             }
         }
     }
