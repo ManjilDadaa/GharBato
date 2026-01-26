@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -144,6 +145,7 @@ fun LoginBody() {
                     },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
+                        .testTag("email_input")
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
                 )
@@ -208,6 +210,7 @@ fun LoginBody() {
                     },
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
+                        .testTag("password_input")
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
                 )
@@ -360,6 +363,7 @@ fun LoginBody() {
                     },
                     enabled = !isLoading,
                     modifier = Modifier
+                        .testTag("login_button")
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
                         .height(56.dp)
