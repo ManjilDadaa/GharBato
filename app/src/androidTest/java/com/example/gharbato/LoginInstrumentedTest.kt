@@ -44,14 +44,22 @@ class LoginInstrumentedTest {
 
     @Test
     fun test_login_to_dashboard() {
-        //Enter email
+        // Enter email and password
+        // Failing test
         composeRule.onNodeWithTag("email_input")
-            .performTextInput("manjilbasnet99@gmail.com")
+            .performTextInput("manjilbasnet@gmail.com")
         composeRule.onNodeWithTag("password_input")
-            .performTextInput("Manjil@123")
+            .performTextInput("1233333")
         composeRule.onNodeWithTag("login_button")
             .performClick()
 
-        Intents.intended(hasComponent(DashboardActivity::class.java.name))
+        composeRule.waitUntil(timeoutMillis = 10000) {
+            try {
+                Intents.intended(hasComponent(DashboardActivity::class.java.name))
+                true
+            } catch (e: AssertionError) {
+                false
+            }
+        }
     }
 }
