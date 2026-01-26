@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -66,9 +67,10 @@ fun MessageAdminScreen() {
     var isLoading by remember { mutableStateOf(true) }
 
     val currentUser = FirebaseAuth.getInstance().currentUser
+    val currentUserId = currentUser?.uid ?: ""
     val database = FirebaseDatabase.getInstance()
-    val messagesRef = database.getReference("support_messages").child(currentUser?.uid ?: "")
-    val usersRef = database.getReference("users").child(currentUser?.uid ?: "")
+    val messagesRef = database.getReference("support_messages").child(currentUserId)
+    val usersRef = database.getReference("users").child(currentUserId)
 
     val listState = rememberLazyListState()
 
@@ -293,9 +295,9 @@ fun MessageAdminScreen() {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(messages) { message ->
-                        MessageBubble(
+                        UserMessageBubble(
                             message = message,
-                            isCurrentUser = !message.isAdmin,
+                            currentUserId = currentUserId,
                             isDarkMode = isDarkMode
                         )
                     }
@@ -306,28 +308,28 @@ fun MessageAdminScreen() {
 }
 
 @Composable
-fun MessageBubble(
+fun UserMessageBubble(
     message: SupportMessage,
-    isCurrentUser: Boolean,
+    currentUserId: String,
     isDarkMode: Boolean
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
+    val isMyMessage = message.senderId == currentUserId && !message.isAdmin
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
+        horizontalAlignment = if (isMyMessage) Alignment.End else Alignment.Start
     ) {
         Card(
-            modifier = Modifier
-                .widthIn(max = 280.dp),
+            modifier = Modifier.widthIn(max = 280.dp),
             shape = RoundedCornerShape(
                 topStart = 16.dp,
                 topEnd = 16.dp,
-                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
-                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+                bottomStart = if (isMyMessage) 16.dp else 4.dp,
+                bottomEnd = if (isMyMessage) 4.dp else 16.dp
             ),
             colors = CardDefaults.cardColors(
-                containerColor = if (isCurrentUser) Blue else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = if (isMyMessage) Blue else MaterialTheme.colorScheme.surfaceVariant
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = if (isDarkMode) 0.dp else 2.dp
@@ -336,10 +338,10 @@ fun MessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Show sender name for user messages (not for current user's own messages)
-                if (!isCurrentUser) {
+                // Show sender name only for admin messages (incoming messages from admin)
+                if (!isMyMessage && message.isAdmin) {
                     Text(
-                        text = message.senderName.ifEmpty { "User" },
+                        text = "Admin",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = textColor.copy(alpha = 0.7f)
@@ -351,7 +353,7 @@ fun MessageBubble(
                 Text(
                     text = message.message,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isCurrentUser) Color.White else textColor
+                        color = if (isMyMessage) Color.White else textColor
                     )
                 )
             }
