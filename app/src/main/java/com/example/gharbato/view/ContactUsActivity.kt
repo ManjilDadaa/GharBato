@@ -268,8 +268,50 @@ fun ContactUsScreen() {
                         contentColor = Color.White
                     )
                 ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_email_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Email Us",
+                        style = MaterialTheme.typography.labelLarge.copy(
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Message Admin Button (Outlined)
+                OutlinedButton(
+                    onClick = {
+                        // TODO: Navigate to Message Admin Screen or Open Chat
+                        // Example: context.startActivity(Intent(context, MessageAdminActivity::class.java))
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Blue,
+                        containerColor = if (isDarkMode) Blue.copy(alpha = 0.1f) else Color.Transparent
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 2.dp,
+                        color = Blue
+                    )
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.baseline_support_agent_24),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Blue
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Message Admin",
                         style = MaterialTheme.typography.labelLarge.copy(
                             fontWeight = FontWeight.SemiBold
                         )
