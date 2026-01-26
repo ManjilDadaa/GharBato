@@ -38,6 +38,7 @@ import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.example.gharbato.utils.SystemBarUtils
+import com.example.gharbato.ui.theme.GharBatoTheme
 
 class EditProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,7 +47,10 @@ class EditProfileActivity : ComponentActivity() {
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            EditProfileScreen()
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                EditProfileScreen()
+            }
         }
     }
 }
@@ -55,6 +59,7 @@ class EditProfileActivity : ComponentActivity() {
 @Composable
 fun EditProfileScreen() {
     val context = LocalContext.current
+    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     // Initialize ViewModel
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
@@ -78,6 +83,15 @@ fun EditProfileScreen() {
     var isUploadingImage by remember { mutableStateOf(false) }
 
     val generatedCode = remember { generateRandomCode() }
+
+    // Theme colors
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
+    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
+    val borderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
+    val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -148,19 +162,34 @@ fun EditProfileScreen() {
             },
             generatedCode = generatedCode,
             onVerificationCodeChange = { verificationCode = it },
-            verificationCode = verificationCode
+            verificationCode = verificationCode,
+            isDarkMode = isDarkMode
         )
     }
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile") },
+                title = {
+                    Text(
+                        "Edit Profile",
+                        color = textColorPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { (context as ComponentActivity).finish() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = null,
+                            tint = appBlue
+                        )
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = backgroundColor
+                )
             )
         }
     ) { padding ->
@@ -171,14 +200,14 @@ fun EditProfileScreen() {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = appBlue)
             }
         } else {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(Color(0xFFF8F9FB))
+                    .background(backgroundColor)
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -201,8 +230,8 @@ fun EditProfileScreen() {
                             modifier = Modifier
                                 .size(120.dp)
                                 .clip(CircleShape)
-                                .border(3.dp, Color(0xFF4D8DFF), CircleShape)
-                                .background(Color.LightGray),
+                                .border(3.dp, appBlue, CircleShape)
+                                .background(if (isDarkMode) Color(0xFF424242) else Color.LightGray),
                             contentScale = ContentScale.Crop
                         )
 
@@ -211,8 +240,8 @@ fun EditProfileScreen() {
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF4D8DFF))
-                                .border(3.dp, Color.White, CircleShape)
+                                .background(appBlue)
+                                .border(3.dp, backgroundColor, CircleShape)
                                 .clickable {
                                     imagePickerLauncher.launch("image/*")
                                 },
@@ -239,14 +268,16 @@ fun EditProfileScreen() {
                 Text(
                     "Tap to change profile picture",
                     fontSize = 13.sp,
-                    color = Color.Gray,
+                    color = textColorSecondary,
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
 
                 // Form Fields
                 ProfileTextField(
                     value = name,
-                    label = "Full Name"
+                    label = "Full Name",
+                    isDarkMode = isDarkMode,
+                    appBlue = appBlue
                 ) { name = it }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -254,7 +285,9 @@ fun EditProfileScreen() {
                 ProfileTextField(
                     value = email,
                     label = "Email Address",
-                    enabled = false
+                    enabled = false,
+                    isDarkMode = isDarkMode,
+                    appBlue = appBlue
                 ) { }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -262,7 +295,9 @@ fun EditProfileScreen() {
                 ProfileTextField(
                     value = phone,
                     label = "Phone Number",
-                    enabled = false
+                    enabled = false,
+                    isDarkMode = isDarkMode,
+                    appBlue = appBlue
                 ) { }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -270,7 +305,9 @@ fun EditProfileScreen() {
                 ProfileTextField(
                     value = country,
                     label = "Country",
-                    enabled = false
+                    enabled = false,
+                    isDarkMode = isDarkMode,
+                    appBlue = appBlue
                 ) { }
 
                 Spacer(modifier = Modifier.height(30.dp))
@@ -296,7 +333,8 @@ fun EditProfileScreen() {
                         .height(52.dp),
                     shape = RoundedCornerShape(30.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4D8DFF)
+                        containerColor = appBlue,
+                        disabledContainerColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
                     ),
                     enabled = !isSaving && !isUploadingImage
                 ) {
@@ -309,7 +347,8 @@ fun EditProfileScreen() {
                         Text(
                             "Save Changes",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
                         )
                     }
                 }
@@ -320,9 +359,13 @@ fun EditProfileScreen() {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White)
+                        .background(cardBackgroundColor)
+                        .border(
+                            width = 1.dp,
+                            color = if (isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE),
+                            shape = RoundedCornerShape(12.dp)
+                        )
                         .clickable {
                             showDeleteDialog = true
                         }
@@ -335,7 +378,7 @@ fun EditProfileScreen() {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = null,
-                            tint = Color(0xFFE53935),
+                            tint = errorColor,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -343,7 +386,7 @@ fun EditProfileScreen() {
                             "Delete Account",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE53935)
+                            color = errorColor
                         )
                     }
                 }
@@ -364,20 +407,43 @@ fun ProfileTextField(
     value: String,
     label: String,
     enabled: Boolean = true,
+    isDarkMode: Boolean,
+    appBlue: Color,
     onValueChange: (String) -> Unit
 ) {
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val disabledTextColor = if (isDarkMode) Color(0xFF888888) else Color.Gray
+    val borderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White
+
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = {
+            Text(
+                label,
+                color = if (enabled) {
+                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+                } else {
+                    disabledTextColor
+                }
+            )
+        },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         singleLine = true,
         enabled = enabled,
         colors = OutlinedTextFieldDefaults.colors(
-            disabledTextColor = Color.Gray,
-            disabledBorderColor = Color.LightGray,
-            disabledLabelColor = Color.Gray
+            focusedTextColor = textColor,
+            unfocusedTextColor = textColor,
+            disabledTextColor = disabledTextColor,
+            focusedBorderColor = appBlue,
+            unfocusedBorderColor = borderColor,
+            disabledBorderColor = borderColor,
+            focusedContainerColor = backgroundColor,
+            unfocusedContainerColor = backgroundColor,
+            disabledContainerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5),
+            cursorColor = appBlue
         )
     )
 }
@@ -389,16 +455,31 @@ fun DeleteAccountConfirmationDialog(
     onAccountDelete: () -> Unit,
     generatedCode: String,
     onVerificationCodeChange: (String) -> Unit,
-    verificationCode: String
+    verificationCode: String,
+    isDarkMode: Boolean
 ) {
     val isCodeCorrect = verificationCode == generatedCode
+    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
+    val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
+    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
+    val dialogBackground = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Confirm Account Deletion") },
+        title = {
+            Text(
+                "Confirm Account Deletion",
+                color = textColorPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column {
-                Text("To delete your account, please enter the following code:")
+                Text(
+                    "To delete your account, please enter the following code:",
+                    color = textColorSecondary
+                )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -406,7 +487,7 @@ fun DeleteAccountConfirmationDialog(
                     generatedCode,
                     style = MaterialTheme.typography.bodyLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFE53935)
+                        color = errorColor
                     )
                 )
 
@@ -417,14 +498,21 @@ fun DeleteAccountConfirmationDialog(
                     onValueChange = onVerificationCodeChange,
                     label = { Text("Enter the code") },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = appBlue,
+                        unfocusedBorderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0),
+                        focusedTextColor = textColorPrimary,
+                        unfocusedTextColor = textColorPrimary,
+                        cursorColor = appBlue
+                    )
                 )
 
                 if (verificationCode.isNotEmpty() && !isCodeCorrect) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         "The code you entered is incorrect. Please try again.",
-                        color = Color.Red,
+                        color = errorColor,
                         fontSize = 14.sp
                     )
                 }
@@ -441,14 +529,18 @@ fun DeleteAccountConfirmationDialog(
             ) {
                 Text(
                     "Confirm",
-                    color = if (isCodeCorrect) Color(0xFFE53935) else Color.Gray
+                    color = if (isCodeCorrect) errorColor else if (isDarkMode) Color(0xFF666666) else Color.Gray
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(
+                    "Cancel",
+                    color = appBlue
+                )
             }
-        }
+        },
+        containerColor = dialogBackground
     )
 }
