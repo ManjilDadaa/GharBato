@@ -251,7 +251,6 @@ fun ContactUsScreen() {
                             )
                         } catch (e: Exception) {
                             // Handle case where no email app is available
-                            // You might want to show a Toast or Snackbar here
                         }
                     },
                     modifier = Modifier
@@ -287,8 +286,7 @@ fun ContactUsScreen() {
                 // Message Admin Button (Outlined)
                 OutlinedButton(
                     onClick = {
-                        // TODO: Navigate to Message Admin Screen or Open Chat
-                        // Example: context.startActivity(Intent(context, MessageAdminActivity::class.java))
+                        context.startActivity(Intent(context, MessageAdminActivity::class.java))
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -322,7 +320,7 @@ fun ContactUsScreen() {
 
                 // Note
                 Text(
-                    text = "Alternatively, you can also reach out through our social media channels for general inquiries.",
+                    text = "For instant support, use the Message Admin feature for direct communication with our team.",
                     style = MaterialTheme.typography.bodySmall.copy(
                         color = noteColor
                     ),
