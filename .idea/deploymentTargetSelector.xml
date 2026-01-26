@@ -16,10 +16,10 @@
         </DropdownSelection>
         <DialogSelection />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity">
+      <SelectionState runConfigName="LoginInstrumentedTest">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
-      <SelectionState runConfigName="SplashActivity (3)">
+      <SelectionState runConfigName="test_login_to_dashboard()">
         <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
     </selectionStates>
