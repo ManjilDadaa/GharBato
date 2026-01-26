@@ -33,6 +33,8 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
 import com.google.firebase.database.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 class AdminChatActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +68,72 @@ class AdminChatActivity : ComponentActivity() {
             }
         }
     }
+}
+
+@Composable
+fun AdminMessageBubble(
+    message: SupportMessage,
+    isCurrentUser: Boolean,
+    isDarkMode: Boolean
+) {
+    val textColor = MaterialTheme.colorScheme.onBackground
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
+    ) {
+        Card(
+            modifier = Modifier
+                .widthIn(max = 280.dp),
+            shape = RoundedCornerShape(
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+            ),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isCurrentUser) Blue else MaterialTheme.colorScheme.surfaceVariant
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = if (isDarkMode) 0.dp else 2.dp
+            )
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                // Show sender label
+                Text(
+                    text = if (isCurrentUser) "Admin" else message.senderName.ifEmpty { "User" },
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (isCurrentUser) Color.White.copy(alpha = 0.9f)
+                        else textColor.copy(alpha = 0.7f)
+                    ),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+
+                Text(
+                    text = message.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (isCurrentUser) Color.White else textColor
+                    )
+                )
+            }
+        }
+
+        Text(
+            text = formatMessageTimestamp(message.timestamp),
+            style = MaterialTheme.typography.labelSmall.copy(
+                color = textColor.copy(alpha = 0.5f)
+            ),
+            modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp)
+        )
+    }
+}
+
+private fun formatMessageTimestamp(timestamp: Long): String {
+    val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
