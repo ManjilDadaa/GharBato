@@ -12,14 +12,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
@@ -134,95 +137,165 @@ fun AdminSupportScreen() {
         })
     }
 
-    Scaffold(
-        containerColor = backgroundColor,
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .statusBarsPadding()
+    ) {
+        // Custom Header
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = backgroundColor,
+            shadowElevation = if (isDarkMode) 0.dp else 2.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Support Icon with gradient background
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Blue, Blue.copy(alpha = 0.7f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SupportAgent,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Support Messages",
+                            text = "Support Center",
                             style = MaterialTheme.typography.headlineSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = textColor
                             )
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "${conversations.size} conversation${if (conversations.size != 1) "s" else ""}",
-                            style = MaterialTheme.typography.labelMedium.copy(
+                            text = if (isLoading) "Loading..." else "${conversations.size} active conversation${if (conversations.size != 1) "s" else ""}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
                                 color = textColor.copy(alpha = 0.6f)
                             )
                         )
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = backgroundColor
-                )
-            )
+                }
+            }
         }
-    ) { paddingValues ->
+
+        // Divider
+        HorizontalDivider(
+            color = textColor.copy(alpha = 0.08f),
+            thickness = 1.dp
+        )
+
+        // Content
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(backgroundColor)
+                .weight(1f)
         ) {
-            if (isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = Blue)
-                }
-            } else if (conversations.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "💬",
-                        style = MaterialTheme.typography.displayLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "No Support Messages",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
+            when {
+                isLoading -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = Blue,
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp
                         )
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "User support messages will appear here",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
-                        ),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Loading conversations...",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
+                            )
+                        )
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(conversations) { conversation ->
-                        ConversationCard(
-                            conversation = conversation,
-                            isDarkMode = isDarkMode,
-                            onClick = {
-                                val intent = Intent(context, AdminChatActivity::class.java).apply {
-                                    putExtra("userId", conversation.userId)
-                                    putExtra("userName", conversation.userName)
-                                    putExtra("userEmail", conversation.userEmail)
-                                    putExtra("userPhone", conversation.userPhone)
-                                    putExtra("userImage", conversation.userImage)
+                conversations.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(Blue.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SupportAgent,
+                                contentDescription = null,
+                                tint = Blue,
+                                modifier = Modifier.size(56.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "No Support Requests",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "When users reach out for help,\ntheir messages will appear here",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        items(
+                            items = conversations,
+                            key = { it.userId }
+                        ) { conversation ->
+                            ConversationCard(
+                                conversation = conversation,
+                                isDarkMode = isDarkMode,
+                                onClick = {
+                                    val intent = Intent(context, AdminChatActivity::class.java).apply {
+                                        putExtra("userId", conversation.userId)
+                                        putExtra("userName", conversation.userName)
+                                        putExtra("userEmail", conversation.userEmail)
+                                        putExtra("userPhone", conversation.userPhone)
+                                        putExtra("userImage", conversation.userImage)
+                                    }
+                                    context.startActivity(intent)
                                 }
-                                context.startActivity(intent)
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -237,16 +310,18 @@ fun ConversationCard(
     onClick: () -> Unit
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
-    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+    val cardColor = if (isDarkMode) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = surfaceColor
-        ),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isDarkMode) 0.dp else 2.dp
@@ -255,26 +330,33 @@ fun ConversationCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // User Avatar
+            // User Avatar with online indicator
             Box {
                 if (conversation.userImage.isNotEmpty()) {
                     AsyncImage(
                         model = conversation.userImage,
                         contentDescription = conversation.userName,
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(54.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(54.dp)
                             .clip(CircleShape)
-                            .background(Blue.copy(alpha = 0.2f)),
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Blue.copy(alpha = 0.2f),
+                                        Blue.copy(alpha = 0.1f)
+                                    )
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -282,7 +364,7 @@ fun ConversationCard(
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Blue,
-                                fontSize = 20.sp
+                                fontSize = 22.sp
                             )
                         )
                     }
@@ -291,30 +373,48 @@ fun ConversationCard(
                 // Online indicator
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
+                        .size(16.dp)
                         .align(Alignment.BottomEnd)
                         .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .background(if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White)
                         .padding(2.dp)
-                )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             // Conversation Details
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                // User Name
-                Text(
-                    text = conversation.userName,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = textColor
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                // User Name and Time Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = conversation.userName,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = textColor
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = formatConversationTime(conversation.lastMessageTime),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = textColor.copy(alpha = 0.5f)
+                        )
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
@@ -322,17 +422,17 @@ fun ConversationCard(
                 Text(
                     text = conversation.lastMessage,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = textColor.copy(alpha = 0.7f)
+                        color = textColor.copy(alpha = 0.65f)
                     ),
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Contact Info Row
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (conversation.userEmail.isNotEmpty()) {
@@ -343,16 +443,17 @@ fun ConversationCard(
                             Icon(
                                 imageVector = Icons.Default.Email,
                                 contentDescription = null,
-                                tint = Blue,
+                                tint = Blue.copy(alpha = 0.8f),
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
-                                text = conversation.userEmail.take(20) + if (conversation.userEmail.length > 20) "..." else "",
+                                text = if (conversation.userEmail.length > 18)
+                                    conversation.userEmail.take(18) + "..."
+                                else conversation.userEmail,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = textColor.copy(alpha = 0.6f)
+                                    color = textColor.copy(alpha = 0.55f)
                                 ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                maxLines = 1
                             )
                         }
                     }
@@ -365,13 +466,13 @@ fun ConversationCard(
                             Icon(
                                 imageVector = Icons.Default.Phone,
                                 contentDescription = null,
-                                tint = Blue,
+                                tint = Blue.copy(alpha = 0.8f),
                                 modifier = Modifier.size(14.dp)
                             )
                             Text(
                                 text = conversation.userPhone,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = textColor.copy(alpha = 0.6f)
+                                    color = textColor.copy(alpha = 0.55f)
                                 ),
                                 maxLines = 1
                             )
@@ -382,44 +483,19 @@ fun ConversationCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Right Side Info
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // Arrow Icon
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Blue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
             ) {
-                // Timestamp
-                Text(
-                    text = formatConversationTime(conversation.lastMessageTime),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = textColor.copy(alpha = 0.5f)
-                    )
-                )
-
-                // Unread Badge
-                if (conversation.unreadCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(Blue),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = conversation.unreadCount.toString(),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                        )
-                    }
-                }
-
-                // Arrow Icon
                 Icon(
                     imageVector = Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = textColor.copy(alpha = 0.3f),
-                    modifier = Modifier.size(24.dp)
+                    tint = Blue,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -431,10 +507,10 @@ private fun formatConversationTime(timestamp: Long): String {
     val diff = now - timestamp
 
     return when {
-        diff < 60000 -> "Just now"
-        diff < 3600000 -> "${diff / 60000}m ago"
-        diff < 86400000 -> "${diff / 3600000}h ago"
-        diff < 604800000 -> "${diff / 86400000}d ago"
+        diff < 60000 -> "Now"
+        diff < 3600000 -> "${diff / 60000}m"
+        diff < 86400000 -> "${diff / 3600000}h"
+        diff < 604800000 -> "${diff / 86400000}d"
         else -> {
             val sdf = SimpleDateFormat("MMM dd", Locale.getDefault())
             sdf.format(Date(timestamp))
