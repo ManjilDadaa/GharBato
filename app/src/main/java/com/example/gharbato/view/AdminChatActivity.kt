@@ -7,6 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,17 +17,21 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -172,13 +177,19 @@ fun AdminChatScreen(
         }
     }
 
-    Scaffold(
-        containerColor = backgroundColor,
-        topBar = {
-            Surface(
-                color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 2.dp
-            ) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .statusBarsPadding()
+    ) {
+        // Custom Top Bar
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = surfaceColor,
+            shadowElevation = if (isDarkMode) 0.dp else 4.dp
+        ) {
+            Column {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -187,9 +198,7 @@ fun AdminChatScreen(
                 ) {
                     // Back button
                     IconButton(
-                        onClick = {
-                            (context as? ComponentActivity)?.finish()
-                        }
+                        onClick = { (context as? ComponentActivity)?.finish() }
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -198,31 +207,58 @@ fun AdminChatScreen(
                         )
                     }
 
-                    // User profile image
-                    if (displayImage.isNotEmpty()) {
-                        AsyncImage(
-                            model = displayImage,
-                            contentDescription = displayName,
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    // User profile image with online indicator
+                    Box {
+                        if (displayImage.isNotEmpty()) {
+                            AsyncImage(
+                                model = displayImage,
+                                contentDescription = displayName,
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, Blue.copy(alpha = 0.3f), CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        brush = Brush.linearGradient(
+                                            colors = listOf(Blue.copy(alpha = 0.2f), Blue.copy(alpha = 0.1f))
+                                        )
+                                    )
+                                    .border(2.dp, Blue.copy(alpha = 0.3f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = displayName.take(1).uppercase(),
+                                    style = TextStyle(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 18.sp,
+                                        color = Blue
+                                    )
+                                )
+                            }
+                        }
+
+                        // Online indicator
                         Box(
                             modifier = Modifier
-                                .size(42.dp)
+                                .size(14.dp)
+                                .align(Alignment.BottomEnd)
                                 .clip(CircleShape)
-                                .background(Blue.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                                .background(if (isDarkMode) surfaceColor else Color.White)
+                                .padding(2.dp)
                         ) {
-                            Text(
-                                text = displayName.take(1).uppercase(),
-                                style = TextStyle(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp,
-                                    color = Blue
-                                )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4CAF50))
                             )
                         }
                     }
@@ -230,92 +266,248 @@ fun AdminChatScreen(
                     Spacer(modifier = Modifier.width(12.dp))
 
                     // User info
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = displayName,
                             style = TextStyle(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 17.sp,
                                 color = textColor
                             ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (displayEmail.isNotEmpty()) {
-                            Text(
-                                text = displayEmail,
-                                style = TextStyle(
-                                    fontSize = 12.sp,
-                                    color = textColor.copy(alpha = 0.6f)
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4CAF50))
                             )
-                        } else if (displayPhone.isNotEmpty()) {
                             Text(
-                                text = displayPhone,
+                                text = "Online",
                                 style = TextStyle(
                                     fontSize = 12.sp,
-                                    color = textColor.copy(alpha = 0.6f)
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                    color = Color(0xFF4CAF50)
+                                )
                             )
                         }
                     }
+                }
 
-                    // Online status
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF4CAF50))
+                // Contact info row
+                if (displayEmail.isNotEmpty() || displayPhone.isNotEmpty()) {
+                    HorizontalDivider(
+                        color = textColor.copy(alpha = 0.08f),
+                        thickness = 1.dp
                     )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(20.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (displayEmail.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Email,
+                                    contentDescription = null,
+                                    tint = Blue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = displayEmail,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = textColor.copy(alpha = 0.7f)
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                        if (displayPhone.isNotEmpty()) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Phone,
+                                    contentDescription = null,
+                                    tint = Blue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = displayPhone,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = textColor.copy(alpha = 0.7f)
+                                    ),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        },
-        bottomBar = {
-            Surface(
-                color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 4.dp,
-                shadowElevation = 8.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    OutlinedTextField(
-                        value = messageText,
-                        onValueChange = { messageText = it },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 56.dp, max = 120.dp),
-                        placeholder = {
-                            Text(
-                                "Reply to $displayName...",
-                                color = textColor.copy(alpha = 0.5f)
+        }
+
+        // Chat Content
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .background(backgroundColor)
+        ) {
+            when {
+                isLoading -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = Blue,
+                            modifier = Modifier.size(44.dp),
+                            strokeWidth = 3.dp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Loading conversation...",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
                             )
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = textColor.copy(alpha = 0.3f),
-                            focusedTextColor = textColor,
-                            unfocusedTextColor = textColor,
-                            cursorColor = Blue
+                        )
+                    }
+                }
+                messages.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(88.dp)
+                                .clip(CircleShape)
+                                .background(Blue.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "💬",
+                                style = TextStyle(fontSize = 44.sp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Text(
+                            text = "Start Conversation",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Send a message to help\n$displayName with their inquiry",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(
+                            items = messages,
+                            key = { it.id }
+                        ) { message ->
+                            AdminMessageBubble(
+                                message = message,
+                                userName = displayName,
+                                isDarkMode = isDarkMode
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Bottom Input Bar
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = surfaceColor,
+            shadowElevation = 8.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                OutlinedTextField(
+                    value = messageText,
+                    onValueChange = { messageText = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 52.dp, max = 120.dp),
+                    placeholder = {
+                        Text(
+                            "Reply to $displayName...",
+                            color = textColor.copy(alpha = 0.5f),
+                            fontSize = 15.sp
+                        )
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Blue,
+                        unfocusedBorderColor = textColor.copy(alpha = 0.2f),
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = Blue,
+                        focusedContainerColor = if (isDarkMode) Color.Transparent else Color(0xFFF8F9FA),
+                        unfocusedContainerColor = if (isDarkMode) Color.Transparent else Color(0xFFF8F9FA)
+                    ),
+                    shape = RoundedCornerShape(26.dp),
+                    maxLines = 4,
+                    enabled = !isSending,
+                    textStyle = TextStyle(fontSize = 15.sp)
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                // Send Button
+                Box(
+                    modifier = Modifier
+                        .size(52.dp)
+                        .shadow(
+                            elevation = if (messageText.isBlank() || isSending) 0.dp else 6.dp,
+                            shape = CircleShape,
+                            ambientColor = Blue.copy(alpha = 0.3f),
+                            spotColor = Blue.copy(alpha = 0.3f)
+                        )
+                        .clip(CircleShape)
+                        .background(
+                            brush = if (messageText.isBlank() || isSending)
+                                Brush.linearGradient(listOf(Blue.copy(alpha = 0.4f), Blue.copy(alpha = 0.3f)))
+                            else
+                                Brush.linearGradient(listOf(Blue, Blue.copy(alpha = 0.85f)))
                         ),
-                        shape = RoundedCornerShape(28.dp),
-                        maxLines = 4,
-                        enabled = !isSending
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
+                    contentAlignment = Alignment.Center
+                ) {
                     IconButton(
                         onClick = {
                             if (messageText.isNotBlank() && !isSending) {
@@ -354,24 +546,12 @@ fun AdminChatScreen(
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .size(56.dp)
-                            .shadow(
-                                elevation = if (isDarkMode) 0.dp else 4.dp,
-                                shape = RoundedCornerShape(28.dp)
-                            )
-                            .background(
-                                color = if (messageText.isBlank() || isSending)
-                                    Blue.copy(alpha = 0.5f)
-                                else
-                                    Blue,
-                                shape = RoundedCornerShape(28.dp)
-                            ),
-                        enabled = messageText.isNotBlank() && !isSending
+                        enabled = messageText.isNotBlank() && !isSending,
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         if (isSending) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(22.dp),
                                 color = Color.White,
                                 strokeWidth = 2.dp
                             )
@@ -379,79 +559,10 @@ fun AdminChatScreen(
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
-                                tint = Color.White
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                    }
-                }
-            }
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(backgroundColor)
-        ) {
-            if (isLoading) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(color = Blue)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Loading conversation...",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
-                        )
-                    )
-                }
-            } else if (messages.isEmpty()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = "💬",
-                        style = TextStyle(fontSize = 64.sp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Start Conversation",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Send a message to assist $displayName with their inquiry",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
-                        ),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(
-                        items = messages,
-                        key = { it.id }
-                    ) { message ->
-                        AdminMessageBubble(
-                            message = message,
-                            userName = displayName,
-                            isDarkMode = isDarkMode
-                        )
                     }
                 }
             }
@@ -476,33 +587,35 @@ fun AdminMessageBubble(
     ) {
         // Message bubble
         Card(
-            modifier = Modifier.widthIn(max = 280.dp),
+            modifier = Modifier.widthIn(max = 300.dp),
             shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isAdminMessage) 16.dp else 4.dp,
-                bottomEnd = if (isAdminMessage) 4.dp else 16.dp
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = if (isAdminMessage) 18.dp else 4.dp,
+                bottomEnd = if (isAdminMessage) 4.dp else 18.dp
             ),
             colors = CardDefaults.cardColors(
                 containerColor = if (isAdminMessage)
                     Blue
-                else
+                else if (isDarkMode)
                     MaterialTheme.colorScheme.surfaceVariant
+                else
+                    Color(0xFFF0F2F5)
             ),
             elevation = CardDefaults.cardElevation(
-                defaultElevation = if (isDarkMode) 0.dp else 2.dp
+                defaultElevation = if (isDarkMode) 0.dp else 1.dp
             )
         ) {
             Column(
-                modifier = Modifier.padding(12.dp)
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
             ) {
                 // Show sender name for user messages only
                 if (!isAdminMessage) {
                     Text(
                         text = userName,
                         style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textColor.copy(alpha = 0.7f)
+                            fontWeight = FontWeight.SemiBold,
+                            color = Blue
                         ),
                         modifier = Modifier.padding(bottom = 4.dp)
                     )
@@ -511,7 +624,8 @@ fun AdminMessageBubble(
                 Text(
                     text = message.message,
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isAdminMessage) Color.White else textColor
+                        color = if (isAdminMessage) Color.White else textColor,
+                        lineHeight = 20.sp
                     )
                 )
             }
@@ -526,7 +640,8 @@ fun AdminMessageBubble(
             Text(
                 text = formatMessageTimestamp(message.timestamp),
                 style = MaterialTheme.typography.labelSmall.copy(
-                    color = textColor.copy(alpha = 0.5f)
+                    color = textColor.copy(alpha = 0.45f),
+                    fontSize = 11.sp
                 )
             )
 
@@ -535,8 +650,9 @@ fun AdminMessageBubble(
                 Text(
                     text = "✓✓",
                     style = MaterialTheme.typography.labelSmall.copy(
-                        color = Blue.copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold
+                        color = Blue.copy(alpha = 0.7f),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp
                     )
                 )
             }
