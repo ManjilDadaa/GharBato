@@ -35,15 +35,23 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import com.example.gharbato.repository.ReportUserRepoImpl
 import com.example.gharbato.repository.UserRepoImpl
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.ReportedUser
 import com.example.gharbato.viewmodel.ReportedUsersViewModel
+import androidx.compose.runtime.collectAsState
 
 class ReportedUsersActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
-            ReportedUsersScreen()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ReportedUsersScreen()
+            }
         }
     }
 }
@@ -151,7 +159,7 @@ fun ReportedUsersScreen() {
             Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFF5F5F5)),
+                .background(MaterialTheme.colorScheme.background),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -159,7 +167,7 @@ fun ReportedUsersScreen() {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFFFEBEE)
+                        containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -200,7 +208,7 @@ fun ReportedUsersScreen() {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.surface
                     )
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
