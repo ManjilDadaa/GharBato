@@ -419,17 +419,66 @@ class MessageRepositoryImpl : MessageRepository {
                             return@forEach
                         }
 
-                        // Log raw Firebase data for debugging
-                        val rawPropertyId = msgSnapshot.child("propertyId").value
-                        val rawPropertyTitle = msgSnapshot.child("propertyTitle").value
-                        Log.d(TAG, "Raw Firebase data - propertyId: $rawPropertyId (${rawPropertyId?.javaClass?.simpleName}), propertyTitle: $rawPropertyTitle")
+                        // Manually parse message to handle type conversion issues
+                        val id = msgSnapshot.child("id").getValue(String::class.java) ?: ""
+                        val senderId = msgSnapshot.child("senderId").getValue(String::class.java) ?: ""
+                        val senderName = msgSnapshot.child("senderName").getValue(String::class.java) ?: ""
+                        val text = msgSnapshot.child("text").getValue(String::class.java) ?: ""
+                        val imageUrl = msgSnapshot.child("imageUrl").getValue(String::class.java) ?: ""
+                        val timestamp = msgSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
+                        val isRead = msgSnapshot.child("isRead").getValue(Boolean::class.java) ?: false
 
-                        val message = msgSnapshot.getValue(ChatMessage::class.java)
-                        if (message != null) {
-                            // Log property card data for debugging
-                            Log.d(TAG, "Parsed message - propertyId: ${message.propertyId}, propertyTitle: '${message.propertyTitle}', hasPropertyCard: ${message.hasPropertyCard}")
-                            messageList.add(message)
+                        // Handle propertyId - Firebase may store as Long, convert to Int safely
+                        val rawPropertyId = msgSnapshot.child("propertyId").value
+                        val propertyId = when (rawPropertyId) {
+                            is Long -> rawPropertyId.toInt()
+                            is Int -> rawPropertyId
+                            is Double -> rawPropertyId.toInt()
+                            is String -> rawPropertyId.toIntOrNull() ?: 0
+                            else -> 0
                         }
+
+                        val propertyTitle = msgSnapshot.child("propertyTitle").getValue(String::class.java) ?: ""
+                        val propertyPrice = msgSnapshot.child("propertyPrice").getValue(String::class.java) ?: ""
+                        val propertyImage = msgSnapshot.child("propertyImage").getValue(String::class.java) ?: ""
+                        val propertyLocation = msgSnapshot.child("propertyLocation").getValue(String::class.java) ?: ""
+
+                        // Handle bedrooms/bathrooms - Firebase may store as Long
+                        val rawBedrooms = msgSnapshot.child("propertyBedrooms").value
+                        val propertyBedrooms = when (rawBedrooms) {
+                            is Long -> rawBedrooms.toInt()
+                            is Int -> rawBedrooms
+                            is Double -> rawBedrooms.toInt()
+                            else -> 0
+                        }
+
+                        val rawBathrooms = msgSnapshot.child("propertyBathrooms").value
+                        val propertyBathrooms = when (rawBathrooms) {
+                            is Long -> rawBathrooms.toInt()
+                            is Int -> rawBathrooms
+                            is Double -> rawBathrooms.toInt()
+                            else -> 0
+                        }
+
+                        val message = ChatMessage(
+                            id = id,
+                            senderId = senderId,
+                            senderName = senderName,
+                            text = text,
+                            imageUrl = imageUrl,
+                            timestamp = timestamp,
+                            isRead = isRead,
+                            propertyId = propertyId,
+                            propertyTitle = propertyTitle,
+                            propertyPrice = propertyPrice,
+                            propertyImage = propertyImage,
+                            propertyLocation = propertyLocation,
+                            propertyBedrooms = propertyBedrooms,
+                            propertyBathrooms = propertyBathrooms
+                        )
+
+                        Log.d(TAG, "Parsed message - propertyId: ${message.propertyId}, propertyTitle: '${message.propertyTitle}', hasPropertyCard: ${message.hasPropertyCard}")
+                        messageList.add(message)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error parsing message", e)
                     }
