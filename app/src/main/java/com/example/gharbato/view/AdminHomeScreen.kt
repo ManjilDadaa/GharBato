@@ -33,8 +33,6 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -42,9 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -87,7 +83,6 @@ private val TextSecondary = Color(0xFF6B7280)
 @Composable
 fun AdminHomeScreen() {
     val context = LocalContext.current
-    var showMenu by remember { mutableStateOf(false) }
 
     // ViewModels for real-time data
     val reportViewModel: ReportViewModel = viewModel(
@@ -174,56 +169,24 @@ fun AdminHomeScreen() {
                         }
                     }
 
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = !showMenu },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f))
-                        ) {
-                            Icon(
-                                Icons.Outlined.ExitToApp,
-                                contentDescription = "Menu",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.ExitToApp,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp),
-                                            tint = AlertRed
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Text(
-                                            "Logout",
-                                            color = AlertRed,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 15.sp
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    FirebaseAuth.getInstance().signOut()
-                                    val intent = Intent(context, LoginActivity::class.java)
-                                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                                    context.startActivity(intent)
-                                }
-                            )
-                        }
+                    IconButton(
+                        onClick = {
+                            FirebaseAuth.getInstance().signOut()
+                            val intent = Intent(context, LoginActivity::class.java)
+                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f))
+                    ) {
+                        Icon(
+                            Icons.Outlined.ExitToApp,
+                            contentDescription = "Logout",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
                 }
             }
