@@ -145,7 +145,7 @@ dependencies {
     implementation("com.cloudinary:cloudinary-android:2.1.0")
 
     // Gemini AI
-    implementation("com.google.ai.client.generativeai:generativeai:0.1.2")
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
     implementation(libs.androidx.compose.foundation)
 
     // Testing
