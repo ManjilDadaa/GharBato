@@ -569,7 +569,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             style = TextStyle(
                                 fontSize = 14.sp,
                                 color = secondaryTextColor
-                            )
+                            ),
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -590,6 +590,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                     context.startActivity(intent)
                                 }
                                 .padding(8.dp)
+                                .testTag("create_account")
                         )
                     }
                 }

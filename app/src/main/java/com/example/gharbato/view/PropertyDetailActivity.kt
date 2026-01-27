@@ -246,7 +246,7 @@ fun PropertyDetailScreen(
 
                 // Status Chips
                 item {
-                    StatusChipsRow(isDarkMode = isDarkMode)
+                    StatusChipsRow(property = property, isDarkMode = isDarkMode)
                 }
 
                 // Price Section
@@ -579,18 +579,43 @@ private fun shareProperty(context: Context, property: PropertyModel) {
 }
 
 @Composable
-fun StatusChipsRow(isDarkMode: Boolean) {
+fun StatusChipsRow(property: PropertyModel, isDarkMode: Boolean) {
     val featuredBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFECB3)
     val featuredText = if (isDarkMode) Color(0xFFFFD54F) else Color(0xFFFF6F00)
     val verifiedBg = if (isDarkMode) Color(0xFF1B3221) else Color(0xFFE8F5E9)
     val verifiedText = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
     val ownerBg = if (isDarkMode) Color(0xFF1A237E) else Color(0xFFE3F2FD)
     val ownerText = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+    val soldBg = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFFEBEE)
+    val soldText = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+    val onHoldBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFF3E0)
+    val onHoldText = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFFF6F00)
 
     LazyRow(
         modifier = Modifier.padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Show property status first if not AVAILABLE
+        if (property.propertyStatus == "SOLD") {
+            item {
+                StatusChip(
+                    text = "Sold",
+                    icon = Icons.Default.CheckCircle,
+                    backgroundColor = soldBg,
+                    textColor = soldText
+                )
+            }
+        } else if (property.propertyStatus == "ON_HOLD") {
+            item {
+                StatusChip(
+                    text = "On Hold",
+                    icon = Icons.Default.Schedule,
+                    backgroundColor = onHoldBg,
+                    textColor = onHoldText
+                )
+            }
+        }
+        
         item {
             StatusChip(
                 text = "Featured",
