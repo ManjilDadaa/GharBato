@@ -13,23 +13,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
@@ -92,6 +98,9 @@ fun EditProfileScreen() {
     val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
     val borderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
     val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
+    val lockedFieldBg = if (isDarkMode) Color(0xFF1E1E1E) else Color(0xFFF5F7FA)
+    val infoBoxBg = if (isDarkMode) Color(0xFF2C3E50).copy(alpha = 0.3f) else Color(0xFFE3F2FD)
+    val infoBoxBorder = if (isDarkMode) Color(0xFF3498DB).copy(alpha = 0.3f) else Color(0xFFBBDEFB)
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -175,14 +184,15 @@ fun EditProfileScreen() {
                     Text(
                         "Edit Profile",
                         color = textColorPrimary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { (context as ComponentActivity).finish() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
+                            contentDescription = "Back",
                             tint = appBlue
                         )
                     }
@@ -200,7 +210,22 @@ fun EditProfileScreen() {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = appBlue)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = appBlue,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        "Loading profile...",
+                        color = textColorSecondary,
+                        fontSize = 14.sp
+                    )
+                }
             }
         } else {
             Column(
@@ -208,86 +233,191 @@ fun EditProfileScreen() {
                     .fillMaxSize()
                     .padding(padding)
                     .background(backgroundColor)
-                    .padding(20.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Profile Image Section with Upload
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.padding(vertical = 20.dp)
+                // Profile Image Section with Professional Upload
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 24.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+                    elevation = CardDefaults.cardElevation(
+                        defaultElevation = if (isDarkMode) 4.dp else 2.dp
+                    )
                 ) {
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        // Profile Image
-                        Image(
-                            painter = if (selectedImageUri != null) {
-                                rememberAsyncImagePainter(selectedImageUri)
-                            } else if (profileImageUrl != null) {
-                                rememberAsyncImagePainter(profileImageUrl)
-                            } else {
-                                painterResource(R.drawable.billu)
-                            },
-                            contentDescription = "Profile Image",
-                            modifier = Modifier
-                                .size(120.dp)
-                                .clip(CircleShape)
-                                .border(3.dp, appBlue, CircleShape)
-                                .background(if (isDarkMode) Color(0xFF424242) else Color.LightGray),
-                            contentScale = ContentScale.Crop
-                        )
-
-                        // Camera Icon Button for uploading
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(appBlue)
-                                .border(3.dp, backgroundColor, CircleShape)
-                                .clickable {
-                                    imagePickerLauncher.launch("image/*")
-                                },
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isUploadingImage) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.CameraAlt,
-                                    contentDescription = "Change Photo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                // Profile Image with enhanced styling
+                                Box(
+                                    modifier = Modifier
+                                        .size(130.dp)
+                                        .shadow(8.dp, CircleShape)
+                                ) {
+                                    Image(
+                                        painter = if (selectedImageUri != null) {
+                                            rememberAsyncImagePainter(selectedImageUri)
+                                        } else if (profileImageUrl != null) {
+                                            rememberAsyncImagePainter(profileImageUrl)
+                                        } else {
+                                            painterResource(R.drawable.billu)
+                                        },
+                                        contentDescription = "Profile Image",
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape)
+                                            .border(4.dp, appBlue, CircleShape)
+                                            .background(lockedFieldBg),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
+
+                                // Camera Icon Button with professional styling
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .shadow(4.dp, CircleShape)
+                                        .clip(CircleShape)
+                                        .background(appBlue)
+                                        .border(3.dp, backgroundColor, CircleShape)
+                                        .clickable {
+                                            imagePickerLauncher.launch("image/*")
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isUploadingImage) {
+                                        CircularProgressIndicator(
+                                            color = Color.White,
+                                            modifier = Modifier.size(22.dp),
+                                            strokeWidth = 2.5.dp
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Default.CameraAlt,
+                                            contentDescription = "Change Photo",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            "Tap camera icon to update photo",
+                            fontSize = 13.sp,
+                            color = textColorSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
 
-                Text(
-                    "Tap to change profile picture",
-                    fontSize = 13.sp,
-                    color = textColorSecondary,
-                    modifier = Modifier.padding(bottom = 20.dp)
-                )
+                // Editable Section Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "EDITABLE INFORMATION",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = appBlue,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Divider(
+                        modifier = Modifier.weight(2f),
+                        color = borderColor,
+                        thickness = 1.dp
+                    )
+                }
 
-                // Form Fields
+                // Form Fields - Editable
                 ProfileTextField(
                     value = name,
                     label = "Full Name",
                     isDarkMode = isDarkMode,
-                    appBlue = appBlue
+                    appBlue = appBlue,
+                    isEditable = true
                 ) { name = it }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Non-Editable Section with Info Box
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "ACCOUNT INFORMATION",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColorSecondary,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Divider(
+                        modifier = Modifier.weight(2f),
+                        color = borderColor,
+                        thickness = 1.dp
+                    )
+                }
+
+                // Info Box explaining non-editable fields
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = infoBoxBg),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, infoBoxBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = appBlue,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            "These fields cannot be edited for security reasons",
+                            fontSize = 12.sp,
+                            color = textColorSecondary,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
 
                 ProfileTextField(
                     value = email,
                     label = "Email Address",
                     enabled = false,
                     isDarkMode = isDarkMode,
-                    appBlue = appBlue
+                    appBlue = appBlue,
+                    isEditable = false
                 ) { }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -297,7 +427,8 @@ fun EditProfileScreen() {
                     label = "Phone Number",
                     enabled = false,
                     isDarkMode = isDarkMode,
-                    appBlue = appBlue
+                    appBlue = appBlue,
+                    isEditable = false
                 ) { }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -307,12 +438,13 @@ fun EditProfileScreen() {
                     label = "Country",
                     enabled = false,
                     isDarkMode = isDarkMode,
-                    appBlue = appBlue
+                    appBlue = appBlue,
+                    isEditable = false
                 ) { }
 
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-                // Save Button
+                // Save Button with professional styling
                 Button(
                     onClick = {
                         if (name.isBlank()) {
@@ -330,8 +462,12 @@ fun EditProfileScreen() {
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(30.dp),
+                        .height(56.dp)
+                        .shadow(
+                            elevation = if (isDarkMode) 6.dp else 4.dp,
+                            shape = RoundedCornerShape(28.dp)
+                        ),
+                    shape = RoundedCornerShape(28.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = appBlue,
                         disabledContainerColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
@@ -339,49 +475,65 @@ fun EditProfileScreen() {
                     enabled = !isSaving && !isUploadingImage
                 ) {
                     if (isSaving) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.5.dp
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                "Saving...",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
                     } else {
                         Text(
                             "Save Changes",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            color = Color.White,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // Delete Account Button
-                Box(
+                // Delete Account Button with professional styling
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(cardBackgroundColor)
-                        .border(
-                            width = 1.dp,
-                            color = if (isDarkMode) Color(0xFF424242) else Color(0xFFEEEEEE),
-                            shape = RoundedCornerShape(12.dp)
-                        )
                         .clickable {
                             showDeleteDialog = true
-                        }
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.5.dp,
+                        color = errorColor.copy(alpha = 0.3f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = null,
                             tint = errorColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             "Delete Account",
                             fontSize = 16.sp,
@@ -390,6 +542,8 @@ fun EditProfileScreen() {
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
             }
         }
     }
@@ -401,7 +555,7 @@ fun generateRandomCode(): String {
     return List(6) { chars.random() }.joinToString("")
 }
 
-// Profile text field
+// Professional Profile text field with lock icon for non-editable fields
 @Composable
 fun ProfileTextField(
     value: String,
@@ -409,12 +563,16 @@ fun ProfileTextField(
     enabled: Boolean = true,
     isDarkMode: Boolean,
     appBlue: Color,
+    isEditable: Boolean = true,
     onValueChange: (String) -> Unit
 ) {
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val disabledTextColor = if (isDarkMode) Color(0xFF888888) else Color.Gray
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+    val disabledTextColor = if (isDarkMode) Color(0xFF888888) else Color(0xFF757575)
     val borderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
+    val focusedBorderColor = appBlue
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White
+    val disabledBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color(0xFFF5F7FA)
+    val lockIconColor = if (isDarkMode) Color(0xFF666666) else Color(0xFF999999)
 
     OutlinedTextField(
         value = value,
@@ -426,9 +584,21 @@ fun ProfileTextField(
                     if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
                 } else {
                     disabledTextColor
-                }
+                },
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
             )
         },
+        trailingIcon = if (!isEditable) {
+            {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Field is locked",
+                    tint = lockIconColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        } else null,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         singleLine = true,
@@ -437,18 +607,20 @@ fun ProfileTextField(
             focusedTextColor = textColor,
             unfocusedTextColor = textColor,
             disabledTextColor = disabledTextColor,
-            focusedBorderColor = appBlue,
+            focusedBorderColor = focusedBorderColor,
             unfocusedBorderColor = borderColor,
-            disabledBorderColor = borderColor,
+            disabledBorderColor = borderColor.copy(alpha = 0.5f),
             focusedContainerColor = backgroundColor,
             unfocusedContainerColor = backgroundColor,
-            disabledContainerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5),
-            cursorColor = appBlue
+            disabledContainerColor = disabledBackgroundColor,
+            cursorColor = appBlue,
+            focusedLabelColor = focusedBorderColor,
+            unfocusedLabelColor = if (isDarkMode) Color(0xFF999999) else Color(0xFF666666)
         )
     )
 }
 
-// Delete Account Confirmation Dialog
+// Professional Delete Account Confirmation Dialog
 @Composable
 fun DeleteAccountConfirmationDialog(
     onDismiss: () -> Unit,
@@ -461,86 +633,172 @@ fun DeleteAccountConfirmationDialog(
     val isCodeCorrect = verificationCode == generatedCode
     val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
     val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
-    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
     val dialogBackground = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val codeBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFFFF3E0)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                "Confirm Account Deletion",
-                color = textColorPrimary,
-                fontWeight = FontWeight.Bold
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = errorColor,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    "Confirm Account Deletion",
+                    color = textColorPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         },
         text = {
-            Column {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Text(
-                    "To delete your account, please enter the following code:",
-                    color = textColorSecondary
+                    "This action is permanent and cannot be undone. To proceed, please enter the verification code below:",
+                    color = textColorSecondary,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                Text(
-                    generatedCode,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = errorColor
-                    )
-                )
+                // Code display box
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = codeBackgroundColor)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            "Verification Code",
+                            fontSize = 12.sp,
+                            color = textColorSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            generatedCode,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = errorColor,
+                                letterSpacing = 4.sp
+                            )
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 OutlinedTextField(
                     value = verificationCode,
                     onValueChange = onVerificationCodeChange,
-                    label = { Text("Enter the code") },
+                    label = {
+                        Text(
+                            "Enter the code",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    },
+                    placeholder = {
+                        Text(
+                            "XXXXXX",
+                            letterSpacing = 2.sp
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = appBlue,
                         unfocusedBorderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0),
                         focusedTextColor = textColorPrimary,
                         unfocusedTextColor = textColorPrimary,
-                        cursorColor = appBlue
-                    )
+                        cursorColor = appBlue,
+                        errorBorderColor = errorColor
+                    ),
+                    isError = verificationCode.isNotEmpty() && !isCodeCorrect
                 )
 
                 if (verificationCode.isNotEmpty() && !isCodeCorrect) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "The code you entered is incorrect. Please try again.",
-                        color = errorColor,
-                        fontSize = 14.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = errorColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            "Incorrect code. Please try again.",
+                            color = errorColor,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
                     if (isCodeCorrect) {
                         onAccountDelete()
                     }
                 },
-                enabled = isCodeCorrect
+                enabled = isCodeCorrect,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = errorColor,
+                    disabledContainerColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
+                ),
+                shape = RoundedCornerShape(10.dp)
             ) {
                 Text(
-                    "Confirm",
-                    color = if (isCodeCorrect) errorColor else if (isDarkMode) Color(0xFF666666) else Color.Gray
+                    "Delete Account",
+                    color = if (isCodeCorrect) Color.White else if (isDarkMode) Color(0xFF666666) else Color.Gray,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
                 )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            OutlinedButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = appBlue
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, appBlue),
+                shape = RoundedCornerShape(10.dp)
+            ) {
                 Text(
                     "Cancel",
-                    color = appBlue
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
                 )
             }
         },
-        containerColor = dialogBackground
+        containerColor = dialogBackground,
+        shape = RoundedCornerShape(20.dp)
     )
 }
