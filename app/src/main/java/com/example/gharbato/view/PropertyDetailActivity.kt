@@ -59,12 +59,56 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.maps.android.compose.*
 import com.example.gharbato.R
 import kotlin.collections.emptyMap
 
 private fun getCurrentUserId(): String {
     return FirebaseAuth.getInstance().currentUser?.uid ?: ""
+}
+
+private fun navigateToMessageWithUserFetch(
+    context: Context,
+    activity: Activity,
+    otherUserId: String,
+    fallbackName: String,
+    fallbackImage: String = ""
+) {
+    // Fetch actual user data from Firebase before navigating
+    // Note: Uses "Users" with capital U to match MessageRepository.fetchUsersByIds
+    FirebaseDatabase.getInstance().getReference("Users").child(otherUserId)
+        .addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // Use UserModel field names: fullName, profileImageUrl
+                val actualFullName = snapshot.child("fullName").getValue(String::class.java)
+                    ?.takeIf { it.isNotBlank() } ?: fallbackName
+                val actualProfileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+                    ?: fallbackImage
+
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = actualFullName,
+                    otherUserImage = actualProfileImage
+                )
+                activity.startActivity(intent)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // Fall back to passed name if fetch fails
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = fallbackName,
+                    otherUserImage = fallbackImage
+                )
+                activity.startActivity(intent)
+            }
+        })
 }
 
 fun getAmenityIconForPropertyDetail(amenity: String): ImageVector {
@@ -173,6 +217,39 @@ fun PropertyDetailScreen(
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
     val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
 
+    // State for fetched owner info from Firebase Users collection
+    var ownerFullName by remember { mutableStateOf(property.ownerName) }
+    var ownerProfileImage by remember { mutableStateOf(property.ownerImageUrl) }
+
+    // Fetch actual owner info from Firebase Users collection
+    LaunchedEffect(property.ownerId) {
+        if (property.ownerId.isNotEmpty()) {
+            FirebaseDatabase.getInstance().getReference("Users").child(property.ownerId)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val fullName = snapshot.child("fullName").getValue(String::class.java)
+                        val profileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+
+                        if (!fullName.isNullOrBlank()) {
+                            ownerFullName = fullName
+                        }
+                        if (!profileImage.isNullOrBlank()) {
+                            ownerProfileImage = profileImage
+                        }
+                    }
+                    override fun onCancelled(error: DatabaseError) {
+                        // Keep using property.ownerName as fallback
+                    }
+                })
+        }
+    }
+
+    // Create a modified property with the fetched owner info for display
+    val displayProperty = property.copy(
+        ownerName = ownerFullName.ifBlank { property.ownerName.ifBlank { property.developer } },
+        ownerImageUrl = ownerProfileImage
+    )
+
     if (showReportDialog) {
         ReportListingDialog(
             onDismiss = { showReportDialog = false },
@@ -183,7 +260,7 @@ fun PropertyDetailScreen(
                     propertyTitle = property.developer,
                     propertyImage = property.images.values.flatten().firstOrNull() ?: "",
                     ownerId = property.ownerId,
-                    ownerName = property.ownerName.ifBlank { property.developer },
+                    ownerName = ownerFullName.ifBlank { property.developer },
                     reportedByName = "",
                     reportedBy = getCurrentUserId(),
                     reportReason = reason,
@@ -313,10 +390,10 @@ fun PropertyDetailScreen(
                     )
                 }
 
-                // Contact Owner Section
+                // Contact Owner Section - use displayProperty for fetched owner info
                 item {
                     ContactOwnerSection(
-                        property = property,
+                        property = displayProperty,
                         surfaceColor = surfaceColor,
                         onBackgroundColor = onBackgroundColor,
                         onSurfaceVariantColor = onSurfaceVariantColor,
@@ -396,8 +473,9 @@ fun PropertyDetailScreen(
                 }
             }
 
+            // Use displayProperty for fetched owner info
             BottomActionButtons(
-                property = property,
+                property = displayProperty,
                 surfaceColor = surfaceColor,
                 outlineVariantColor = outlineVariantColor,
                 successColor = successColor,
@@ -1323,6 +1401,14 @@ private fun sendQuickMessage(
 ) {
     val repository = MessageRepositoryImpl()
 
+    // Debug logging
+    android.util.Log.d("PropertyDetailActivity", "=== sendQuickMessage called ===")
+    android.util.Log.d("PropertyDetailActivity", "Property ID: ${property.id}")
+    android.util.Log.d("PropertyDetailActivity", "Property Developer: ${property.developer}")
+    android.util.Log.d("PropertyDetailActivity", "Property Owner ID: ${property.ownerId}")
+    android.util.Log.d("PropertyDetailActivity", "Property Price: ${property.price}")
+    android.util.Log.d("PropertyDetailActivity", "Property Images: ${property.images}")
+
     Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
 
     repository.sendQuickMessageWithPropertyAndNavigate(
@@ -1937,12 +2023,12 @@ fun BoxScope.BottomActionButtons(
 
             Button(
                 onClick = {
-                    val intent = MessageDetailsActivity.newIntent(
-                        activity = context as Activity,
-                        otherUserId = property.ownerId,
-                        otherUserName = property.ownerName.ifBlank { property.developer }
+                    // Send property card with default message
+                    sendQuickMessage(
+                        context = context,
+                        property = property,
+                        message = "Hi, I'm interested in ${property.developer}."
                     )
-                    context.startActivity(intent)
                 },
                 modifier = Modifier
                     .weight(1f)
