@@ -1273,7 +1273,7 @@ fun ContactOwnerSection(
                         sendQuickMessage(
                             context = context,
                             property = property,
-                            message = "Hello! Is this property still available for ${property.marketType.lowercase()}?"
+                            message = "Hello! Is this property still available for ${if (property.marketType.equals("Sell", ignoreCase = true)) "buying" else property.marketType.lowercase()}?"
                         )
                     },
                     isDarkMode = isDarkMode
