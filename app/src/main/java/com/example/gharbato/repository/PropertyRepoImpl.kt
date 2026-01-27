@@ -88,7 +88,7 @@ class PropertyRepoImpl : PropertyRepo {
 
                         for (propertySnapshot in snapshot.children) {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
-                            if (property != null) {
+                            if (property != null && property.propertyStatus == "AVAILABLE") {
                                 properties.add(property)
                             }
                         }
@@ -514,6 +514,7 @@ class PropertyRepoImpl : PropertyRepo {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
                             if (property != null &&
                                 property.status == PropertyStatus.APPROVED &&
+                                property.propertyStatus == "AVAILABLE" &&
                                 property.id != currentProperty.id) { // Exclude current property
                                 allProperties.add(property)
                             }

@@ -20,13 +20,14 @@ class PropertyDataProvider {
             val properties = mutableListOf<PropertyModel>()
             snapshot.children.forEach { child ->
                 child.getValue(PropertyModel::class.java)?.let { property ->
-                    if (property.status == PropertyStatus.APPROVED) {
+                    if (property.status == PropertyStatus.APPROVED && 
+                        property.propertyStatus == "AVAILABLE") {
                         properties.add(property.copy(firebaseKey = child.key))
                     }
                 }
             }
 
-            Log.d(tag, "Fetched ${properties.size} approved properties")
+            Log.d(tag, "Fetched ${properties.size} approved and available properties")
             properties
         } catch (e: Exception) {
             Log.e(tag, "Error fetching properties", e)
