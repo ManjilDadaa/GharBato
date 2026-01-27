@@ -67,6 +67,10 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import java.util.Locale
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.R
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.MapProperties
 
 class LocationPickerActivity : ComponentActivity() {
 
@@ -85,8 +89,9 @@ class LocationPickerActivity : ComponentActivity() {
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsStateWithLifecycle()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            LocationPickerScreen(
-                isDarkMode = isDarkMode,
+            GharBatoTheme(darkTheme = isDarkMode) {
+                LocationPickerScreen(
+                    isDarkMode = isDarkMode,
                 onLocationSelected = { location, address, radius ->
                     val resultIntent = Intent().apply {
                         putExtra(RESULT_LATITUDE, location.latitude)
@@ -101,7 +106,8 @@ class LocationPickerActivity : ComponentActivity() {
                     setResult(RESULT_CANCELED)
                     finish()
                 }
-            )
+                )
+            }
         }
     }
 }
@@ -210,6 +216,11 @@ fun LocationPickerScreen(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                properties = MapProperties(
+                    mapStyleOptions = if (isDarkMode) {
+                        MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+                    } else null
+                ),
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
                     myLocationButtonEnabled = false,
