@@ -25,53 +25,65 @@ class GeminiRepositoryImpl(
         - When users ask about properties, you will receive REAL property data from the Gharbato database
         - ALWAYS use the actual property data provided to you
         - NEVER make up or invent property listings
-        - If no properties match, tell users honestly
-        - Guide users to use the app's Buy/Rent sections to browse all listings
+        - When showing properties, mention their Property ID in format: [PROPERTY:id]
+        - If no properties match, tell users honestly and suggest browsing the app
 
         RESPONSE STYLE:
-        - Keep responses SHORT (2-4 sentences for simple questions)
+        - Keep responses SHORT and conversational (2-4 sentences)
         - Be direct and helpful
-        - Use bullet points sparingly (max 3-4 items)
-        - Format important info with **bold**
-        - Use numbered lists for steps
+        - Use **bold** for property titles and prices
+        - Use bullet points (*) for property features
+        - Always include [PROPERTY:id] when mentioning a property
 
         WHEN SHOWING PROPERTIES:
-        - Present the actual properties from the database
-        - Include key details: price, location, bedrooms/bathrooms
-        - Keep descriptions brief
-        - Suggest users tap on listings in the app for full details
-
+        Format each property like this:
+        
+        **Property Title** [PROPERTY:firebase_key]
+        Rs Price | Location
+        * Bedrooms bed, Bathrooms bath
+        * Property Type
+        
         EXAMPLES:
 
-        Q: "Show me houses for sale"
-        A: [You'll receive real property data]
-        "Here are available houses for sale:
+        User: "Show me houses for sale in Kathmandu"
+        You: "Here are houses for sale in Kathmandu:
+        
+        **Modern Villa** [PROPERTY:-abc123]
+        Rs 2.5 Cr | Kathmandu
+        * 3 bed, 2 bath
+        * House
+        
+        **Family Home** [PROPERTY:-xyz789]
+        Rs 1.8 Cr | Kathmandu
+        * 4 bed, 3 bath
+        * House
+        
+        Tap any property card below to see full details!"
 
-        1. **Modern Villa in Kathmandu**
-           Rs. 2.5 Cr | 3 bed, 2 bath | Kathmandu
+        User: "Find affordable apartments"
+        You: "Here are affordable apartments:
+        
+        **Cozy Apartment** [PROPERTY:-def456]
+        Rs 45 Lakh | Lalitpur
+        * 2 bed, 1 bath
+        * Apartment
+        
+        Check the property cards below for more info!"
 
-        2. **Family House in Lalitpur**
-           Rs. 1.8 Cr | 4 bed, 3 bath | Lalitpur
+        User: "What should I check when buying property?"
+        You: "Key things to verify:
+        * Legal documents and clear ownership
+        * Property location and accessibility
+        * Market price comparison
+        * Future development plans in area
+        
+        Need help finding a specific property?"
 
-        Tap any listing in the app to see photos and contact the seller!"
-
-        Q: "What should I check when buying property?"
-        A: "Key things to verify:
-        1. Legal documents and ownership
-        2. Property location and accessibility
-        3. Market price comparison
-        4. Future development plans in area
-
-        Need help with anything specific?"
-
-        GENERAL ADVICE:
-        - Help with real estate questions
-        - Explain buying/renting process
-        - Discuss home loans and EMI
-        - Give property investment tips
-        - Don't give specific legal/financial advice
-
-        Remember: You have access to REAL Gharbato property data - use it!
+        IMPORTANT:
+        - Always include [PROPERTY:id] when mentioning properties
+        - Keep responses concise
+        - Property cards will appear automatically below your message
+        - Guide users to tap cards for full details
         """.trimIndent()
     private val gson = Gson()
     private val prefs by lazy {
@@ -95,11 +107,15 @@ class GeminiRepositoryImpl(
     override suspend fun sendMessage(
         message: String,
         conversationHistory: List<GeminiChatMessage>,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String, List<String>) -> Unit
     ) {
         withContext(Dispatchers.IO) {
             try {
                 Log.d(tag, "Sending message to Gemini: $message")
+
+                // Fetch real properties from database
+                val properties = propertyDataProvider.fetchApprovedProperties()
+                val propertyContext = propertyDataProvider.formatPropertiesForAI(properties, message)
 
                 val model = createModel()
 
@@ -120,13 +136,22 @@ class GeminiRepositoryImpl(
 
                 val chat = model.startChat(history = history)
 
+                // Enhance message with property data
+                val enhancedMessage = """$message
+                    
+                    $propertyContext
+                """.trimIndent()
+
                 // Send message and get response
-                val response = chat.sendMessage(message)
+                val response = chat.sendMessage(enhancedMessage)
                 val aiResponse = response.text ?: "I apologize, but I couldn't generate a response. Please try again."
 
-                Log.d(tag, "Gemini response received successfully")
+                // Extract property IDs from AI response
+                val propertyIds = extractPropertyIds(aiResponse)
+
+                Log.d(tag, "Gemini response received successfully with ${propertyIds.size} properties")
                 withContext(Dispatchers.Main) {
-                    callback(true, aiResponse)
+                    callback(true, aiResponse, propertyIds)
                 }
 
             } catch (e: Exception) {
@@ -161,10 +186,18 @@ class GeminiRepositoryImpl(
                 }
 
                 withContext(Dispatchers.Main) {
-                    callback(false, errorMessage)
+                    callback(false, errorMessage, emptyList())
                 }
             }
         }
+    }
+
+    private fun extractPropertyIds(response: String): List<String> {
+        val regex = """\[PROPERTY:([^\]]+)\]""".toRegex()
+        return regex.findAll(response)
+            .map { it.groupValues[1].trim() }
+            .toList()
+            .take(5)
     }
 
     override fun loadConversation(userId: String): List<GeminiChatMessage> {
