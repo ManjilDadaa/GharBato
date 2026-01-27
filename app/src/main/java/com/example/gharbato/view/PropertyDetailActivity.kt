@@ -217,6 +217,39 @@ fun PropertyDetailScreen(
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
     val reportUiState by reportViewModel.uiState.collectAsStateWithLifecycle()
 
+    // State for fetched owner info from Firebase Users collection
+    var ownerFullName by remember { mutableStateOf(property.ownerName) }
+    var ownerProfileImage by remember { mutableStateOf(property.ownerImageUrl) }
+
+    // Fetch actual owner info from Firebase Users collection
+    LaunchedEffect(property.ownerId) {
+        if (property.ownerId.isNotEmpty()) {
+            FirebaseDatabase.getInstance().getReference("Users").child(property.ownerId)
+                .addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(snapshot: DataSnapshot) {
+                        val fullName = snapshot.child("fullName").getValue(String::class.java)
+                        val profileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+
+                        if (!fullName.isNullOrBlank()) {
+                            ownerFullName = fullName
+                        }
+                        if (!profileImage.isNullOrBlank()) {
+                            ownerProfileImage = profileImage
+                        }
+                    }
+                    override fun onCancelled(error: DatabaseError) {
+                        // Keep using property.ownerName as fallback
+                    }
+                })
+        }
+    }
+
+    // Create a modified property with the fetched owner info for display
+    val displayProperty = property.copy(
+        ownerName = ownerFullName.ifBlank { property.ownerName.ifBlank { property.developer } },
+        ownerImageUrl = ownerProfileImage
+    )
+
     if (showReportDialog) {
         ReportListingDialog(
             onDismiss = { showReportDialog = false },
@@ -227,7 +260,7 @@ fun PropertyDetailScreen(
                     propertyTitle = property.developer,
                     propertyImage = property.images.values.flatten().firstOrNull() ?: "",
                     ownerId = property.ownerId,
-                    ownerName = property.ownerName.ifBlank { property.developer },
+                    ownerName = ownerFullName.ifBlank { property.developer },
                     reportedByName = "",
                     reportedBy = getCurrentUserId(),
                     reportReason = reason,
@@ -357,10 +390,10 @@ fun PropertyDetailScreen(
                     )
                 }
 
-                // Contact Owner Section
+                // Contact Owner Section - use displayProperty for fetched owner info
                 item {
                     ContactOwnerSection(
-                        property = property,
+                        property = displayProperty,
                         surfaceColor = surfaceColor,
                         onBackgroundColor = onBackgroundColor,
                         onSurfaceVariantColor = onSurfaceVariantColor,
@@ -440,8 +473,9 @@ fun PropertyDetailScreen(
                 }
             }
 
+            // Use displayProperty for fetched owner info
             BottomActionButtons(
-                property = property,
+                property = displayProperty,
                 surfaceColor = surfaceColor,
                 outlineVariantColor = outlineVariantColor,
                 successColor = successColor,
