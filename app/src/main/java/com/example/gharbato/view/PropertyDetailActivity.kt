@@ -1981,12 +1981,11 @@ fun BoxScope.BottomActionButtons(
 
             Button(
                 onClick = {
-                    navigateToMessageWithUserFetch(
+                    // Send property card with default message
+                    sendQuickMessage(
                         context = context,
-                        activity = context as Activity,
-                        otherUserId = property.ownerId,
-                        fallbackName = property.ownerName.ifBlank { property.developer },
-                        fallbackImage = property.ownerImageUrl
+                        property = property,
+                        message = "Hi, I'm interested in ${property.developer}."
                     )
                 },
                 modifier = Modifier
