@@ -113,7 +113,52 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.R
+
+/**
+ * Helper function to navigate to message screen with fetched user fullName from Firebase
+ */
+private fun navigateToMessageWithUserFetch(
+    context: Context,
+    activity: Activity,
+    otherUserId: String,
+    fallbackName: String,
+    fallbackImage: String = ""
+) {
+    // Fetch actual user data from Firebase Users collection before navigating
+    FirebaseDatabase.getInstance().getReference("Users").child(otherUserId)
+        .addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val actualFullName = snapshot.child("fullName").getValue(String::class.java)
+                    ?.takeIf { it.isNotBlank() } ?: fallbackName
+                val actualProfileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+                    ?: fallbackImage
+
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = actualFullName,
+                    otherUserImage = actualProfileImage
+                )
+                activity.startActivity(intent)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // Fall back to passed name if fetch fails
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = fallbackName,
+                    otherUserImage = fallbackImage
+                )
+                activity.startActivity(intent)
+            }
+        })
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1011,13 +1056,14 @@ fun PropertyCard(
                         color = priceColor,
                         modifier = Modifier.size(48.dp).clickable {
                             if (property.ownerId.isNotEmpty()) {
-                                val intent = MessageDetailsActivity.newIntent(
+                                // Fetch actual fullName from Firebase Users before navigating
+                                navigateToMessageWithUserFetch(
+                                    context = context,
                                     activity = context as Activity,
                                     otherUserId = property.ownerId,
-                                    otherUserName = property.ownerName.ifBlank { property.developer },
-                                    otherUserImage = property.ownerImageUrl ?: ""
+                                    fallbackName = property.ownerName.ifBlank { property.developer },
+                                    fallbackImage = property.ownerImageUrl ?: ""
                                 )
-                                context.startActivity(intent)
                             }
                         }
                     ) {
