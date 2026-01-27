@@ -98,6 +98,10 @@ class PropertyViewModel(
         }
     }
 
+    fun refreshProperties() {
+        loadProperties()
+    }
+
 
     private fun observeSavedProperties() {
         viewModelScope.launch {
