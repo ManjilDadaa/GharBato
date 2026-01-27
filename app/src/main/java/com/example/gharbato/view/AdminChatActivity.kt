@@ -1,3 +1,4 @@
+// File: app/src/main/java/com/example/gharbato/view/AdminChatActivity.kt
 package com.example.gharbato.view
 
 import android.os.Bundle
@@ -10,26 +11,32 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
 import com.google.firebase.database.*
+import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,6 +48,9 @@ class AdminChatActivity : ComponentActivity() {
 
         val userId = intent.getStringExtra("userId") ?: ""
         val userName = intent.getStringExtra("userName") ?: "User"
+        val userEmail = intent.getStringExtra("userEmail") ?: ""
+        val userPhone = intent.getStringExtra("userPhone") ?: ""
+        val userImage = intent.getStringExtra("userImage") ?: ""
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
@@ -53,7 +63,10 @@ class AdminChatActivity : ComponentActivity() {
                 ) {
                     AdminChatScreen(
                         userId = userId,
-                        userName = userName
+                        userName = userName,
+                        userEmail = userEmail,
+                        userPhone = userPhone,
+                        userImage = userImage
                     )
                 }
             }
@@ -65,7 +78,10 @@ class AdminChatActivity : ComponentActivity() {
 @Composable
 fun AdminChatScreen(
     userId: String,
-    userName: String
+    userName: String,
+    userEmail: String,
+    userPhone: String,
+    userImage: String
 ) {
     val context = LocalContext.current
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState(initial = false)
@@ -75,7 +91,8 @@ fun AdminChatScreen(
     var isLoading by remember { mutableStateOf(true) }
     var isSending by remember { mutableStateOf(false) }
 
-    val database = FirebaseDatabase.getInstance()
+    // Initialize Firebase Database
+    val database = FirebaseDatabase.getInstance("https://gharbatodb-default-rtdb.firebaseio.com")
     val messagesRef = database.getReference("support_messages").child(userId)
 
     val listState = rememberLazyListState()
@@ -86,28 +103,36 @@ fun AdminChatScreen(
     val surfaceColor = MaterialTheme.colorScheme.surface
 
     // Load messages from Firebase
-    LaunchedEffect(Unit) {
-        messagesRef.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val loadedMessages = mutableListOf<SupportMessage>()
-                snapshot.children.forEach { data ->
-                    val message = data.getValue(SupportMessage::class.java)
-                    message?.let { loadedMessages.add(it) }
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            messagesRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val loadedMessages = mutableListOf<SupportMessage>()
+                    snapshot.children.forEach { data ->
+                        val message = data.getValue(SupportMessage::class.java)
+                        message?.let {
+                            loadedMessages.add(it)
+                        }
+                    }
+                    messages = loadedMessages.sortedBy { it.timestamp }
+                    isLoading = false
                 }
-                messages = loadedMessages.sortedBy { it.timestamp }
-                isLoading = false
-            }
 
-            override fun onCancelled(error: DatabaseError) {
-                isLoading = false
-                Toast.makeText(context, "Failed to load messages", Toast.LENGTH_SHORT).show()
-            }
-        })
+                override fun onCancelled(error: DatabaseError) {
+                    isLoading = false
+                    Toast.makeText(context, "Failed to load messages: ${error.message}", Toast.LENGTH_SHORT).show()
+                }
+            })
+        } else {
+            isLoading = false
+            Toast.makeText(context, "Invalid user ID", Toast.LENGTH_SHORT).show()
+        }
     }
 
     // Auto scroll to bottom when new message arrives
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
+            delay(100) // Small delay to ensure layout is complete
             listState.animateScrollToItem(messages.size - 1)
         }
     }
@@ -115,48 +140,114 @@ fun AdminChatScreen(
     Scaffold(
         containerColor = backgroundColor,
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = userName,
-                            style = TextStyle(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = textColor
-                            )
-                        )
-                        Text(
-                            text = "Support Chat",
-                            style = TextStyle(
-                                fontSize = 12.sp,
-                                color = textColor.copy(alpha = 0.6f)
-                            )
-                        )
-                    }
-                },
-                navigationIcon = {
+            Surface(
+                color = surfaceColor,
+                tonalElevation = if (isDarkMode) 0.dp else 2.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Back button
                     IconButton(
                         onClick = {
                             (context as? ComponentActivity)?.finish()
                         }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = textColor
                         )
                     }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = backgroundColor
-                )
-            )
+
+                    // User profile image
+                    if (userImage.isNotEmpty()) {
+                        AsyncImage(
+                            model = userImage,
+                            contentDescription = userName,
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(Blue.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = userName.take(1).uppercase(),
+                                style = TextStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Blue
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // User info
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = userName,
+                            style = TextStyle(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = textColor
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (userEmail.isNotEmpty()) {
+                            Text(
+                                text = userEmail,
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = textColor.copy(alpha = 0.6f)
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        } else if (userPhone.isNotEmpty()) {
+                            Text(
+                                text = userPhone,
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = textColor.copy(alpha = 0.6f)
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Online status
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+            }
         },
         bottomBar = {
             Surface(
                 color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 4.dp
+                tonalElevation = if (isDarkMode) 0.dp else 4.dp,
+                shadowElevation = 8.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -172,7 +263,7 @@ fun AdminChatScreen(
                             .heightIn(min = 56.dp, max = 120.dp),
                         placeholder = {
                             Text(
-                                "Type your message...",
+                                "Reply to $userName...",
                                 color = textColor.copy(alpha = 0.5f)
                             )
                         },
@@ -194,28 +285,38 @@ fun AdminChatScreen(
                         onClick = {
                             if (messageText.isNotBlank() && !isSending) {
                                 isSending = true
-                                val messageId = messagesRef.push().key ?: return@IconButton
-                                val newMessage = SupportMessage(
-                                    id = messageId,
-                                    senderId = "admin",
-                                    senderName = "Admin Support",
-                                    senderEmail = "",
-                                    senderPhone = "",
-                                    senderImage = "",
-                                    message = messageText.trim(),
-                                    timestamp = System.currentTimeMillis(),
-                                    isAdmin = true
-                                )
+                                val messageId = messagesRef.push().key
 
-                                messagesRef.child(messageId).setValue(newMessage)
-                                    .addOnSuccessListener {
-                                        messageText = ""
-                                        isSending = false
-                                    }
-                                    .addOnFailureListener {
-                                        Toast.makeText(context, "Failed to send message", Toast.LENGTH_SHORT).show()
-                                        isSending = false
-                                    }
+                                if (messageId != null) {
+                                    val newMessage = SupportMessage(
+                                        id = messageId,
+                                        senderId = "admin",
+                                        senderName = "Support Team",
+                                        senderEmail = "",
+                                        senderPhone = "",
+                                        senderImage = "",
+                                        message = messageText.trim(),
+                                        timestamp = System.currentTimeMillis(),
+                                        isAdmin = true
+                                    )
+
+                                    messagesRef.child(messageId).setValue(newMessage)
+                                        .addOnSuccessListener {
+                                            messageText = ""
+                                            isSending = false
+                                        }
+                                        .addOnFailureListener { exception ->
+                                            Toast.makeText(
+                                                context,
+                                                "Failed to send: ${exception.message}",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                            isSending = false
+                                        }
+                                } else {
+                                    Toast.makeText(context, "Failed to generate message ID", Toast.LENGTH_SHORT).show()
+                                    isSending = false
+                                }
                             }
                         },
                         modifier = Modifier
@@ -225,7 +326,10 @@ fun AdminChatScreen(
                                 shape = RoundedCornerShape(28.dp)
                             )
                             .background(
-                                color = if (messageText.isBlank() || isSending) Blue.copy(alpha = 0.5f) else Blue,
+                                color = if (messageText.isBlank() || isSending)
+                                    Blue.copy(alpha = 0.5f)
+                                else
+                                    Blue,
                                 shape = RoundedCornerShape(28.dp)
                             ),
                         enabled = messageText.isNotBlank() && !isSending
@@ -238,7 +342,7 @@ fun AdminChatScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Send,
+                                imageVector = Icons.AutoMirrored.Filled.Send,
                                 contentDescription = "Send",
                                 tint = Color.White
                             )
@@ -255,10 +359,19 @@ fun AdminChatScreen(
                 .background(backgroundColor)
         ) {
             if (isLoading) {
-                CircularProgressIndicator(
+                Column(
                     modifier = Modifier.align(Alignment.Center),
-                    color = Blue
-                )
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    CircularProgressIndicator(color = Blue)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Loading conversation...",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = textColor.copy(alpha = 0.6f)
+                        )
+                    )
+                }
             } else if (messages.isEmpty()) {
                 Column(
                     modifier = Modifier
@@ -273,15 +386,15 @@ fun AdminChatScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "No messages yet",
-                        style = MaterialTheme.typography.titleMedium.copy(
+                        text = "Start Conversation",
+                        style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = textColor
                         )
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Send a message to start the conversation",
+                        text = "Send a message to assist $userName with their inquiry",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = textColor.copy(alpha = 0.6f)
                         ),
@@ -292,12 +405,16 @@ fun AdminChatScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(messages) { message ->
+                    items(
+                        items = messages,
+                        key = { it.id }
+                    ) { message ->
                         AdminMessageBubble(
                             message = message,
+                            userName = userName,
                             isDarkMode = isDarkMode
                         )
                     }
@@ -310,15 +427,19 @@ fun AdminChatScreen(
 @Composable
 fun AdminMessageBubble(
     message: SupportMessage,
+    userName: String,
     isDarkMode: Boolean
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
-    val isAdminMessage = message.isAdmin
+
+    // Admin messages come from senderId = "admin" OR isAdmin = true
+    val isAdminMessage = message.isAdmin || message.senderId == "admin"
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = if (isAdminMessage) Alignment.End else Alignment.Start
     ) {
+        // Message bubble
         Card(
             modifier = Modifier.widthIn(max = 280.dp),
             shape = RoundedCornerShape(
@@ -328,32 +449,89 @@ fun AdminMessageBubble(
                 bottomEnd = if (isAdminMessage) 4.dp else 16.dp
             ),
             colors = CardDefaults.cardColors(
-                containerColor = if (isAdminMessage) Blue else MaterialTheme.colorScheme.surfaceVariant
+                containerColor = if (isAdminMessage)
+                    Blue
+                else
+                    MaterialTheme.colorScheme.surfaceVariant
             ),
             elevation = CardDefaults.cardElevation(
                 defaultElevation = if (isDarkMode) 0.dp else 2.dp
             )
         ) {
-            Text(
-                text = message.message,
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    color = if (isAdminMessage) Color.White else textColor
-                ),
+            Column(
                 modifier = Modifier.padding(12.dp)
-            )
+            ) {
+                // Show sender name for user messages only
+                if (!isAdminMessage) {
+                    Text(
+                        text = userName,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = textColor.copy(alpha = 0.7f)
+                        ),
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    )
+                }
+
+                Text(
+                    text = message.message,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = if (isAdminMessage) Color.White else textColor
+                    )
+                )
+            }
         }
 
-        Text(
-            text = formatMessageTimestamp(message.timestamp),
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = textColor.copy(alpha = 0.5f)
-            ),
-            modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp)
-        )
+        // Timestamp
+        Row(
+            modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = formatMessageTimestamp(message.timestamp),
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = textColor.copy(alpha = 0.5f)
+                )
+            )
+
+            // Delivery indicator for admin messages
+            if (isAdminMessage) {
+                Text(
+                    text = "✓✓",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = Blue.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            }
+        }
     }
 }
 
 private fun formatMessageTimestamp(timestamp: Long): String {
-    val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+    if (timestamp == 0L) return ""
+
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+
+    return when {
+        diff < 60000 -> "Just now"
+        diff < 3600000 -> {
+            val minutes = diff / 60000
+            "$minutes min ago"
+        }
+        diff < 86400000 -> {
+            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+            "Today ${sdf.format(Date(timestamp))}"
+        }
+        diff < 172800000 -> {
+            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
+            "Yesterday ${sdf.format(Date(timestamp))}"
+        }
+        else -> {
+            val sdf = SimpleDateFormat("MMM dd, hh:mm a", Locale.getDefault())
+            sdf.format(Date(timestamp))
+        }
+    }
 }
