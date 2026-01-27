@@ -5,7 +5,8 @@ data class GeminiChatMessage(
     val text: String = "",
     val isFromUser: Boolean = true,
     val timestamp: Long = System.currentTimeMillis(),
-    val isError: Boolean = false
+    val isError: Boolean = false,
+    val propertyIds: List<String> = emptyList()
 )
 
 data class GeminiConversation(
