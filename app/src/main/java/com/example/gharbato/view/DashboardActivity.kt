@@ -163,6 +163,10 @@ fun DashboardBody() {
                         },
                         onClick = {
                             selectedIndex = index
+                            // Refresh properties when navigating to Home or Search
+                            if (index == 0 || index == 1) {
+                                propertyViewModel.refreshProperties()
+                            }
                         },
                         selected = selectedIndex == index,
                         colors = NavigationBarItemDefaults.colors(

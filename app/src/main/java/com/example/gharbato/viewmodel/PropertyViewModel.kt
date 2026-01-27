@@ -98,6 +98,10 @@ class PropertyViewModel(
         }
     }
 
+    fun refreshProperties() {
+        loadProperties()
+    }
+
 
     private fun observeSavedProperties() {
         viewModelScope.launch {
@@ -198,11 +202,13 @@ class PropertyViewModel(
                 if (query.isNotEmpty()) {
                     val searchLower = query.lowercase().trim()
                     result = result.filter { property ->
+                        // Map "Sell" -> "Buy" for user-facing text search
+                        val displayMarketType = if (property.marketType.equals("Sell", ignoreCase = true)) "buy" else property.marketType.lowercase()
                         property.title.lowercase().contains(searchLower) ||
                                 property.location.lowercase().contains(searchLower) ||
                                 property.developer.lowercase().contains(searchLower) ||
                                 property.propertyType.lowercase().contains(searchLower) ||
-                                property.marketType.lowercase().contains(searchLower) ||
+                                displayMarketType.contains(searchLower) ||
                                 (property.description?.lowercase()?.contains(searchLower) == true)
                     }
                     Log.d(TAG, "Text search found ${result.size} matches")

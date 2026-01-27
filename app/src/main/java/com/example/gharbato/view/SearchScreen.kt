@@ -107,10 +107,13 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.example.gharbato.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -438,7 +441,8 @@ fun SearchScreen(
             },
             onDismiss = {
                 showSortSheet = false
-            }
+            },
+            isDarkMode = isDarkMode
         )
     }
 
@@ -681,6 +685,11 @@ fun PropertiesMapSection(
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
+            properties = MapProperties(
+                mapStyleOptions = if (isDarkMode) {
+                    MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+                } else null
+            ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,

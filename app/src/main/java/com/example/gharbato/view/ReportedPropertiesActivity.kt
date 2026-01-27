@@ -30,6 +30,8 @@ import coil.compose.AsyncImage
 import com.example.gharbato.model.ReportedProperty
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.view.ui.theme.LightBlue
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.ReportViewModel
 import com.example.gharbato.viewmodel.ReportViewModelFactory
 import java.text.SimpleDateFormat
@@ -44,10 +46,14 @@ class ReportedPropertiesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsStateWithLifecycle()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
             val uiState by reportViewModel.uiState.collectAsStateWithLifecycle()
 
-            ReportedPropertiesScreen(
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ReportedPropertiesScreen(
                 uiState = uiState,
                 onDeleteProperty = { reportId, propertyId, ownerId, title ->
                     reportViewModel.deleteReportedProperty(
@@ -78,6 +84,7 @@ class ReportedPropertiesActivity : ComponentActivity() {
                     Toast.makeText(this@ReportedPropertiesActivity, it, Toast.LENGTH_SHORT).show()
                     reportViewModel.clearMessages()
                 }
+            }
             }
         }
     }

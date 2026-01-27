@@ -57,8 +57,10 @@ import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.ReportViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
+import com.example.gharbato.R
 import kotlin.collections.emptyMap
 
 private fun getCurrentUserId(): String {
@@ -244,7 +246,7 @@ fun PropertyDetailScreen(
 
                 // Status Chips
                 item {
-                    StatusChipsRow(isDarkMode = isDarkMode)
+                    StatusChipsRow(property = property, isDarkMode = isDarkMode)
                 }
 
                 // Price Section
@@ -306,7 +308,8 @@ fun PropertyDetailScreen(
                             context.startActivity(intent)
                         },
                         surfaceColor = surfaceColor,
-                        primaryColor = primaryColor
+                        primaryColor = primaryColor,
+                        isDarkMode = isDarkMode
                     )
                 }
 
@@ -576,18 +579,43 @@ private fun shareProperty(context: Context, property: PropertyModel) {
 }
 
 @Composable
-fun StatusChipsRow(isDarkMode: Boolean) {
+fun StatusChipsRow(property: PropertyModel, isDarkMode: Boolean) {
     val featuredBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFECB3)
     val featuredText = if (isDarkMode) Color(0xFFFFD54F) else Color(0xFFFF6F00)
     val verifiedBg = if (isDarkMode) Color(0xFF1B3221) else Color(0xFFE8F5E9)
     val verifiedText = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
     val ownerBg = if (isDarkMode) Color(0xFF1A237E) else Color(0xFFE3F2FD)
     val ownerText = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+    val soldBg = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFFEBEE)
+    val soldText = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+    val onHoldBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFF3E0)
+    val onHoldText = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFFF6F00)
 
     LazyRow(
         modifier = Modifier.padding(16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Show property status first if not AVAILABLE
+        if (property.propertyStatus == "SOLD") {
+            item {
+                StatusChip(
+                    text = "Sold",
+                    icon = Icons.Default.CheckCircle,
+                    backgroundColor = soldBg,
+                    textColor = soldText
+                )
+            }
+        } else if (property.propertyStatus == "ON_HOLD") {
+            item {
+                StatusChip(
+                    text = "On Hold",
+                    icon = Icons.Default.Schedule,
+                    backgroundColor = onHoldBg,
+                    textColor = onHoldText
+                )
+            }
+        }
+        
         item {
             StatusChip(
                 text = "Featured",
@@ -1045,8 +1073,10 @@ fun MapPreviewSection(
     property: PropertyModel,
     onClick: () -> Unit,
     surfaceColor: Color,
-    primaryColor: Color
+    primaryColor: Color,
+    isDarkMode: Boolean = false
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1060,6 +1090,11 @@ fun MapPreviewSection(
             cameraPositionState = rememberCameraPositionState {
                 position = CameraPosition.fromLatLngZoom(property.latLng, 13f)
             },
+            properties = MapProperties(
+                mapStyleOptions = if (isDarkMode) {
+                    MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+                } else null
+            ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
@@ -1238,7 +1273,7 @@ fun ContactOwnerSection(
                         sendQuickMessage(
                             context = context,
                             property = property,
-                            message = "Hello! Is this property still available for ${property.marketType.lowercase()}?"
+                            message = "Hello! Is this property still available for ${if (property.marketType.equals("Sell", ignoreCase = true)) "buying" else property.marketType.lowercase()}?"
                         )
                     },
                     isDarkMode = isDarkMode

@@ -8,20 +8,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.gharbato.R
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.model.SupportConversation
 import com.example.gharbato.ui.theme.Blue
@@ -37,11 +43,10 @@ fun AdminSupportScreen() {
 
     var conversations by remember { mutableStateOf<List<SupportConversation>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    var selectedFilter by remember { mutableStateOf("All") }
-    var searchQuery by remember { mutableStateOf("") }
 
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages")
+    val usersRef = database.getReference("Users")
 
     // Themed colors
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -53,9 +58,11 @@ fun AdminSupportScreen() {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val conversationList = mutableListOf<SupportConversation>()
+                val userIds = mutableListOf<String>()
 
                 snapshot.children.forEach { userSnapshot ->
                     val userId = userSnapshot.key ?: return@forEach
+                    userIds.add(userId)
                     val messages = mutableListOf<SupportMessage>()
 
                     userSnapshot.children.forEach { messageSnapshot ->
@@ -64,27 +71,64 @@ fun AdminSupportScreen() {
                     }
 
                     if (messages.isNotEmpty()) {
+                        // Get user info from the first non-admin message
+                        val userMessage = messages.firstOrNull { !it.isAdmin }
+
                         val sortedMessages = messages.sortedByDescending { it.timestamp }
                         val lastMessage = sortedMessages.first()
-                        val unreadCount = messages.count { !it.isAdmin && it.timestamp > getLastReadTimestamp(userId) }
 
                         conversationList.add(
                             SupportConversation(
                                 userId = userId,
-                                userName = lastMessage.senderName.ifEmpty { "User" },
-                                userEmail = lastMessage.senderEmail,
-                                userPhone = lastMessage.senderPhone,
-                                userImage = lastMessage.senderImage,
+                                userName = userMessage?.senderName ?: "",
+                                userEmail = userMessage?.senderEmail ?: "",
+                                userPhone = userMessage?.senderPhone ?: "",
+                                userImage = userMessage?.senderImage ?: "",
                                 lastMessage = lastMessage.message,
                                 lastMessageTime = lastMessage.timestamp,
-                                unreadCount = unreadCount
+                                unreadCount = 0
                             )
                         )
                     }
                 }
 
+                // First set conversations to show loading is done
                 conversations = conversationList.sortedByDescending { it.lastMessageTime }
                 isLoading = false
+
+                // Then fetch user profiles from users node to get full names and images
+                conversationList.forEachIndexed { index, conversation ->
+                    usersRef.child(conversation.userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(userSnapshot: DataSnapshot) {
+                            val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: ""
+                            val userName = userSnapshot.child("userName").getValue(String::class.java) ?: ""
+                            val profileImage = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                            val email = userSnapshot.child("email").getValue(String::class.java) ?: ""
+                            val phone = userSnapshot.child("phoneNo").getValue(String::class.java) ?: ""
+
+                            // Use fullName first, then userName, then fallback to "User"
+                            val displayName = when {
+                                fullName.isNotEmpty() -> fullName
+                                userName.isNotEmpty() -> userName
+                                else -> "User"
+                            }
+
+                            // Update the conversation with user data from users node
+                            conversations = conversations.map { conv ->
+                                if (conv.userId == conversation.userId) {
+                                    conv.copy(
+                                        userName = displayName,
+                                        userImage = profileImage.ifEmpty { conv.userImage },
+                                        userEmail = email.ifEmpty { conv.userEmail },
+                                        userPhone = phone.ifEmpty { conv.userPhone }
+                                    )
+                                } else conv
+                            }.sortedByDescending { it.lastMessageTime }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {}
+                    })
+                }
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -93,243 +137,163 @@ fun AdminSupportScreen() {
         })
     }
 
-    // Filter conversations based on search and filter
-    val filteredConversations = remember(conversations, searchQuery, selectedFilter) {
-        conversations.filter { conversation ->
-            val matchesSearch = searchQuery.isEmpty() ||
-                    conversation.userName.contains(searchQuery, ignoreCase = true) ||
-                    conversation.userEmail.contains(searchQuery, ignoreCase = true) ||
-                    conversation.lastMessage.contains(searchQuery, ignoreCase = true)
-
-            val matchesFilter = when (selectedFilter) {
-                "Unread" -> conversation.unreadCount > 0
-                "All" -> true
-                else -> true
-            }
-
-            matchesSearch && matchesFilter
-        }
-    }
-
-    Scaffold(
-        containerColor = backgroundColor,
-        topBar = {
-            Surface(
-                color = surfaceColor,
-                tonalElevation = if (isDarkMode) 0.dp else 2.dp,
-                shadowElevation = 4.dp
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .statusBarsPadding()
+    ) {
+        // Custom Header
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = backgroundColor,
+            shadowElevation = if (isDarkMode) 0.dp else 2.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    // Support Icon with gradient background
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Blue, Blue.copy(alpha = 0.7f))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column {
-                            Text(
-                                text = "Support Center",
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = textColor
-                                )
-                            )
-                            Text(
-                                text = "${conversations.size} active conversation${if (conversations.size != 1) "s" else ""}",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    color = textColor.copy(alpha = 0.6f)
-                                )
-                            )
-                        }
-
-                        // Unread count badge
-                        val totalUnread = conversations.sumOf { it.unreadCount }
-                        if (totalUnread > 0) {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = Blue,
-                                modifier = Modifier.padding(4.dp)
-                            ) {
-                                Text(
-                                    text = "$totalUnread new",
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Default.SupportAgent,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                    // Search Bar
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                "Search conversations...",
-                                color = textColor.copy(alpha = 0.5f)
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painter = painterResource(id = R.drawable.outline_search_24),
-                                contentDescription = "Search",
-                                tint = textColor.copy(alpha = 0.5f)
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.baseline_clear_24),
-                                        contentDescription = "Clear",
-                                        tint = textColor.copy(alpha = 0.5f)
-                                    )
-                                }
-                            }
-                        },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Blue,
-                            unfocusedBorderColor = textColor.copy(alpha = 0.2f),
-                            focusedTextColor = textColor,
-                            unfocusedTextColor = textColor,
-                            cursorColor = Blue
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Filter Chips
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterChip(
-                            selected = selectedFilter == "All",
-                            onClick = { selectedFilter = "All" },
-                            label = {
-                                Text(
-                                    "All (${conversations.size})",
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Blue,
-                                selectedLabelColor = Color.White
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Support Center",
+                            style = MaterialTheme.typography.headlineSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
                             )
                         )
-
-                        FilterChip(
-                            selected = selectedFilter == "Unread",
-                            onClick = { selectedFilter = "Unread" },
-                            label = {
-                                Text(
-                                    "Unread (${conversations.count { it.unreadCount > 0 }})",
-                                    style = MaterialTheme.typography.labelMedium
-                                )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Blue,
-                                selectedLabelColor = Color.White
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isLoading) "Loading..." else "${conversations.size} active conversation${if (conversations.size != 1) "s" else ""}",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
                             )
                         )
                     }
                 }
             }
         }
-    ) { paddingValues ->
+
+        // Divider
+        HorizontalDivider(
+            color = textColor.copy(alpha = 0.08f),
+            thickness = 1.dp
+        )
+
+        // Content
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
-                .background(backgroundColor)
+                .weight(1f)
         ) {
-            if (isLoading) {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    CircularProgressIndicator(color = Blue)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Loading conversations...",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
+            when {
+                isLoading -> {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(
+                            color = Blue,
+                            modifier = Modifier.size(48.dp),
+                            strokeWidth = 4.dp
                         )
-                    )
-                }
-            } else if (filteredConversations.isEmpty()) {
-                // Empty state
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.baseline_support_agent_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Blue.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = if (searchQuery.isNotEmpty()) "No Results Found" else "No Support Messages",
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = textColor
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Loading conversations...",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
+                            )
                         )
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = if (searchQuery.isNotEmpty())
-                            "Try adjusting your search terms"
-                        else
-                            "User support messages will appear here",
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = 0.6f)
-                        ),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    }
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(
-                        items = filteredConversations,
-                        key = { it.userId }
-                    ) { conversation ->
-                        ConversationItem(
-                            conversation = conversation,
-                            isDarkMode = isDarkMode,
-                            onClick = {
-                                val intent = Intent(context, AdminChatActivity::class.java).apply {
-                                    putExtra("userId", conversation.userId)
-                                    putExtra("userName", conversation.userName)
-                                    putExtra("userEmail", conversation.userEmail)
-                                    putExtra("userPhone", conversation.userPhone)
-                                    putExtra("userImage", conversation.userImage)
+                conversations.isEmpty() -> {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(100.dp)
+                                .clip(CircleShape)
+                                .background(Blue.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SupportAgent,
+                                contentDescription = null,
+                                tint = Blue,
+                                modifier = Modifier.size(56.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "No Support Requests",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = textColor
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "When users reach out for help,\ntheir messages will appear here",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                color = textColor.copy(alpha = 0.6f)
+                            ),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        items(
+                            items = conversations,
+                            key = { it.userId }
+                        ) { conversation ->
+                            ConversationCard(
+                                conversation = conversation,
+                                isDarkMode = isDarkMode,
+                                onClick = {
+                                    val intent = Intent(context, AdminChatActivity::class.java).apply {
+                                        putExtra("userId", conversation.userId)
+                                        putExtra("userName", conversation.userName)
+                                        putExtra("userEmail", conversation.userEmail)
+                                        putExtra("userPhone", conversation.userPhone)
+                                        putExtra("userImage", conversation.userImage)
+                                    }
+                                    context.startActivity(intent)
                                 }
-                                context.startActivity(intent)
-                            }
-                        )
-                        if (conversation != filteredConversations.last()) {
-                            HorizontalDivider(
-                                color = textColor.copy(alpha = 0.1f),
-                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
@@ -340,151 +304,199 @@ fun AdminSupportScreen() {
 }
 
 @Composable
-fun ConversationItem(
+fun ConversationCard(
     conversation: SupportConversation,
     isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
-    val hasUnread = conversation.unreadCount > 0
+    val cardColor = if (isDarkMode) {
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    }
 
-    Surface(
+    Card(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp)
             .clickable(onClick = onClick),
-        color = if (hasUnread && !isDarkMode) {
-            Blue.copy(alpha = 0.05f)
-        } else {
-            Color.Transparent
-        }
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDarkMode) 0.dp else 2.dp
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar with online indicator
+            // User Avatar with online indicator
             Box {
                 if (conversation.userImage.isNotEmpty()) {
                     AsyncImage(
                         model = conversation.userImage,
                         contentDescription = conversation.userName,
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(54.dp)
                             .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(56.dp)
+                            .size(54.dp)
                             .clip(CircleShape)
-                            .background(Blue.copy(alpha = 0.2f)),
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Blue.copy(alpha = 0.2f),
+                                        Blue.copy(alpha = 0.1f)
+                                    )
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = conversation.userName.take(1).uppercase(),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = Blue
+                                color = Blue,
+                                fontSize = 22.sp
                             )
                         )
                     }
                 }
 
-                // Online status indicator
+                // Online indicator
                 Box(
                     modifier = Modifier
-                        .size(14.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF4CAF50))
+                        .size(16.dp)
                         .align(Alignment.BottomEnd)
-                )
+                        .clip(CircleShape)
+                        .background(if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White)
+                        .padding(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(Color(0xFF4CAF50))
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            // Conversation Details
+            Column(modifier = Modifier.weight(1f)) {
+                // User Name and Time Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = conversation.userName,
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold,
-                                color = textColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                    Text(
+                        text = conversation.userName,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = textColor
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = formatConversationTime(conversation.lastMessageTime),
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = textColor.copy(alpha = 0.5f)
                         )
+                    )
+                }
 
-                        if (conversation.userEmail.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Last Message Preview
+                Text(
+                    text = conversation.lastMessage,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = textColor.copy(alpha = 0.65f)
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Contact Info Row
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (conversation.userEmail.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null,
+                                tint = Blue.copy(alpha = 0.8f),
+                                modifier = Modifier.size(14.dp)
+                            )
                             Text(
-                                text = conversation.userEmail,
+                                text = if (conversation.userEmail.length > 18)
+                                    conversation.userEmail.take(18) + "..."
+                                else conversation.userEmail,
                                 style = MaterialTheme.typography.labelSmall.copy(
-                                    color = textColor.copy(alpha = 0.5f)
+                                    color = textColor.copy(alpha = 0.55f)
                                 ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                maxLines = 1
                             )
                         }
                     }
 
-                    Text(
-                        text = formatConversationTime(conversation.lastMessageTime),
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = if (hasUnread) Blue else textColor.copy(alpha = 0.5f),
-                            fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Normal
-                        )
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = conversation.lastMessage,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            color = textColor.copy(alpha = if (hasUnread) 0.9f else 0.6f),
-                            fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal
-                        ),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    if (hasUnread) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Surface(
-                            shape = CircleShape,
-                            color = Blue,
-                            modifier = Modifier.size(24.dp)
+                    if (conversation.userPhone.isNotEmpty()) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Text(
-                                    text = if (conversation.unreadCount > 9) "9+" else conversation.unreadCount.toString(),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Phone,
+                                contentDescription = null,
+                                tint = Blue.copy(alpha = 0.8f),
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                text = conversation.userPhone,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = textColor.copy(alpha = 0.55f)
+                                ),
+                                maxLines = 1
+                            )
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Arrow Icon
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Blue.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Blue,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -497,21 +509,11 @@ private fun formatConversationTime(timestamp: Long): String {
     return when {
         diff < 60000 -> "Now"
         diff < 3600000 -> "${diff / 60000}m"
-        diff < 86400000 -> {
-            val sdf = SimpleDateFormat("hh:mm a", Locale.getDefault())
-            sdf.format(Date(timestamp))
-        }
-        diff < 172800000 -> "Yesterday"
+        diff < 86400000 -> "${diff / 3600000}h"
         diff < 604800000 -> "${diff / 86400000}d"
         else -> {
             val sdf = SimpleDateFormat("MMM dd", Locale.getDefault())
             sdf.format(Date(timestamp))
         }
     }
-}
-
-// Helper function to track last read time (you can implement with SharedPreferences or Firebase)
-private fun getLastReadTimestamp(userId: String): Long {
-    // TODO: Implement proper read tracking with SharedPreferences or Firebase
-    return 0L
 }

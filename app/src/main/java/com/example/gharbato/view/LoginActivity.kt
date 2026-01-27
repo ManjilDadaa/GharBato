@@ -36,20 +36,27 @@ import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
-            LoginBody()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            GharBatoTheme(darkTheme = isDarkMode) {
+                LoginBody(isDarkMode = isDarkMode)
+            }
         }
     }
 }
 
 @Composable
-fun LoginBody() {
+fun LoginBody(isDarkMode: Boolean = false) {
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
 
     var email by remember { mutableStateOf("") }
@@ -70,8 +77,14 @@ fun LoginBody() {
     val adminEmail = "admin@gmail.com"
     val adminPassword = "Admin@123"
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+
     Scaffold(
-        containerColor = Color.White
+        containerColor = backgroundColor
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -101,7 +114,7 @@ fun LoginBody() {
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 22.sp,
-                            color = Color.DarkGray
+                            color = textColor
                         ),
                         modifier = Modifier.offset(y = (-16).dp)
                     )
@@ -127,14 +140,16 @@ fun LoginBody() {
                         )
                     },
                     colors = TextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedContainerColor = Color(0xFFEFF6FF),
-                        focusedIndicatorColor = Blue,
+                        unfocusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                        focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEFF6FF),
+                        focusedIndicatorColor = primaryColor,
                         unfocusedIndicatorColor = Color.Transparent,
-                        errorContainerColor = Color(0xFFFEF2F2),
+                        errorContainerColor = if (isDarkMode) Color(0xFF3D1414) else Color(0xFFFEF2F2),
                         errorIndicatorColor = Color.Red,
-                        focusedLeadingIconColor = Blue,
-                        unfocusedLeadingIconColor = Color(0xFFAAAAAA)
+                        focusedLeadingIconColor = primaryColor,
+                        unfocusedLeadingIconColor = secondaryTextColor,
+                        unfocusedTextColor = textColor,
+                        focusedTextColor = textColor
                     ),
                     singleLine = true,
                     leadingIcon = {
@@ -171,14 +186,16 @@ fun LoginBody() {
                     },
                     singleLine = true,
                     colors = TextFieldDefaults.colors(
-                        unfocusedContainerColor = Color(0xFFF5F5F5),
-                        focusedContainerColor = Color(0xFFEFF6FF),
-                        focusedIndicatorColor = Blue,
+                        unfocusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                        focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEFF6FF),
+                        focusedIndicatorColor = primaryColor,
                         unfocusedIndicatorColor = Color.Transparent,
-                        errorContainerColor = Color(0xFFFEF2F2),
+                        errorContainerColor = if (isDarkMode) Color(0xFF3D1414) else Color(0xFFFEF2F2),
                         errorIndicatorColor = Color.Red,
-                        focusedLeadingIconColor = Blue,
-                        unfocusedLeadingIconColor = Color(0xFFAAAAAA)
+                        focusedLeadingIconColor = primaryColor,
+                        unfocusedLeadingIconColor = secondaryTextColor,
+                        unfocusedTextColor = textColor,
+                        focusedTextColor = textColor
                     ),
                     leadingIcon = {
                         Icon(
@@ -250,7 +267,7 @@ fun LoginBody() {
                         Text(
                             "Remember me",
                             style = TextStyle(
-                                color = Color.DarkGray,
+                                color = textColor,
                                 fontSize = 14.sp
                             )
                         )
@@ -404,7 +421,7 @@ fun LoginBody() {
                 ) {
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = Color(0xFFE0E0E0),
+                        color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE0E0E0),
                         modifier = Modifier.weight(1f)
                     )
 
@@ -419,7 +436,7 @@ fun LoginBody() {
 
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = Color(0xFFE0E0E0),
+                        color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE0E0E0),
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -435,11 +452,11 @@ fun LoginBody() {
                         .height(56.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.White
+                        containerColor = surfaceColor
                     ),
                     border = ButtonDefaults.outlinedButtonBorder.copy(
                         width = 1.5.dp,
-                        brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFDDDDDD))
+                        brush = androidx.compose.ui.graphics.SolidColor(if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFDDDDDD))
                     )
                 ) {
                     Row(
@@ -458,7 +475,7 @@ fun LoginBody() {
                             "Continue with Google",
                             style = TextStyle(
                                 fontSize = 15.sp,
-                                color = Color(0xFF555555),
+                                color = textColor,
                                 fontWeight = FontWeight.Medium
                             )
                         )
@@ -474,7 +491,7 @@ fun LoginBody() {
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF8F9FA)
+                        containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FA)
                     ),
                     elevation = CardDefaults.cardElevation(
                         defaultElevation = 1.dp
@@ -490,8 +507,8 @@ fun LoginBody() {
                             "Don't have an account?",
                             style = TextStyle(
                                 fontSize = 14.sp,
-                                color = Color(0xFF666666)
-                            )
+                                color = secondaryTextColor
+                            ),
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
@@ -512,6 +529,7 @@ fun LoginBody() {
                                     context.startActivity(intent)
                                 }
                                 .padding(8.dp)
+                                .testTag("create_account")
                         )
                     }
                 }

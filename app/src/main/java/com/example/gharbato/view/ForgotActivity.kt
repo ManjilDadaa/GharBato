@@ -31,31 +31,44 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.collectAsState
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.view.LoginActivity
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 
 class ForgotActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
-            ForgotBody()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            GharBatoTheme(darkTheme = isDarkMode) {
+                ForgotBody(isDarkMode = isDarkMode)
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ForgotBody() {
+fun ForgotBody(isDarkMode: Boolean = false) {
     val userRepo = UserRepoImpl()
     var emailError by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val context = LocalContext.current
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+
     Scaffold(
-        containerColor = Color.White,
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {},
@@ -67,12 +80,12 @@ fun ForgotBody() {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = Color.DarkGray
+                            tint = textColor
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = backgroundColor
                 )
             )
         }
@@ -103,7 +116,7 @@ fun ForgotBody() {
                 style = TextStyle(
                     fontWeight = FontWeight.Bold,
                     fontSize = 24.sp,
-                    color = Color.DarkGray
+                    color = textColor
                 )
             )
 
@@ -112,7 +125,7 @@ fun ForgotBody() {
             // Description
             Text(
                 "Enter your email address and we'll send you a link to reset your password",
-                color = Color(0xFF999999),
+                color = secondaryTextColor,
                 style = TextStyle(
                     fontSize = 15.sp,
                     textAlign = TextAlign.Center
@@ -126,14 +139,16 @@ fun ForgotBody() {
             OutlinedTextField(
                 modifier = Modifier.fillMaxWidth(),
                 colors = TextFieldDefaults.colors(
-                    unfocusedContainerColor = Color(0xFFF5F5F5),
-                    focusedContainerColor = Color(0xFFEFF6FF),
-                    focusedIndicatorColor = Blue,
+                    unfocusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFEFF6FF),
+                    focusedIndicatorColor = primaryColor,
                     unfocusedIndicatorColor = Color.Transparent,
                     errorContainerColor = Color(0xFFFEF2F2),
                     errorIndicatorColor = Color.Red,
-                    focusedLeadingIconColor = Blue,
-                    unfocusedLeadingIconColor = Color(0xFFAAAAAA)
+                    focusedLeadingIconColor = primaryColor,
+                    unfocusedLeadingIconColor = secondaryTextColor,
+                    unfocusedTextColor = textColor,
+                    focusedTextColor = textColor
                 ),
                 isError = emailError,
                 shape = RoundedCornerShape(14.dp),
@@ -147,7 +162,7 @@ fun ForgotBody() {
                 placeholder = {
                     Text(
                         "Email address",
-                        color = Color(0xFFAAAAAA)
+                        color = secondaryTextColor
                     )
                 },
                 leadingIcon = {
@@ -208,11 +223,11 @@ fun ForgotBody() {
                     .shadow(
                         elevation = 6.dp,
                         shape = RoundedCornerShape(14.dp),
-                        spotColor = Blue.copy(alpha = 0.3f)
+                        spotColor = primaryColor.copy(alpha = 0.3f)
                     ),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Blue
+                    containerColor = primaryColor
                 )
             ) {
                 Text(
@@ -231,7 +246,7 @@ fun ForgotBody() {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF8F9FA)
+                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FA)
                 ),
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = 1.dp
@@ -247,7 +262,7 @@ fun ForgotBody() {
                         "Remember your password?",
                         style = TextStyle(
                             fontSize = 14.sp,
-                            color = Color(0xFF666666)
+                            color = secondaryTextColor
                         )
                     )
 
@@ -257,7 +272,7 @@ fun ForgotBody() {
                         "Back to Sign In",
                         style = TextStyle(
                             fontSize = 16.sp,
-                            color = Blue,
+                            color = primaryColor,
                             fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier
