@@ -167,7 +167,7 @@ fun HomeScreen(
                                 onNavigateToSearch()
                             },
                             onBuyClick = {
-                                viewModel.applyFilters(PropertyFilters(marketType = "Sale"))
+                                viewModel.applyFilters(PropertyFilters(marketType = "Sell"))
                                 onNavigateToSearch()
                             },
                             onBookClick = {
@@ -182,7 +182,7 @@ fun HomeScreen(
                         PropertyStatsSection(
                             totalProperties = allProperties.size,
                             rentProperties = allProperties.count { it.marketType.equals("Rent", ignoreCase = true) },
-                            saleProperties = allProperties.count { it.marketType.equals("Sale", ignoreCase = true) },
+                            saleProperties = allProperties.count { it.marketType.equals("Sell", ignoreCase = true) },
                             bookProperties = allProperties.count { it.marketType.equals("Book", ignoreCase = true) },
                             surfaceColor = surfaceColor,
                             onBackgroundColor = onBackgroundColor,
@@ -1157,14 +1157,17 @@ fun ModernPropertyCard(
                         .padding(6.dp),
                     color = when (property.marketType.lowercase()) {
                         "rent" -> Color(0xFF4CAF50)
-                        "sale" -> Color(0xFF2196F3)
+                        "sell" -> Color(0xFF2196F3)
                         "book" -> Color(0xFFFF9800)
                         else -> Color.Gray
                     },
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
-                        text = property.marketType,
+                        text = when (property.marketType.lowercase()) {
+                            "sell" -> "Buy"
+                            else -> property.marketType
+                        },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
