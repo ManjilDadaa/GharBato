@@ -35,6 +35,8 @@ import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PendingPropertiesRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.view.ui.theme.LightGreen
 import com.example.gharbato.viewmodel.PendingPropertiesViewModel
 import kotlinx.coroutines.flow.collectLatest
@@ -43,15 +45,20 @@ class PendingListingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
         setContent {
-            PendingListingsBody()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            GharBatoTheme(darkTheme = isDarkMode) {
+                PendingListingsBody(isDarkMode = isDarkMode)
+            }
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PendingListingsBody() {
+fun PendingListingsBody(isDarkMode: Boolean = false) {
     val viewModel = remember { PendingPropertiesViewModel(PendingPropertiesRepoImpl()) }
     val uiState by viewModel.uiState.collectAsState()
 
@@ -119,7 +126,7 @@ fun PendingListingsBody() {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFFF5F5F5)),
+                        .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF5F5F5)),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -262,7 +269,7 @@ fun PendingListingCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(2.dp),
-        colors = CardDefaults.cardColors(Color.White)
+        colors = CardDefaults.cardColors(MaterialTheme.colorScheme.surface)
     ) {
         Column {
             if (listing.images.isNotEmpty()) {
