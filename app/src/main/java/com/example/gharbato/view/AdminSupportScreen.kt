@@ -8,6 +8,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,14 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.example.gharbato.R
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.model.SupportConversation
 import com.example.gharbato.ui.theme.Blue
@@ -79,7 +81,7 @@ fun AdminSupportScreen() {
                                 userImage = userMessage?.senderImage ?: "",
                                 lastMessage = lastMessage.message,
                                 lastMessageTime = lastMessage.timestamp,
-                                unreadCount = 0 // You can implement read/unread tracking
+                                unreadCount = 0
                             )
                         )
                     }
@@ -136,7 +138,6 @@ fun AdminSupportScreen() {
                     CircularProgressIndicator(color = Blue)
                 }
             } else if (conversations.isEmpty()) {
-                // Empty state
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -144,11 +145,9 @@ fun AdminSupportScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.baseline_support_agent_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Blue.copy(alpha = 0.5f)
+                    Text(
+                        text = "💬",
+                        style = MaterialTheme.typography.displayLarge
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -252,7 +251,7 @@ fun ConversationCard(
                     }
                 }
 
-                // Online indicator (optional)
+                // Online indicator
                 Box(
                     modifier = Modifier
                         .size(14.dp)
@@ -305,7 +304,7 @@ fun ConversationCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.baseline_email_24),
+                                imageVector = Icons.Default.Email,
                                 contentDescription = null,
                                 tint = Blue,
                                 modifier = Modifier.size(14.dp)
@@ -327,7 +326,7 @@ fun ConversationCard(
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Icon(
-                                painter = painterResource(id = R.drawable.baseline_phone_24),
+                                imageVector = Icons.Default.Phone,
                                 contentDescription = null,
                                 tint = Blue,
                                 modifier = Modifier.size(14.dp)
@@ -380,10 +379,10 @@ fun ConversationCard(
 
                 // Arrow Icon
                 Icon(
-                    painter = painterResource(id = R.drawable.outline_arrow_forward_ios_24),
+                    imageVector = Icons.Default.KeyboardArrowRight,
                     contentDescription = null,
                     tint = textColor.copy(alpha = 0.3f),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
