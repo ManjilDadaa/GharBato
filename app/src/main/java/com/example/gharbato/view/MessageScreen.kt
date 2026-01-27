@@ -143,7 +143,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     ),
                 placeholder = {
                     Text(
-                        "",
+                        "Search property owners",
                         color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                     )
                 },
