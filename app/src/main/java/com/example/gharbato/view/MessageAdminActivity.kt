@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,12 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.gharbato.R
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
@@ -148,10 +148,9 @@ fun MessageAdminScreen() {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.baseline_arrow_back_ios_24),
+                            imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = textColor,
-                            modifier = Modifier.size(24.dp)
+                            tint = textColor
                         )
                     }
                 },
@@ -234,10 +233,9 @@ fun MessageAdminScreen() {
                         enabled = messageText.isNotBlank()
                     ) {
                         Icon(
-                            painter = painterResource(id = R.drawable.baseline_send_24),
+                            imageVector = Icons.Default.Send,
                             contentDescription = "Send",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            tint = Color.White
                         )
                     }
                 }
@@ -256,7 +254,6 @@ fun MessageAdminScreen() {
                     color = Blue
                 )
             } else if (messages.isEmpty()) {
-                // Empty state
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -264,11 +261,9 @@ fun MessageAdminScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.baseline_support_agent_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Blue.copy(alpha = 0.5f)
+                    Text(
+                        text = "📞",
+                        style = TextStyle(fontSize = 64.sp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -338,7 +333,6 @@ fun UserMessageBubble(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Show sender name only for admin messages (incoming messages from admin)
                 if (!isMyMessage && message.isAdmin) {
                     Text(
                         text = "Admin",
