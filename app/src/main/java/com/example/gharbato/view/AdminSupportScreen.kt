@@ -43,6 +43,7 @@ fun AdminSupportScreen() {
 
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages")
+    val usersRef = database.getReference("users")
 
     // Themed colors
     val backgroundColor = MaterialTheme.colorScheme.background
@@ -75,7 +76,7 @@ fun AdminSupportScreen() {
                         conversationList.add(
                             SupportConversation(
                                 userId = userId,
-                                userName = userMessage?.senderName?.ifEmpty { "User" } ?: "User",
+                                userName = userMessage?.senderName?.ifEmpty { null } ?: "",
                                 userEmail = userMessage?.senderEmail ?: "",
                                 userPhone = userMessage?.senderPhone ?: "",
                                 userImage = userMessage?.senderImage ?: "",
@@ -85,6 +86,29 @@ fun AdminSupportScreen() {
                             )
                         )
                     }
+                }
+
+                // Fetch user profiles from users node to get full names and images
+                conversationList.forEach { conversation ->
+                    usersRef.child(conversation.userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(userSnapshot: DataSnapshot) {
+                            val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: ""
+                            val profileImage = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+
+                            // Update the conversation with user data from users node
+                            val updatedConversations = conversations.map { conv ->
+                                if (conv.userId == conversation.userId) {
+                                    conv.copy(
+                                        userName = fullName.ifEmpty { conv.userName.ifEmpty { "User" } },
+                                        userImage = profileImage.ifEmpty { conv.userImage }
+                                    )
+                                } else conv
+                            }
+                            conversations = updatedConversations.sortedByDescending { it.lastMessageTime }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {}
+                    })
                 }
 
                 conversations = conversationList.sortedByDescending { it.lastMessageTime }
