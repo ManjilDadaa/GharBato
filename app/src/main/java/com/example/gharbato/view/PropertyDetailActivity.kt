@@ -57,8 +57,10 @@ import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.ReportViewModel
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.maps.android.compose.*
+import com.example.gharbato.R
 import kotlin.collections.emptyMap
 
 private fun getCurrentUserId(): String {
@@ -306,7 +308,8 @@ fun PropertyDetailScreen(
                             context.startActivity(intent)
                         },
                         surfaceColor = surfaceColor,
-                        primaryColor = primaryColor
+                        primaryColor = primaryColor,
+                        isDarkMode = isDarkMode
                     )
                 }
 
@@ -1045,8 +1048,10 @@ fun MapPreviewSection(
     property: PropertyModel,
     onClick: () -> Unit,
     surfaceColor: Color,
-    primaryColor: Color
+    primaryColor: Color,
+    isDarkMode: Boolean = false
 ) {
+    val context = LocalContext.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1060,6 +1065,11 @@ fun MapPreviewSection(
             cameraPositionState = rememberCameraPositionState {
                 position = CameraPosition.fromLatLngZoom(property.latLng, 13f)
             },
+            properties = MapProperties(
+                mapStyleOptions = if (isDarkMode) {
+                    MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+                } else null
+            ),
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
