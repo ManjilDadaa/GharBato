@@ -11,6 +11,12 @@ interface UserRepo {
 
     fun logout(callback: (Boolean, String) -> Unit)
 
+    // Google Sign-In: callback returns (success, message, isNewUser)
+    fun loginWithGoogle(
+        idToken: String,
+        callback: (Boolean, String, Boolean) -> Unit
+    )
+
     fun signUp(
         email: String,
         password: String,

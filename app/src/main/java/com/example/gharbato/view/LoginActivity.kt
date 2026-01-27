@@ -3,6 +3,7 @@ package com.example.gharbato.view
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,6 +33,11 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Gray
@@ -39,6 +45,10 @@ import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.launch
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,6 +65,9 @@ class LoginActivity : ComponentActivity() {
     }
 }
 
+// Web Client ID from google-services.json (client_type: 3)
+private const val WEB_CLIENT_ID = "1054227769178-furvftv3akb1g2potb97htd6s2ot9kqv.apps.googleusercontent.com"
+
 @Composable
 fun LoginBody(isDarkMode: Boolean = false) {
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
@@ -64,9 +77,11 @@ fun LoginBody(isDarkMode: Boolean = false) {
     var visibility by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
+    var isGoogleLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity = context as Activity
+    val coroutineScope = rememberCoroutineScope()
 
     var isErrorEmail by remember { mutableStateOf(false) }
     var isErrorPassword by remember { mutableStateOf(false) }
@@ -82,6 +97,43 @@ fun LoginBody(isDarkMode: Boolean = false) {
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
     val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+
+    // Google Sign-In handler
+    fun handleGoogleSignIn() {
+        isGoogleLoading = true
+
+        val credentialManager = CredentialManager.create(context)
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId(WEB_CLIENT_ID)
+            .setAutoSelectEnabled(false)
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        coroutineScope.launch {
+            try {
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = activity
+                )
+                handleGoogleSignInResult(result, userViewModel, context, activity) {
+                    isGoogleLoading = false
+                }
+            } catch (e: GetCredentialException) {
+                isGoogleLoading = false
+                Log.e("GoogleSignIn", "GetCredentialException: ${e.message}", e)
+                Toast.makeText(
+                    context,
+                    "Google Sign-In failed: ${e.message}",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
 
     Scaffold(
         containerColor = backgroundColor
@@ -445,7 +497,8 @@ fun LoginBody(isDarkMode: Boolean = false) {
 
                 // Google Sign In - Improved border
                 OutlinedButton(
-                    onClick = { /* Google sign in logic */ },
+                    onClick = { handleGoogleSignIn() },
+                    enabled = !isGoogleLoading && !isLoading,
                     modifier = Modifier
                         .padding(horizontal = 24.dp)
                         .fillMaxWidth()
@@ -463,16 +516,24 @@ fun LoginBody(isDarkMode: Boolean = false) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
-                        Image(
-                            painter = painterResource(R.drawable.googlee),
-                            contentDescription = null,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        if (isGoogleLoading) {
+                            CircularProgressIndicator(
+                                color = Blue,
+                                modifier = Modifier.size(22.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Image(
+                                painter = painterResource(R.drawable.googlee),
+                                contentDescription = null,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
 
                         Spacer(modifier = Modifier.width(12.dp))
 
                         Text(
-                            "Continue with Google",
+                            if (isGoogleLoading) "Signing in..." else "Continue with Google",
                             style = TextStyle(
                                 fontSize = 15.sp,
                                 color = textColor,
@@ -544,4 +605,82 @@ fun LoginBody(isDarkMode: Boolean = false) {
 @Preview
 fun PreviewLogin() {
     LoginBody()
+}
+
+/**
+ * Handle the Google Sign-In credential result
+ */
+private fun handleGoogleSignInResult(
+    result: GetCredentialResponse,
+    userViewModel: UserViewModel,
+    context: android.content.Context,
+    activity: Activity,
+    onComplete: () -> Unit
+) {
+    when (val credential = result.credential) {
+        is CustomCredential -> {
+            if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                try {
+                    val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                    val idToken = googleIdTokenCredential.idToken
+
+                    Log.d("GoogleSignIn", "Got ID Token, authenticating with Firebase...")
+
+                    // Authenticate with Firebase
+                    userViewModel.loginWithGoogle(idToken) { success, message, isNewUser ->
+                        if (success) {
+                            // Check if account is suspended
+                            userViewModel.checkIsSuspended { isSuspended, reason, until ->
+                                if (isSuspended) {
+                                    onComplete()
+                                    userViewModel.logout { _, _ -> }
+
+                                    val dateStr = if (until != null && until > 0) {
+                                        java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
+                                            .format(java.util.Date(until))
+                                    } else "Indefinitely"
+
+                                    val msg = "Account Suspended\nReason: ${reason ?: "Unknown"}\nUntil: $dateStr"
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                } else {
+                                    // Google accounts are pre-verified, no need to check email verification
+                                    onComplete()
+
+                                    // Save Remember Me preference
+                                    val sharedPreferences = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
+                                    with(sharedPreferences.edit()) {
+                                        putBoolean("remember_me", true)
+                                        apply()
+                                    }
+
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+
+                                    // Navigate to Dashboard
+                                    val intent = Intent(context, DashboardActivity::class.java)
+                                    context.startActivity(intent)
+                                    activity.finish()
+                                }
+                            }
+                        } else {
+                            onComplete()
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: GoogleIdTokenParsingException) {
+                    onComplete()
+                    Log.e("GoogleSignIn", "Invalid Google ID token", e)
+                    Toast.makeText(context, "Invalid Google credentials", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                onComplete()
+                Log.e("GoogleSignIn", "Unexpected credential type: ${credential.type}")
+                Toast.makeText(context, "Unexpected credential type", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else -> {
+            onComplete()
+            Log.e("GoogleSignIn", "Unexpected credential: ${credential::class.java.name}")
+            Toast.makeText(context, "Unexpected credential type", Toast.LENGTH_SHORT).show()
+        }
+    }
 }
