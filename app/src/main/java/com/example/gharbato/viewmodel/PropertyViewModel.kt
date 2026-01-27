@@ -10,6 +10,7 @@ import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SortOption
 import com.example.gharbato.repository.SavedPropertiesRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -70,14 +71,22 @@ class PropertyViewModel(
                 Log.d(TAG, "Loading properties...")
                 val properties = repository.getAllApprovedProperties()
 
-                // Filter out SOLD properties
-                val availableProperties = properties.filter { it.propertyStatus != "SOLD" }
+                // Get current user ID to filter out their own properties
+                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+
+                // Filter out SOLD properties and user's own properties
+                val availableProperties = properties.filter { property ->
+                    property.propertyStatus != "SOLD" &&
+                    (currentUserId == null || property.ownerId != currentUserId)
+                }
+
+                Log.d(TAG, "Filtered out user's own properties. Current user: $currentUserId")
 
                 val propertiesWithFavorites = availableProperties.map { property ->
                     property.copy(isFavorite = savedPropertiesRepository.isPropertySaved(property.id))
                 }
 
-                Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties")
+                Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties (excluding own)")
 
                 _uiState.value = _uiState.value.copy(
                     allLoadedProperties = propertiesWithFavorites

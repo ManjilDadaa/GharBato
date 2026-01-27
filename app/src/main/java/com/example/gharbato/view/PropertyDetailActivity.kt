@@ -1367,6 +1367,14 @@ private fun sendQuickMessage(
 ) {
     val repository = MessageRepositoryImpl()
 
+    // Debug logging
+    android.util.Log.d("PropertyDetailActivity", "=== sendQuickMessage called ===")
+    android.util.Log.d("PropertyDetailActivity", "Property ID: ${property.id}")
+    android.util.Log.d("PropertyDetailActivity", "Property Developer: ${property.developer}")
+    android.util.Log.d("PropertyDetailActivity", "Property Owner ID: ${property.ownerId}")
+    android.util.Log.d("PropertyDetailActivity", "Property Price: ${property.price}")
+    android.util.Log.d("PropertyDetailActivity", "Property Images: ${property.images}")
+
     Toast.makeText(context, "Sending message...", Toast.LENGTH_SHORT).show()
 
     repository.sendQuickMessageWithPropertyAndNavigate(

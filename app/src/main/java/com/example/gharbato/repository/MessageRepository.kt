@@ -404,18 +404,30 @@ class MessageRepositoryImpl : MessageRepository {
 
     override fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
-        
+
+        Log.d(TAG, "=== Listening to messages for chat: $chatId ===")
+
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val messageList = mutableListOf<ChatMessage>()
+                Log.d(TAG, "Received ${snapshot.childrenCount} messages from Firebase")
+
                 snapshot.children.forEach { msgSnapshot ->
                     try {
                         val deletedForCurrentUser = msgSnapshot.child("deletedFor").child(currentUserId).getValue(Boolean::class.java) == true
                         if (deletedForCurrentUser) {
                             return@forEach
                         }
+
+                        // Log raw Firebase data for debugging
+                        val rawPropertyId = msgSnapshot.child("propertyId").value
+                        val rawPropertyTitle = msgSnapshot.child("propertyTitle").value
+                        Log.d(TAG, "Raw Firebase data - propertyId: $rawPropertyId (${rawPropertyId?.javaClass?.simpleName}), propertyTitle: $rawPropertyTitle")
+
                         val message = msgSnapshot.getValue(ChatMessage::class.java)
                         if (message != null) {
+                            // Log property card data for debugging
+                            Log.d(TAG, "Parsed message - propertyId: ${message.propertyId}, propertyTitle: '${message.propertyTitle}', hasPropertyCard: ${message.hasPropertyCard}")
                             messageList.add(message)
                         }
                     } catch (e: Exception) {
@@ -753,6 +765,15 @@ class MessageRepositoryImpl : MessageRepository {
         val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
 
+        // Validate property data before sending
+        val propertyIdToSend = property.id
+        val propertyTitleToSend = property.developer
+
+        Log.d(TAG, "=== Property Validation Before Send ===")
+        Log.d(TAG, "Property ID: $propertyIdToSend (valid: ${propertyIdToSend > 0})")
+        Log.d(TAG, "Property Title: '$propertyTitleToSend' (valid: ${propertyTitleToSend.isNotEmpty()})")
+        Log.d(TAG, "Will hasPropertyCard be true? ${propertyIdToSend > 0 && propertyTitleToSend.isNotEmpty()}")
+
         val chatMessage = hashMapOf(
             "id" to messageId,
             "senderId" to session.myUserId,
@@ -762,8 +783,8 @@ class MessageRepositoryImpl : MessageRepository {
             "isRead" to false,
             "imageUrl" to "",
             // Property card data
-            "propertyId" to property.id,
-            "propertyTitle" to property.developer,
+            "propertyId" to propertyIdToSend,
+            "propertyTitle" to propertyTitleToSend,
             "propertyPrice" to property.price,
             "propertyImage" to propertyImageUrl,
             "propertyLocation" to property.location,
@@ -771,11 +792,16 @@ class MessageRepositoryImpl : MessageRepository {
             "propertyBathrooms" to property.bathrooms
         )
 
-        Log.d(TAG, "Sending message with property card and navigating:")
+        Log.d(TAG, "=== Sending message with property card ===")
         Log.d(TAG, "Chat ID: ${session.chatId}")
-        Log.d(TAG, "Property ID: ${property.id}")
-        Log.d(TAG, "Property Title: ${property.developer}")
-        Log.d(TAG, "Property Image: $propertyImageUrl")
+        Log.d(TAG, "Current User ID: ${session.myUserId}")
+        Log.d(TAG, "Other User ID (property owner): $otherUserId")
+        Log.d(TAG, "Firebase message data: $chatMessage")
+        Log.d(TAG, "Property Location: ${property.location}")
+        Log.d(TAG, "Property Bedrooms: ${property.bedrooms}")
+        Log.d(TAG, "Property Bathrooms: ${property.bathrooms}")
+        Log.d(TAG, "Property Owner ID: ${property.ownerId}")
+        Log.d(TAG, "hasPropertyCard would be: ${property.id > 0 && property.developer.isNotEmpty()}")
 
         // Send message first
         messagesRef.child(messageId).setValue(chatMessage)
