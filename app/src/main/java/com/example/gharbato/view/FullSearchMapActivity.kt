@@ -35,6 +35,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,6 +44,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,10 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.example.gharbato.utils.SystemBarUtils
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.R
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.maps.android.compose.MapProperties
 
 class FullSearchMapActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,9 +84,12 @@ class FullSearchMapActivity : ComponentActivity() {
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            FullSearchMapScreen(
-                onBack = { finish() }
-            )
+            GharBatoTheme(darkTheme = isDarkMode) {
+                FullSearchMapScreen(
+                    onBack = { finish() },
+                    isDarkMode = isDarkMode
+                )
+            }
         }
     }
 }
@@ -88,7 +97,8 @@ class FullSearchMapActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FullSearchMapScreen(
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isDarkMode: Boolean = false
 ) {
     val context = LocalContext.current
     val viewModel: PropertyViewModel = viewModel(
@@ -103,6 +113,18 @@ fun FullSearchMapScreen(
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(startLocation, 12f)
     }
+
+    val mapProperties = remember(isDarkMode) {
+        MapProperties(
+            mapStyleOptions = if (isDarkMode) {
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+            } else null
+        )
+    }
+
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
 
     Scaffold(
         topBar = {
@@ -123,7 +145,7 @@ fun FullSearchMapScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 )
             )
         }
@@ -136,6 +158,7 @@ fun FullSearchMapScreen(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                properties = mapProperties,
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
                     myLocationButtonEnabled = false,
@@ -164,7 +187,7 @@ fun FullSearchMapScreen(
                         .padding(16.dp),
                     shape = RoundedCornerShape(16.dp),
                     elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White)
+                    colors = CardDefaults.cardColors(containerColor = surfaceColor)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -263,12 +286,12 @@ fun FullSearchMapScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Zoom In",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
 
@@ -281,12 +304,12 @@ fun FullSearchMapScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = "Zoom Out",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
             }
@@ -300,7 +323,7 @@ fun PropertyInfoChipFullMap(
     text: String
 ) {
     Surface(
-        color = Color(0xFFF5F5F5),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -310,14 +333,14 @@ fun PropertyInfoChipFullMap(
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = Color.Gray,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(
                 text = text,
                 fontSize = 12.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
