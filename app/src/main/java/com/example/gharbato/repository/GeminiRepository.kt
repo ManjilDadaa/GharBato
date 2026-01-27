@@ -8,12 +8,12 @@ interface GeminiRepository {
      * Send a message to Gemini AI and get response
      * @param message User's message text
      * @param conversationHistory Previous messages for context
-     * @param callback Returns success status and AI response or error message
+     * @param callback Returns success status, AI response, and property IDs
      */
     suspend fun sendMessage(
         message: String,
         conversationHistory: List<GeminiChatMessage> = emptyList(),
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String, List<String>) -> Unit
     )
 
     /**
