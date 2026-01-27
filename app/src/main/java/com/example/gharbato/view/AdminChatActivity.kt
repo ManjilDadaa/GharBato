@@ -100,7 +100,7 @@ fun AdminChatScreen(
     // Initialize Firebase Database
     val database = FirebaseDatabase.getInstance("https://gharbatodb-default-rtdb.firebaseio.com")
     val messagesRef = database.getReference("support_messages").child(userId)
-    val usersRef = database.getReference("users")
+    val usersRef = database.getReference("Users")
 
     val listState = rememberLazyListState()
 

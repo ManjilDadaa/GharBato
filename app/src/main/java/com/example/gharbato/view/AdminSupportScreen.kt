@@ -43,7 +43,7 @@ fun AdminSupportScreen() {
 
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages")
-    val usersRef = database.getReference("users")
+    val usersRef = database.getReference("Users")
 
     // Themed colors
     val backgroundColor = MaterialTheme.colorScheme.background
