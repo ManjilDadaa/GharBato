@@ -91,9 +91,16 @@ fun AdminChatScreen(
     var isLoading by remember { mutableStateOf(true) }
     var isSending by remember { mutableStateOf(false) }
 
+    // State for user info (fetch from Firebase if not provided)
+    var displayName by remember { mutableStateOf(userName) }
+    var displayEmail by remember { mutableStateOf(userEmail) }
+    var displayPhone by remember { mutableStateOf(userPhone) }
+    var displayImage by remember { mutableStateOf(userImage) }
+
     // Initialize Firebase Database
     val database = FirebaseDatabase.getInstance("https://gharbatodb-default-rtdb.firebaseio.com")
     val messagesRef = database.getReference("support_messages").child(userId)
+    val usersRef = database.getReference("users")
 
     val listState = rememberLazyListState()
 
@@ -101,6 +108,34 @@ fun AdminChatScreen(
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // Fetch user profile from Firebase to get actual name
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            usersRef.child(userId).addListenerForSingleValueEvent(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val fullName = snapshot.child("fullName").getValue(String::class.java) ?: ""
+                    val fetchedUserName = snapshot.child("userName").getValue(String::class.java) ?: ""
+                    val profileImage = snapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                    val email = snapshot.child("email").getValue(String::class.java) ?: ""
+                    val phone = snapshot.child("phoneNo").getValue(String::class.java) ?: ""
+
+                    // Use fullName first, then userName, then fallback to passed userName or "User"
+                    displayName = when {
+                        fullName.isNotEmpty() -> fullName
+                        fetchedUserName.isNotEmpty() -> fetchedUserName
+                        userName.isNotEmpty() && userName != "User" -> userName
+                        else -> "User"
+                    }
+                    if (profileImage.isNotEmpty()) displayImage = profileImage
+                    if (email.isNotEmpty()) displayEmail = email
+                    if (phone.isNotEmpty()) displayPhone = phone
+                }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+        }
+    }
 
     // Load messages from Firebase
     LaunchedEffect(userId) {
@@ -164,10 +199,10 @@ fun AdminChatScreen(
                     }
 
                     // User profile image
-                    if (userImage.isNotEmpty()) {
+                    if (displayImage.isNotEmpty()) {
                         AsyncImage(
-                            model = userImage,
-                            contentDescription = userName,
+                            model = displayImage,
+                            contentDescription = displayName,
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape),
@@ -182,7 +217,7 @@ fun AdminChatScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = userName.take(1).uppercase(),
+                                text = displayName.take(1).uppercase(),
                                 style = TextStyle(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
@@ -199,7 +234,7 @@ fun AdminChatScreen(
                         modifier = Modifier.weight(1f)
                     ) {
                         Text(
-                            text = userName,
+                            text = displayName,
                             style = TextStyle(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
@@ -208,9 +243,9 @@ fun AdminChatScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (userEmail.isNotEmpty()) {
+                        if (displayEmail.isNotEmpty()) {
                             Text(
-                                text = userEmail,
+                                text = displayEmail,
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     color = textColor.copy(alpha = 0.6f)
@@ -218,9 +253,9 @@ fun AdminChatScreen(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                        } else if (userPhone.isNotEmpty()) {
+                        } else if (displayPhone.isNotEmpty()) {
                             Text(
-                                text = userPhone,
+                                text = displayPhone,
                                 style = TextStyle(
                                     fontSize = 12.sp,
                                     color = textColor.copy(alpha = 0.6f)
@@ -263,7 +298,7 @@ fun AdminChatScreen(
                             .heightIn(min = 56.dp, max = 120.dp),
                         placeholder = {
                             Text(
-                                "Reply to $userName...",
+                                "Reply to $displayName...",
                                 color = textColor.copy(alpha = 0.5f)
                             )
                         },
@@ -394,7 +429,7 @@ fun AdminChatScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Send a message to assist $userName with their inquiry",
+                        text = "Send a message to assist $displayName with their inquiry",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             color = textColor.copy(alpha = 0.6f)
                         ),
@@ -414,7 +449,7 @@ fun AdminChatScreen(
                     ) { message ->
                         AdminMessageBubble(
                             message = message,
-                            userName = userName,
+                            userName = displayName,
                             isDarkMode = isDarkMode
                         )
                     }

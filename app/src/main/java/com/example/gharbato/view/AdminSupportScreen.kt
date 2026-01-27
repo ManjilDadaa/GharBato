@@ -55,9 +55,11 @@ fun AdminSupportScreen() {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val conversationList = mutableListOf<SupportConversation>()
+                val userIds = mutableListOf<String>()
 
                 snapshot.children.forEach { userSnapshot ->
                     val userId = userSnapshot.key ?: return@forEach
+                    userIds.add(userId)
                     val messages = mutableListOf<SupportMessage>()
 
                     userSnapshot.children.forEach { messageSnapshot ->
@@ -71,12 +73,11 @@ fun AdminSupportScreen() {
 
                         val sortedMessages = messages.sortedByDescending { it.timestamp }
                         val lastMessage = sortedMessages.first()
-                        val unreadCount = messages.count { !it.isAdmin && it.timestamp > 0 }
 
                         conversationList.add(
                             SupportConversation(
                                 userId = userId,
-                                userName = userMessage?.senderName?.ifEmpty { null } ?: "",
+                                userName = userMessage?.senderName ?: "",
                                 userEmail = userMessage?.senderEmail ?: "",
                                 userPhone = userMessage?.senderPhone ?: "",
                                 userImage = userMessage?.senderImage ?: "",
@@ -88,31 +89,43 @@ fun AdminSupportScreen() {
                     }
                 }
 
-                // Fetch user profiles from users node to get full names and images
-                conversationList.forEach { conversation ->
+                // First set conversations to show loading is done
+                conversations = conversationList.sortedByDescending { it.lastMessageTime }
+                isLoading = false
+
+                // Then fetch user profiles from users node to get full names and images
+                conversationList.forEachIndexed { index, conversation ->
                     usersRef.child(conversation.userId).addListenerForSingleValueEvent(object : ValueEventListener {
                         override fun onDataChange(userSnapshot: DataSnapshot) {
                             val fullName = userSnapshot.child("fullName").getValue(String::class.java) ?: ""
+                            val userName = userSnapshot.child("userName").getValue(String::class.java) ?: ""
                             val profileImage = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
+                            val email = userSnapshot.child("email").getValue(String::class.java) ?: ""
+                            val phone = userSnapshot.child("phoneNo").getValue(String::class.java) ?: ""
+
+                            // Use fullName first, then userName, then fallback to "User"
+                            val displayName = when {
+                                fullName.isNotEmpty() -> fullName
+                                userName.isNotEmpty() -> userName
+                                else -> "User"
+                            }
 
                             // Update the conversation with user data from users node
-                            val updatedConversations = conversations.map { conv ->
+                            conversations = conversations.map { conv ->
                                 if (conv.userId == conversation.userId) {
                                     conv.copy(
-                                        userName = fullName.ifEmpty { conv.userName.ifEmpty { "User" } },
-                                        userImage = profileImage.ifEmpty { conv.userImage }
+                                        userName = displayName,
+                                        userImage = profileImage.ifEmpty { conv.userImage },
+                                        userEmail = email.ifEmpty { conv.userEmail },
+                                        userPhone = phone.ifEmpty { conv.userPhone }
                                     )
                                 } else conv
-                            }
-                            conversations = updatedConversations.sortedByDescending { it.lastMessageTime }
+                            }.sortedByDescending { it.lastMessageTime }
                         }
 
                         override fun onCancelled(error: DatabaseError) {}
                     })
                 }
-
-                conversations = conversationList.sortedByDescending { it.lastMessageTime }
-                isLoading = false
             }
 
             override fun onCancelled(error: DatabaseError) {
