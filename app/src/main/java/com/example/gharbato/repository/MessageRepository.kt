@@ -781,16 +781,40 @@ class MessageRepositoryImpl : MessageRepository {
         messagesRef.child(messageId).setValue(chatMessage)
             .addOnSuccessListener {
                 Log.d(TAG, "Property card message sent successfully, navigating to chat")
-                // Small delay to ensure Firebase has processed the write
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    val intent = MessageDetailsActivity.newIntent(
-                        activity = activity,
-                        otherUserId = otherUserId,
-                        otherUserName = otherUserName,
-                        otherUserImage = otherUserImage
-                    )
-                    activity.startActivity(intent)
-                }, 300)
+
+                // Fetch actual user fullName from Firebase before navigating
+                // Note: Uses "Users" with capital U to match fetchUsersByIds
+                database.getReference("Users").child(otherUserId)
+                    .addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            val actualFullName = snapshot.child("fullName").getValue(String::class.java)
+                                ?: otherUserName
+                            val actualProfileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+                                ?: otherUserImage
+
+                            Log.d(TAG, "Fetched actual user name: $actualFullName (passed: $otherUserName)")
+
+                            val intent = MessageDetailsActivity.newIntent(
+                                activity = activity,
+                                otherUserId = otherUserId,
+                                otherUserName = actualFullName,
+                                otherUserImage = actualProfileImage
+                            )
+                            activity.startActivity(intent)
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            Log.e(TAG, "Failed to fetch user info: ${error.message}")
+                            // Fall back to passed name if fetch fails
+                            val intent = MessageDetailsActivity.newIntent(
+                                activity = activity,
+                                otherUserId = otherUserId,
+                                otherUserName = otherUserName,
+                                otherUserImage = otherUserImage
+                            )
+                            activity.startActivity(intent)
+                        }
+                    })
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to send property card message", e)

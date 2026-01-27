@@ -59,12 +59,56 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 import com.google.maps.android.compose.*
 import com.example.gharbato.R
 import kotlin.collections.emptyMap
 
 private fun getCurrentUserId(): String {
     return FirebaseAuth.getInstance().currentUser?.uid ?: ""
+}
+
+private fun navigateToMessageWithUserFetch(
+    context: Context,
+    activity: Activity,
+    otherUserId: String,
+    fallbackName: String,
+    fallbackImage: String = ""
+) {
+    // Fetch actual user data from Firebase before navigating
+    // Note: Uses "Users" with capital U to match MessageRepository.fetchUsersByIds
+    FirebaseDatabase.getInstance().getReference("Users").child(otherUserId)
+        .addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // Use UserModel field names: fullName, profileImageUrl
+                val actualFullName = snapshot.child("fullName").getValue(String::class.java)
+                    ?.takeIf { it.isNotBlank() } ?: fallbackName
+                val actualProfileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+                    ?: fallbackImage
+
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = actualFullName,
+                    otherUserImage = actualProfileImage
+                )
+                activity.startActivity(intent)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                // Fall back to passed name if fetch fails
+                val intent = MessageDetailsActivity.newIntent(
+                    activity = activity,
+                    otherUserId = otherUserId,
+                    otherUserName = fallbackName,
+                    otherUserImage = fallbackImage
+                )
+                activity.startActivity(intent)
+            }
+        })
 }
 
 fun getAmenityIconForPropertyDetail(amenity: String): ImageVector {
@@ -1937,12 +1981,13 @@ fun BoxScope.BottomActionButtons(
 
             Button(
                 onClick = {
-                    val intent = MessageDetailsActivity.newIntent(
+                    navigateToMessageWithUserFetch(
+                        context = context,
                         activity = context as Activity,
                         otherUserId = property.ownerId,
-                        otherUserName = property.ownerName.ifBlank { property.developer }
+                        fallbackName = property.ownerName.ifBlank { property.developer },
+                        fallbackImage = property.ownerImageUrl
                     )
-                    context.startActivity(intent)
                 },
                 modifier = Modifier
                     .weight(1f)
