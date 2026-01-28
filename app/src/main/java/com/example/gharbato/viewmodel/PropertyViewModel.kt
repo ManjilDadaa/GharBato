@@ -37,7 +37,8 @@ data class PropertyUiState(
     val showMap: Boolean = true,
     val searchLocation: SearchLocation? = null,
     val currentFilters: PropertyFilters = PropertyFilters(),
-    val currentSort: SortOption = SortOption.DATE_NEWEST
+    val currentSort: SortOption = SortOption.DATE_NEWEST,
+    val hiddenPropertyIds: Set<Int> = emptySet()
 )
 
 
@@ -617,5 +618,32 @@ class PropertyViewModel(
 
     fun uploadImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
         repository.uploadImage(context, imageUri, callback)
+    }
+
+    /**
+     * Hides a property from the user's feed (Not Interested)
+     * The property will be filtered out from all views until the app is restarted
+     */
+    fun hideProperty(propertyId: Int) {
+        Log.d(TAG, "Hiding property: $propertyId")
+
+        val updatedHiddenIds = _uiState.value.hiddenPropertyIds + propertyId
+
+        // Filter out the hidden property from current properties list
+        val updatedProperties = _uiState.value.properties.filter { it.id != propertyId }
+        val updatedAllLoaded = _uiState.value.allLoadedProperties.filter { it.id != propertyId }
+
+        _uiState.value = _uiState.value.copy(
+            hiddenPropertyIds = updatedHiddenIds,
+            properties = updatedProperties,
+            allLoadedProperties = updatedAllLoaded
+        )
+    }
+
+    /**
+     * Checks if a property is hidden
+     */
+    fun isPropertyHidden(propertyId: Int): Boolean {
+        return _uiState.value.hiddenPropertyIds.contains(propertyId)
     }
 }
