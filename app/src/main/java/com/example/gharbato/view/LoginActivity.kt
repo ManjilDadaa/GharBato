@@ -243,7 +243,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             fontSize = 26.sp,
                             color = textColor
                         ),
-                        modifier = Modifier.offset(y = (-20).dp)
+                        modifier = Modifier.offset(y = (-32).dp)
                     )
 
                     Text(
@@ -252,7 +252,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             fontSize = 14.sp,
                             color = secondaryTextColor
                         ),
-                        modifier = Modifier.offset(y = (-16).dp)
+                        modifier = Modifier.offset(y = (-28).dp)
                     )
                 }
 
