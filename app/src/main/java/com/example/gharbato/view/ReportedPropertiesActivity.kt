@@ -789,7 +789,7 @@ private fun EnhancedReportedPropertyCard(
                                     color = TextSecondary
                                 )
                                 Text(
-                                    text = report.reason.ifEmpty { "No reason provided" },
+                                    text = report.reportReason.ifEmpty { "No reason provided" },
                                     fontSize = 14.sp,
                                     color = TextPrimary,
                                     lineHeight = 20.sp
@@ -807,14 +807,14 @@ private fun EnhancedReportedPropertyCard(
                             ReportInfoChip(
                                 icon = Icons.Outlined.Person,
                                 label = "Reporter",
-                                value = report.reporterName.ifEmpty { "Anonymous" }
+                                value = report.reportedByName.ifEmpty { "Anonymous" }
                             )
 
-                            if (report.timestamp > 0) {
+                            if (report.reportedAt > 0) {
                                 ReportInfoChip(
                                     icon = Icons.Outlined.Info,
                                     label = "Reported",
-                                    value = report.timestamp.formatDate()
+                                    value = report.reportedAt.formatDate()
                                 )
                             }
                         }
