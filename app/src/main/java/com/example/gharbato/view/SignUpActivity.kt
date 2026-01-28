@@ -223,7 +223,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                     Image(
                         painter = painterResource(R.drawable.gharbato_logo),
                         contentDescription = "Ghar Bato Logo",
-                        modifier = Modifier.size(120.dp)
+                        modifier = Modifier.size(160.dp)
                     )
 
                     Text(
@@ -233,7 +233,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             fontSize = 24.sp,
                             color = textColor
                         ),
-                        modifier = Modifier.offset(y = (-16).dp)
+                        modifier = Modifier.offset(y = (-32).dp)
                     )
 
                     Text(
@@ -242,7 +242,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             color = secondaryTextColor,
                             fontSize = 14.sp
                         ),
-                        modifier = Modifier.offset(y = (-12).dp)
+                        modifier = Modifier.offset(y = (-28).dp)
                     )
                 }
 
