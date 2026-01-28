@@ -44,9 +44,15 @@ class MessageViewModel(
     private val _chatNavigation = mutableStateOf<ChatNavigation?>(null)
     val chatNavigation: State<ChatNavigation?> = _chatNavigation
 
+    private val _unreadCounts = mutableStateOf<Map<String, Int>>(emptyMap())
+    val unreadCounts: State<Map<String, Int>> = _unreadCounts
+
+    private var stopUnreadListener: (() -> Unit)? = null
+
     init {
         loadCurrentUser()
         loadUsers()
+        startUnreadCountsListener()
     }
 
     private fun loadCurrentUser() {
@@ -141,6 +147,20 @@ class MessageViewModel(
 
     fun getLocalUserId(context: android.content.Context): String {
         return repository.getOrCreateLocalUserId(context)
+    }
+
+    private fun startUnreadCountsListener() {
+        val uid = _currentUser.value?.userId ?: return
+        stopUnreadListener?.invoke()
+        stopUnreadListener = repository.listenToPerChatUnreadCounts(uid) { perChat ->
+            _unreadCounts.value = perChat
+        }
+    }
+
+    override fun onCleared() {
+        stopUnreadListener?.invoke()
+        stopUnreadListener = null
+        super.onCleared()
     }
 }
 
