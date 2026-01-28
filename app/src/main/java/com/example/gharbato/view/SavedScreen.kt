@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -55,6 +56,10 @@ fun SavedScreenContent(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // State for unsave confirmation dialog
+    var showUnsaveDialog by remember { mutableStateOf(false) }
+    var propertyToUnsave by remember { mutableStateOf<PropertyModel?>(null) }
 
     // Colors based on theme - from 1st and 2nd codes
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA)
@@ -146,7 +151,8 @@ fun SavedScreenContent(
                                         context.startActivity(intent)
                                     },
                                     onRemoveClick = {
-                                        viewModel.removeFromSaved(property.id)
+                                        propertyToUnsave = property
+                                        showUnsaveDialog = true
                                     },
                                     isDarkMode = isDarkMode,
                                     cardBackgroundColor = cardBackgroundColor,
@@ -193,6 +199,23 @@ fun SavedScreenContent(
                 }
             }
         }
+    }
+
+    // Unsave Confirmation Dialog
+    if (showUnsaveDialog && propertyToUnsave != null) {
+        UnsavePropertyConfirmDialog(
+            propertyTitle = propertyToUnsave!!.developer.ifBlank { propertyToUnsave!!.title },
+            isDarkMode = isDarkMode,
+            onConfirm = {
+                viewModel.removeFromSaved(propertyToUnsave!!.id)
+                showUnsaveDialog = false
+                propertyToUnsave = null
+            },
+            onDismiss = {
+                showUnsaveDialog = false
+                propertyToUnsave = null
+            }
+        )
     }
 }
 
@@ -516,4 +539,124 @@ fun PropertyStat(
             color = iconColor
         )
     }
+}
+
+@Composable
+fun UnsavePropertyConfirmDialog(
+    propertyTitle: String,
+    isDarkMode: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = backgroundColor,
+        icon = {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFFFEBEE),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.HeartBroken,
+                        contentDescription = null,
+                        tint = Color(0xFFE91E63),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        },
+        title = {
+            Text(
+                text = "Remove from Saved?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = textColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Are you sure you want to remove \"$propertyTitle\" from your saved properties?",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = Color(0xFFFFC107),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "You can always save it again from the property details.",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFE91E63),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Remove",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+                ),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(
+                    text = "Keep",
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    )
 }
