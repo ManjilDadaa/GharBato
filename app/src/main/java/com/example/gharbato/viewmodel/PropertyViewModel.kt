@@ -9,6 +9,7 @@ import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SortOption
+import com.example.gharbato.repository.HiddenPropertiesRepository
 import com.example.gharbato.repository.SavedPropertiesRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Job
@@ -53,6 +54,7 @@ data class SearchLocation(
 class PropertyViewModel(
     private val repository: PropertyRepo,
     private val savedPropertiesRepository: SavedPropertiesRepository,
+    private val hiddenPropertiesRepository: HiddenPropertiesRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PropertyUiState())
@@ -61,8 +63,39 @@ class PropertyViewModel(
     private var searchJob: Job? = null
 
     init {
+        loadHiddenProperties()
         loadProperties()
         observeSavedProperties()
+        observeHiddenProperties()
+    }
+
+    private fun loadHiddenProperties() {
+        viewModelScope.launch {
+            val hiddenIds = hiddenPropertiesRepository.getHiddenPropertyIds()
+            _uiState.value = _uiState.value.copy(hiddenPropertyIds = hiddenIds)
+            Log.d(TAG, "Loaded ${hiddenIds.size} hidden property IDs")
+        }
+    }
+
+    private fun observeHiddenProperties() {
+        viewModelScope.launch {
+            hiddenPropertiesRepository.getHiddenPropertyIdsFlow().collect { hiddenIds ->
+                _uiState.value = _uiState.value.copy(hiddenPropertyIds = hiddenIds)
+
+                // Re-filter properties when hidden list changes
+                val filteredProperties = _uiState.value.allLoadedProperties.filter {
+                    !hiddenIds.contains(it.id)
+                }
+                val displayProperties = _uiState.value.properties.filter {
+                    !hiddenIds.contains(it.id)
+                }
+
+                _uiState.value = _uiState.value.copy(
+                    allLoadedProperties = filteredProperties,
+                    properties = displayProperties
+                )
+            }
+        }
     }
 
     fun loadProperties() {
@@ -75,19 +108,23 @@ class PropertyViewModel(
                 // Get current user ID to filter out their own properties
                 val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
-                // Filter out SOLD properties and user's own properties
+                // Get hidden property IDs
+                val hiddenIds = _uiState.value.hiddenPropertyIds
+
+                // Filter out SOLD properties, user's own properties, and hidden properties
                 val availableProperties = properties.filter { property ->
                     property.propertyStatus != "SOLD" &&
-                    (currentUserId == null || property.ownerId != currentUserId)
+                    (currentUserId == null || property.ownerId != currentUserId) &&
+                    !hiddenIds.contains(property.id)
                 }
 
-                Log.d(TAG, "Filtered out user's own properties. Current user: $currentUserId")
+                Log.d(TAG, "Filtered out user's own properties and ${hiddenIds.size} hidden properties. Current user: $currentUserId")
 
                 val propertiesWithFavorites = availableProperties.map { property ->
                     property.copy(isFavorite = savedPropertiesRepository.isPropertySaved(property.id))
                 }
 
-                Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties (excluding own)")
+                Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties (excluding own and hidden)")
 
                 _uiState.value = _uiState.value.copy(
                     allLoadedProperties = propertiesWithFavorites
@@ -622,22 +659,39 @@ class PropertyViewModel(
 
     /**
      * Hides a property from the user's feed (Not Interested)
-     * The property will be filtered out from all views until the app is restarted
+     * Persists to Firebase so it stays hidden across sessions
      */
     fun hideProperty(propertyId: Int) {
         Log.d(TAG, "Hiding property: $propertyId")
 
-        val updatedHiddenIds = _uiState.value.hiddenPropertyIds + propertyId
+        viewModelScope.launch {
+            // Persist to Firebase
+            hiddenPropertiesRepository.hideProperty(propertyId)
 
-        // Filter out the hidden property from current properties list
-        val updatedProperties = _uiState.value.properties.filter { it.id != propertyId }
-        val updatedAllLoaded = _uiState.value.allLoadedProperties.filter { it.id != propertyId }
+            // Update local state immediately for responsive UI
+            val updatedHiddenIds = _uiState.value.hiddenPropertyIds + propertyId
+            val updatedProperties = _uiState.value.properties.filter { it.id != propertyId }
+            val updatedAllLoaded = _uiState.value.allLoadedProperties.filter { it.id != propertyId }
 
-        _uiState.value = _uiState.value.copy(
-            hiddenPropertyIds = updatedHiddenIds,
-            properties = updatedProperties,
-            allLoadedProperties = updatedAllLoaded
-        )
+            _uiState.value = _uiState.value.copy(
+                hiddenPropertyIds = updatedHiddenIds,
+                properties = updatedProperties,
+                allLoadedProperties = updatedAllLoaded
+            )
+        }
+    }
+
+    /**
+     * Unhides a property (restores it to the user's feed)
+     */
+    fun unhideProperty(propertyId: Int) {
+        Log.d(TAG, "Unhiding property: $propertyId")
+
+        viewModelScope.launch {
+            hiddenPropertiesRepository.unhideProperty(propertyId)
+            // Reload properties to include the unhidden one
+            loadProperties()
+        }
     }
 
     /**
