@@ -9,5 +9,7 @@ data class SupportMessage(
     val senderImage: String = "",
     val message: String = "",
     val timestamp: Long = 0L,
-    val isAdmin: Boolean = false
+    val isAdmin: Boolean = false,
+    val isDelivered: Boolean = false,  // Message delivered to recipient's device
+    val isRead: Boolean = false        // Message has been read/seen by recipient
 )
