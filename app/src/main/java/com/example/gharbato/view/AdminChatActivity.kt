@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.*
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.gharbato.R
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
@@ -101,11 +105,13 @@ fun AdminChatScreen(
     var displayEmail by remember { mutableStateOf(userEmail) }
     var displayPhone by remember { mutableStateOf(userPhone) }
     var displayImage by remember { mutableStateOf(userImage) }
+    var isUserOnline by remember { mutableStateOf(false) }
 
     // Initialize Firebase Database
     val database = FirebaseDatabase.getInstance("https://gharbatodb-default-rtdb.firebaseio.com")
     val messagesRef = database.getReference("support_messages").child(userId)
     val usersRef = database.getReference("Users")
+    val userPresenceRef = database.getReference("user_presence").child(userId)
 
     val listState = rememberLazyListState()
 
@@ -135,6 +141,20 @@ fun AdminChatScreen(
                     if (profileImage.isNotEmpty()) displayImage = profileImage
                     if (email.isNotEmpty()) displayEmail = email
                     if (phone.isNotEmpty()) displayPhone = phone
+                }
+
+                override fun onCancelled(error: DatabaseError) {}
+            })
+        }
+    }
+
+    // Listen to user online status
+    LaunchedEffect(userId) {
+        if (userId.isNotEmpty()) {
+            userPresenceRef.addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val online = snapshot.child("online").getValue(Boolean::class.java) ?: false
+                    isUserOnline = online
                 }
 
                 override fun onCancelled(error: DatabaseError) {}
@@ -258,7 +278,7 @@ fun AdminChatScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clip(CircleShape)
-                                    .background(Color(0xFF4CAF50))
+                                    .background(if (isUserOnline) Color(0xFF4CAF50) else Color(0xFF9E9E9E))
                             )
                         }
                     }
@@ -286,13 +306,13 @@ fun AdminChatScreen(
                                 modifier = Modifier
                                     .size(8.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF4CAF50))
+                                    .background(if (isUserOnline) Color(0xFF4CAF50) else Color(0xFF9E9E9E))
                             )
                             Text(
-                                text = "Online",
+                                text = if (isUserOnline) "Online" else "Offline",
                                 style = TextStyle(
                                     fontSize = 12.sp,
-                                    color = Color(0xFF4CAF50)
+                                    color = if (isUserOnline) Color(0xFF4CAF50) else Color(0xFF9E9E9E)
                                 )
                             )
                         }
@@ -438,7 +458,8 @@ fun AdminChatScreen(
                             AdminMessageBubble(
                                 message = message,
                                 userName = displayName,
-                                isDarkMode = isDarkMode
+                                isDarkMode = isDarkMode,
+                                isUserOnline = isUserOnline
                             )
                         }
                     }
@@ -524,7 +545,9 @@ fun AdminChatScreen(
                                         senderImage = "",
                                         message = messageText.trim(),
                                         timestamp = System.currentTimeMillis(),
-                                        isAdmin = true
+                                        isAdmin = true,
+                                        isDelivered = false,
+                                        isRead = false
                                     )
 
                                     messagesRef.child(messageId).setValue(newMessage)
@@ -574,12 +597,17 @@ fun AdminChatScreen(
 fun AdminMessageBubble(
     message: SupportMessage,
     userName: String,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    isUserOnline: Boolean = false
 ) {
     val textColor = MaterialTheme.colorScheme.onBackground
 
     // Admin messages come from senderId = "admin" OR isAdmin = true
     val isAdminMessage = message.isAdmin || message.senderId == "admin"
+
+    // Define tick colors
+    val greyTickColor = Color(0xFF9E9E9E)
+    val blueTickColor = Blue
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -631,7 +659,7 @@ fun AdminMessageBubble(
             }
         }
 
-        // Timestamp
+        // Timestamp and read receipt
         Row(
             modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -645,16 +673,40 @@ fun AdminMessageBubble(
                 )
             )
 
-            // Delivery indicator for admin messages
+            // Read receipt indicators for admin messages only
+            // Single grey tick (✓) = Sent (message not yet delivered/seen)
+            // Double grey tick (✓✓) = Delivered (user is online but hasn't read)
+            // Double blue tick (✓✓) = Read (user has seen the message)
             if (isAdminMessage) {
-                Text(
-                    text = "✓✓",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Blue.copy(alpha = 0.7f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp
-                    )
-                )
+                when {
+                    message.isRead -> {
+                        // Double blue tick - Message has been read
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Read",
+                            modifier = Modifier.size(16.dp),
+                            tint = blueTickColor
+                        )
+                    }
+                    message.isDelivered || isUserOnline -> {
+                        // Double grey tick - Message delivered or user is online
+                        Icon(
+                            imageVector = Icons.Default.DoneAll,
+                            contentDescription = "Delivered",
+                            modifier = Modifier.size(16.dp),
+                            tint = greyTickColor
+                        )
+                    }
+                    else -> {
+                        // Single grey tick - Message sent but not delivered
+                        Icon(
+                            imageVector = Icons.Default.Done,
+                            contentDescription = "Sent",
+                            modifier = Modifier.size(16.dp),
+                            tint = greyTickColor
+                        )
+                    }
+                }
             }
         }
     }
