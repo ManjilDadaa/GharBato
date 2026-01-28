@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -194,6 +195,8 @@ fun SearchScreen(
     var isSearchBarFocused by remember { mutableStateOf(false) }
     var showReportDialog by remember { mutableStateOf(false) }
     var propertyToReport by remember { mutableStateOf<PropertyModel?>(null) }
+    var showHideConfirmDialog by remember { mutableStateOf(false) }
+    var propertyToHide by remember { mutableStateOf<PropertyModel?>(null) }
 
     // Report ViewModel
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
@@ -491,8 +494,8 @@ fun SearchScreen(
                                     showReportDialog = true
                                 },
                                 onHideClick = { property ->
-                                    viewModel.hideProperty(property.id)
-                                    Toast.makeText(context, "Property hidden from your feed", Toast.LENGTH_SHORT).show()
+                                    propertyToHide = property
+                                    showHideConfirmDialog = true
                                 },
                                 isDarkMode = isDarkMode
                             )
@@ -577,6 +580,24 @@ fun SearchScreen(
             }
         )
     }
+
+    // Hide Property Confirmation Dialog
+    if (showHideConfirmDialog && propertyToHide != null) {
+        HidePropertyConfirmDialog(
+            propertyTitle = propertyToHide!!.title,
+            isDarkMode = isDarkMode,
+            onConfirm = {
+                viewModel.hideProperty(propertyToHide!!.id)
+                showHideConfirmDialog = false
+                propertyToHide = null
+                Toast.makeText(context, "Property hidden from your feed", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = {
+                showHideConfirmDialog = false
+                propertyToHide = null
+            }
+        )
+    }
 }
 
 // Helper function to convert PropertyFilters to Map for storage
@@ -600,6 +621,126 @@ private fun convertFiltersToMap(filters: com.example.gharbato.model.PropertyFilt
     }
 
     return map
+}
+
+@Composable
+fun HidePropertyConfirmDialog(
+    propertyTitle: String,
+    isDarkMode: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = backgroundColor,
+        icon = {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFFFF3E0),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9800),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        },
+        title = {
+            Text(
+                text = "Hide This Property?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = textColor,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "You won't see \"$propertyTitle\" in your feed anymore.",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "This action cannot be undone from the app.",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF9800),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VisibilityOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Hide Property",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+                ),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    )
 }
 
 @Composable
