@@ -12,14 +12,10 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,10 +25,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -58,8 +52,6 @@ fun SplashScreen(isDarkMode: Boolean = false) {
     val logoAlpha = remember { Animatable(0f) }
     val logoScale = remember { Animatable(0.5f) }
     val logoRotation = remember { Animatable(-10f) }
-    val textAlpha = remember { Animatable(0f) }
-    val textSlideUp = remember { Animatable(30f) }
 
     LaunchedEffect(Unit) {
         launch {
@@ -100,21 +92,6 @@ fun SplashScreen(isDarkMode: Boolean = false) {
             )
         }
 
-        // Delay text animation
-        delay(400)
-        launch {
-            textAlpha.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 600)
-            )
-        }
-        launch {
-            textSlideUp.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(durationMillis = 600)
-            )
-        }
-
         delay(1800)
 
         val sharedPreferences = context.getSharedPreferences("user_prefs", android.content.Context.MODE_PRIVATE)
@@ -135,7 +112,6 @@ fun SplashScreen(isDarkMode: Boolean = false) {
 
     val backgroundColorStart = if (isDarkMode) Color(0xFF121212) else Color(0xFFF8F9FA)
     val backgroundColorEnd = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val textColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF0066CC)
 
     Box(
         modifier = Modifier
@@ -161,17 +137,6 @@ fun SplashScreen(isDarkMode: Boolean = false) {
                     .alpha(logoAlpha.value)
                     .scale(logoScale.value)
             )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Find Your Dream Home",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = textColor,
-                modifier = Modifier
-                    .alpha(textAlpha.value)
-            )
         }
     }
 }
@@ -194,15 +159,6 @@ fun SplashScreenPreview() {
                 painter = painterResource(id = R.drawable.gharbato_logo),
                 contentDescription = "Gharbato Logo",
                 modifier = Modifier.size(280.dp)
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            Text(
-                text = "Find Your Dream Home",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF0066CC)
             )
         }
     }
