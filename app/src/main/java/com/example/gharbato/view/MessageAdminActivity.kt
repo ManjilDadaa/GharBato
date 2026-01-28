@@ -21,10 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.gharbato.model.SupportMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
@@ -71,8 +74,10 @@ fun MessageAdminScreen() {
     val database = FirebaseDatabase.getInstance()
     val messagesRef = database.getReference("support_messages").child(currentUserId)
     val usersRef = database.getReference("users").child(currentUserId)
+    val userPresenceRef = database.getReference("user_presence").child(currentUserId)
 
     val listState = rememberLazyListState()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     var userProfile by remember { mutableStateOf<Map<String, Any>?>(null) }
 
@@ -80,6 +85,41 @@ fun MessageAdminScreen() {
     val backgroundColor = MaterialTheme.colorScheme.background
     val textColor = MaterialTheme.colorScheme.onBackground
     val surfaceColor = MaterialTheme.colorScheme.surface
+
+    // Set user online presence when entering/leaving the chat
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    // User is in the chat - set online status
+                    if (currentUserId.isNotEmpty()) {
+                        userPresenceRef.child("online").setValue(true)
+                        userPresenceRef.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+                        // Set onDisconnect to update when user leaves
+                        userPresenceRef.child("online").onDisconnect().setValue(false)
+                        userPresenceRef.child("lastSeen").onDisconnect().setValue(ServerValue.TIMESTAMP)
+                    }
+                }
+                Lifecycle.Event.ON_PAUSE -> {
+                    // User left the chat - set offline status
+                    if (currentUserId.isNotEmpty()) {
+                        userPresenceRef.child("online").setValue(false)
+                        userPresenceRef.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+                    }
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            // Ensure offline status is set when composable is disposed
+            if (currentUserId.isNotEmpty()) {
+                userPresenceRef.child("online").setValue(false)
+                userPresenceRef.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+            }
+        }
+    }
 
     // Load user profile
     LaunchedEffect(Unit) {
@@ -91,14 +131,25 @@ fun MessageAdminScreen() {
         })
     }
 
-    // Load messages from Firebase
+    // Load messages from Firebase and mark admin messages as read
     LaunchedEffect(Unit) {
         messagesRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val loadedMessages = mutableListOf<SupportMessage>()
                 snapshot.children.forEach { data ->
                     val message = data.getValue(SupportMessage::class.java)
-                    message?.let { loadedMessages.add(it) }
+                    message?.let {
+                        loadedMessages.add(it)
+
+                        // Mark admin messages as read and delivered when user views them
+                        if (it.isAdmin && (!it.isRead || !it.isDelivered)) {
+                            val updates = hashMapOf<String, Any>(
+                                "isRead" to true,
+                                "isDelivered" to true
+                            )
+                            data.ref.updateChildren(updates)
+                        }
+                    }
                 }
                 messages = loadedMessages.sortedBy { it.timestamp }
                 isLoading = false
