@@ -1,18 +1,77 @@
 package com.example.gharbato.view
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -23,16 +82,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.Gray
-import com.example.gharbato.view.ui.theme.ReportedRed
 import com.example.gharbato.viewmodel.AdminDeleteViewModel
 import com.example.gharbato.viewmodel.AdminDeleteViewModelFactory
 import com.example.gharbato.viewmodel.DeletionRecord
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+// Modern color palette for Delete Screen
+private val DeleteRed = Color(0xFFE53935)
+private val DarkRed = Color(0xFFC62828)
+private val RestoreGreen = Color(0xFF43A047)
+private val DarkGreen = Color(0xFF2E7D32)
+private val BackgroundGray = Color(0xFFF5F7FA)
+private val CardWhite = Color(0xFFFFFFFF)
+private val TextPrimary = Color(0xFF1A1A2E)
+private val TextSecondary = Color(0xFF6B7280)
+private val WarningOrange = Color(0xFFFF9800)
+
 @Composable
 fun AdminDeleteScreen() {
     val viewModel: AdminDeleteViewModel = viewModel(
@@ -44,7 +112,6 @@ fun AdminDeleteScreen() {
     var selectedTab by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
 
-    // Show success/error messages
     LaunchedEffect(uiState.successMessage, uiState.error) {
         uiState.successMessage?.let {
             viewModel.clearMessages()
@@ -54,109 +121,207 @@ fun AdminDeleteScreen() {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "Delete Management",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            "Manage rejected properties",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                    }
-                },
-                actions = {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier.padding(12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "${uiState.rejectedProperties.size}",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = ReportedRed
-                )
-            )
-        }
-    ) { padding ->
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundGray)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5))
-                .padding(top = padding.calculateTopPadding())
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
+            // Custom Header with Gradient
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(DeleteRed, DarkRed)
+                        )
+                    )
+                    .padding(horizontal = 20.dp, vertical = 16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Delete Management",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Manage rejected properties",
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.8f)
+                            )
+                        }
+                    }
+
+                    // Count Badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.2f))
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${uiState.rejectedProperties.size}",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+
             // Search Bar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
-                shadowElevation = 2.dp
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    placeholder = { Text(if (selectedTab == 0) "Search by title, location, or owner..." else "Search by title or owner...") },
+                        .padding(4.dp),
+                    placeholder = {
+                        Text(
+                            if (selectedTab == 0) "Search by title, location, or owner..."
+                            else "Search by title or owner...",
+                            color = TextSecondary
+                        )
+                    },
                     leadingIcon = {
-                        Icon(Icons.Default.Search, null, tint = Gray)
+                        Icon(
+                            Icons.Default.Search,
+                            null,
+                            tint = DeleteRed
+                        )
                     },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Close, null)
+                                Icon(
+                                    Icons.Default.Close,
+                                    null,
+                                    tint = TextSecondary
+                                )
                             }
                         }
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Red,
-                        unfocusedBorderColor = Color(0xFFE0E0E0)
+                        focusedBorderColor = Color.Transparent,
+                        unfocusedBorderColor = Color.Transparent,
+                        cursorColor = DeleteRed
                     ),
-                    shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
             }
 
-            // Tabs
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.White,
-                contentColor = Color.Red
+            // Enhanced Tabs
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardWhite),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Tab(
-                    selected = selectedTab == 0,
-                    onClick = { selectedTab = 0 },
-                    text = {
-                        Text("Rejected Properties (${uiState.rejectedProperties.size})")
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    containerColor = Color.Transparent,
+                    contentColor = DeleteRed,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            modifier = Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .padding(horizontal = 24.dp),
+                            height = 3.dp,
+                            color = DeleteRed
+                        )
+                    },
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Cancel,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (selectedTab == 0) DeleteRed else TextSecondary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "Rejected (${uiState.rejectedProperties.size})",
+                                fontWeight = if (selectedTab == 0) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (selectedTab == 0) DeleteRed else TextSecondary,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
-                )
-                Tab(
-                    selected = selectedTab == 1,
-                    onClick = { selectedTab = 1 },
-                    text = {
-                        Text("Delete History (${uiState.deletionHistory.size})")
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 12.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.History,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = if (selectedTab == 1) DeleteRed else TextSecondary
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "History (${uiState.deletionHistory.size})",
+                                fontWeight = if (selectedTab == 1) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (selectedTab == 1) DeleteRed else TextSecondary,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
-                )
+                }
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Content
             Box(
@@ -170,8 +335,8 @@ fun AdminDeleteScreen() {
                             } else {
                                 uiState.rejectedProperties.filter {
                                     it.title.contains(searchQuery, ignoreCase = true) ||
-                                    it.location.contains(searchQuery, ignoreCase = true) ||
-                                    it.ownerName.contains(searchQuery, ignoreCase = true)
+                                            it.location.contains(searchQuery, ignoreCase = true) ||
+                                            it.ownerName.contains(searchQuery, ignoreCase = true)
                                 }
                             }
                         }
@@ -208,60 +373,106 @@ fun RejectedPropertiesTab(
     ) {
         when {
             isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            error != null -> {
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.ErrorOutline,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Red
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        error,
-                        color = Color.Red,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-            properties.isEmpty() -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Color(0xFF4CAF50).copy(alpha = 0.3f)
+                    CircularProgressIndicator(
+                        color = DeleteRed,
+                        strokeWidth = 3.dp
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "No rejected properties",
+                        "Loading properties...",
+                        color = TextSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            error != null -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(DeleteRed.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp),
+                            tint = DeleteRed
+                        )
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Something went wrong",
                         fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Gray
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        error,
+                        color = TextSecondary,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            properties.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(RestoreGreen.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(50.dp),
+                            tint = RestoreGreen
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        "All Clear!",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "No rejected properties",
+                        fontSize = 16.sp,
+                        color = TextSecondary
                     )
                     Text(
                         "All properties are either pending or approved",
                         fontSize = 14.sp,
-                        color = Gray.copy(alpha = 0.7f)
+                        color = TextSecondary.copy(alpha = 0.7f)
                     )
                 }
             }
+
             else -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(properties) { property ->
                         RejectedPropertyCard(
@@ -269,6 +480,9 @@ fun RejectedPropertiesTab(
                             onDelete = { onDelete(property.id) },
                             onRestore = { onRestore(property.id) }
                         )
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -291,35 +505,56 @@ fun RejectedPropertyCard(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             icon = {
-                Icon(
-                    Icons.Default.DeleteForever,
-                    contentDescription = null,
-                    tint = Color.Red,
-                    modifier = Modifier.size(48.dp)
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(DeleteRed.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.DeleteForever,
+                        contentDescription = null,
+                        tint = DeleteRed,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    "Permanently Delete?",
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
             },
-            title = { Text("Permanently Delete?", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("This action cannot be undone!")
-                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "Property: ${property.title}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Owner: ${property.ownerName}",
-                        fontSize = 13.sp,
-                        color = Gray
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "The property will be permanently removed from the database.",
-                        fontSize = 12.sp,
-                        color = Color.Red,
+                        "This action cannot be undone!",
+                        color = DeleteRed,
                         fontWeight = FontWeight.Medium
                     )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = BackgroundGray
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                property.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "Owner: ${property.ownerName}",
+                                fontSize = 13.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -329,19 +564,21 @@ fun RejectedPropertyCard(
                         showDeleteDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Red
-                    )
+                        containerColor = DeleteRed
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.DeleteForever, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text("Delete Permanently")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TextSecondary)
                 }
-            }
+            },
+            shape = RoundedCornerShape(20.dp)
         )
     }
 
@@ -349,16 +586,51 @@ fun RejectedPropertyCard(
     if (showRestoreDialog) {
         AlertDialog(
             onDismissRequest = { showRestoreDialog = false },
-            title = { Text("Restore Property?") },
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(CircleShape)
+                        .background(RestoreGreen.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Restore,
+                        contentDescription = null,
+                        tint = RestoreGreen,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    "Restore Property?",
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            },
             text = {
                 Column {
-                    Text("This will move the property back to pending status for review.")
-                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "Property: ${property.title}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        "This will move the property back to pending status for review.",
+                        color = TextSecondary
                     )
+                    Spacer(Modifier.height(12.dp))
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = BackgroundGray
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                property.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -368,27 +640,35 @@ fun RejectedPropertyCard(
                         showRestoreDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF4CAF50)
-                    )
+                        containerColor = RestoreGreen
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Icon(Icons.Default.Restore, null, Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text("Restore")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRestoreDialog = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = TextSecondary)
                 }
-            }
+            },
+            shape = RoundedCornerShape(20.dp)
         )
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 4.dp,
+                shape = RoundedCornerShape(20.dp),
+                ambientColor = DeleteRed.copy(alpha = 0.1f),
+                spotColor = DeleteRed.copy(alpha = 0.1f)
+            ),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
     ) {
         Column {
             // Property Image with Rejected Overlay
@@ -399,49 +679,61 @@ fun RejectedPropertyCard(
                         contentDescription = null,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp),
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(150.dp)
-                            .background(Gray.copy(alpha = 0.2f)),
+                            .height(160.dp)
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Gray.copy(alpha = 0.1f),
+                                        Gray.copy(alpha = 0.2f)
+                                    )
+                                )
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             Icons.Default.Home,
                             contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Gray
+                            modifier = Modifier.size(56.dp),
+                            tint = Gray.copy(alpha = 0.5f)
                         )
                     }
                 }
 
                 // Rejected Badge
-                Surface(
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(12.dp),
-                    color = Color.Red,
-                    shape = RoundedCornerShape(8.dp)
+                        .padding(12.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(DeleteRed, DarkRed)
+                            )
+                        )
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.Cancel,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             "REJECTED",
                             color = Color.White,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -454,68 +746,72 @@ fun RejectedPropertyCard(
                     property.title,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
+                    color = TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(6.dp))
 
                 // Location
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.LocationOn,
                         null,
-                        tint = Gray,
+                        tint = DeleteRed,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         property.location,
                         fontSize = 13.sp,
-                        color = Gray
+                        color = TextSecondary
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
 
                 // Owner Info
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        modifier = Modifier.size(40.dp),
-                        shape = CircleShape,
-                        color = Color.Red.copy(alpha = 0.1f)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(DeleteRed.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            if (property.ownerImageUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = property.ownerImageUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Text(
-                                    property.ownerName.firstOrNull()?.toString() ?: "?",
-                                    color = Color.Red,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 18.sp
-                                )
-                            }
+                        if (property.ownerImageUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = property.ownerImageUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Text(
+                                property.ownerName.firstOrNull()?.toString() ?: "?",
+                                color = DeleteRed,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp
+                            )
                         }
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(12.dp))
 
                     Column {
                         Text(
                             property.ownerName,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 14.sp
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = TextPrimary
                         )
                         Text(
                             property.ownerEmail,
                             fontSize = 12.sp,
-                            color = Gray
+                            color = TextSecondary
                         )
                     }
                 }
@@ -523,49 +819,72 @@ fun RejectedPropertyCard(
                 // Expandable Details
                 AnimatedVisibility(visible = showDetails) {
                     Column {
-                        HorizontalDivider(Modifier.padding(vertical = 12.dp))
+                        Spacer(Modifier.height(16.dp))
+                        HorizontalDivider(color = BackgroundGray)
+                        Spacer(Modifier.height(16.dp))
 
+                        // Property Stats
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            PropertyInfo("Price", property.price)
-                            PropertyInfo("Bedrooms", "${property.bedrooms}")
-                            PropertyInfo("Bathrooms", "${property.bathrooms}")
+                            PropertyStatItem("Price", property.price, DeleteRed)
+                            PropertyStatItem("Beds", "${property.bedrooms}", TextPrimary)
+                            PropertyStatItem("Baths", "${property.bathrooms}", TextPrimary)
                         }
 
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(16.dp))
 
-                        PropertyInfo("Type", property.propertyType)
-                        PropertyInfo("Market", property.marketType)
-                        PropertyInfo("Area", property.sqft)
+                        // Additional Info
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = BackgroundGray),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                PropertyDetailRow("Type", property.propertyType)
+                                PropertyDetailRow("Market", property.marketType)
+                                PropertyDetailRow("Area", property.sqft)
+                            }
+                        }
 
                         if (property.description?.isNotEmpty() == true) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(12.dp))
                             Text(
-                                "Description:",
+                                "Description",
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Gray
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
                             )
+                            Spacer(Modifier.height(4.dp))
                             Text(
                                 property.description ?: "",
                                 fontSize = 13.sp,
-                                color = Color.DarkGray
+                                color = TextPrimary
                             )
                         }
 
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
 
                         // Rejected Date
                         val dateFormat = SimpleDateFormat("MMM dd, yyyy 'at' hh:mm a", Locale.getDefault())
                         val rejectedDate = dateFormat.format(Date(property.createdAt))
 
-                        Text(
-                            "Rejected: $rejectedDate",
-                            fontSize = 12.sp,
-                            color = Color.Red
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.History,
+                                null,
+                                tint = WarningOrange,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                "Rejected: $rejectedDate",
+                                fontSize = 12.sp,
+                                color = WarningOrange
+                            )
+                        }
                     }
                 }
 
@@ -574,13 +893,16 @@ fun RejectedPropertyCard(
                 // Action Buttons
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     // More/Less button
                     OutlinedButton(
                         onClick = { showDetails = !showDetails },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = TextSecondary
+                        )
                     ) {
                         Icon(
                             if (showDetails) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -598,54 +920,124 @@ fun RejectedPropertyCard(
                     // Restore and Delete buttons
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Button(
+                        ActionButton(
+                            text = "Restore",
+                            icon = Icons.Default.Restore,
+                            gradientColors = listOf(RestoreGreen, DarkGreen),
                             onClick = { showRestoreDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF4CAF50)
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(vertical = 12.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Restore,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "Restore",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            modifier = Modifier.weight(1f)
+                        )
 
-                        Button(
+                        ActionButton(
+                            text = "Delete",
+                            icon = Icons.Default.DeleteForever,
+                            gradientColors = listOf(DeleteRed, DarkRed),
                             onClick = { showDeleteDialog = true },
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Red
-                            ),
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(vertical = 12.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.DeleteForever,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                "Delete",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PropertyStatItem(
+    label: String,
+    value: String,
+    valueColor: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = valueColor
+        )
+        Text(
+            label,
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+    }
+}
+
+@Composable
+private fun PropertyDetailRow(
+    label: String,
+    value: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            label,
+            fontSize = 13.sp,
+            color = TextSecondary
+        )
+        Text(
+            value,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun ActionButton(
+    text: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    gradientColors: List<Color>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = tween(durationMillis = 100),
+        label = "scale"
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                brush = Brush.horizontalGradient(colors = gradientColors)
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { onClick() }
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.White
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
         }
     }
 }
@@ -658,12 +1050,13 @@ fun PropertyInfo(label: String, value: String) {
         Text(
             label,
             fontSize = 12.sp,
-            color = Gray
+            color = TextSecondary
         )
         Text(
             value,
             fontSize = 14.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary
         )
     }
 }
@@ -682,7 +1075,7 @@ fun DeleteHistoryTab(searchQuery: String = "") {
         } else {
             uiState.deletionHistory.filter {
                 it.propertyTitle.contains(searchQuery, ignoreCase = true) ||
-                it.ownerName.contains(searchQuery, ignoreCase = true)
+                        it.ownerName.contains(searchQuery, ignoreCase = true)
             }
         }
     }
@@ -692,67 +1085,107 @@ fun DeleteHistoryTab(searchQuery: String = "") {
     ) {
         when {
             uiState.isLoading -> {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-            uiState.deletionHistory.isEmpty() -> {
                 Column(
                     modifier = Modifier.align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.History,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Gray.copy(alpha = 0.3f)
+                    CircularProgressIndicator(
+                        color = DeleteRed,
+                        strokeWidth = 3.dp
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(
-                        "No deletion history",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Gray
+                        "Loading history...",
+                        color = TextSecondary,
+                        fontSize = 14.sp
                     )
+                }
+            }
+
+            uiState.deletionHistory.isEmpty() -> {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(TextSecondary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.History,
+                            contentDescription = null,
+                            modifier = Modifier.size(50.dp),
+                            tint = TextSecondary.copy(alpha = 0.5f)
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
+                    Text(
+                        "No History Yet",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "Deleted properties will appear here",
                         fontSize = 14.sp,
-                        color = Gray.copy(alpha = 0.7f)
+                        color = TextSecondary
                     )
                 }
             }
+
             filteredHistory.isEmpty() -> {
                 Column(
-                    modifier = Modifier.align(Alignment.Center),
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.SearchOff,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Gray.copy(alpha = 0.3f)
-                    )
-                    Spacer(Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(100.dp)
+                            .clip(CircleShape)
+                            .background(TextSecondary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.SearchOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(50.dp),
+                            tint = TextSecondary.copy(alpha = 0.5f)
+                        )
+                    }
+                    Spacer(Modifier.height(20.dp))
                     Text(
-                        "No results found",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Gray
+                        "No Results",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "Try a different search term",
                         fontSize = 14.sp,
-                        color = Gray.copy(alpha = 0.7f)
+                        color = TextSecondary
                     )
                 }
             }
+
             else -> {
                 LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(filteredHistory) { record ->
                         DeletionHistoryCard(record)
+                    }
+                    item {
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
             }
@@ -763,60 +1196,57 @@ fun DeleteHistoryTab(searchQuery: String = "") {
 @Composable
 fun DeletionHistoryCard(record: DeletionRecord) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 2.dp,
+                shape = RoundedCornerShape(16.dp)
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = CardWhite)
     ) {
         Column(Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(DeleteRed.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.Red.copy(alpha = 0.1f),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.DeleteForever,
-                                contentDescription = null,
-                                tint = Color.Red,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        Icons.Default.DeleteForever,
+                        contentDescription = null,
+                        tint = DeleteRed,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-                    Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            record.propertyTitle,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            "by ${record.ownerName}",
-                            fontSize = 12.sp,
-                            color = Gray
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        record.propertyTitle,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "by ${record.ownerName}",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            HorizontalDivider()
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(16.dp))
+            HorizontalDivider(color = BackgroundGray)
+            Spacer(Modifier.height(16.dp))
 
             // Deletion Details
             Row(
@@ -827,12 +1257,13 @@ fun DeletionHistoryCard(record: DeletionRecord) {
                     Text(
                         "Deleted On",
                         fontSize = 11.sp,
-                        color = Gray
+                        color = TextSecondary
                     )
                     Text(
                         record.deletedDate,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
                     )
                 }
 
@@ -840,23 +1271,42 @@ fun DeletionHistoryCard(record: DeletionRecord) {
                     Text(
                         "Property ID",
                         fontSize = 11.sp,
-                        color = Gray
+                        color = TextSecondary
                     )
-                    Text(
-                        record.propertyId.toString(),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(BackgroundGray)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            "#${record.propertyId}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextPrimary
+                        )
+                    }
                 }
             }
 
             if (record.deletedBy.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Deleted by: ${record.deletedBy}",
-                    fontSize = 12.sp,
-                    color = Gray
-                )
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Home,
+                        null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Deleted by: ${record.deletedBy}",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
             }
         }
     }
