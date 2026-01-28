@@ -20,6 +20,7 @@ data class ChatMessage(
     val propertyBedrooms: Int = 0,
     val propertyBathrooms: Int = 0
 ) {
+    // Property card is valid if propertyId is non-zero (can be negative due to Int overflow) and title is not empty
     val hasPropertyCard: Boolean
-        get() = propertyId > 0 && propertyTitle.isNotEmpty()
+        get() = propertyId != 0 && propertyTitle.isNotEmpty()
 }
