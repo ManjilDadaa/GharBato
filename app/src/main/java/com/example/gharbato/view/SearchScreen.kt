@@ -54,9 +54,11 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SingleBed
+import androidx.compose.material.icons.filled.SquareFoot
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Bathtub
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -1307,27 +1309,46 @@ fun PropertyCard(
                     }
                 }
 
+                // Enhanced Stats Row with proper icons
                 Row(
-                    modifier = Modifier.align(Alignment.BottomStart)
-                        .background(overlayBackgroundColor, RoundedCornerShape(topEnd = 12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.8f)
+                                )
+                            )
+                        )
+                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Home, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(property.sqft, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    // Area Stat
+                    PropertyStatChip(
+                        icon = Icons.Default.SquareFoot,
+                        value = property.sqft,
+                        label = null,
+                        iconTint = Color(0xFF4CAF50)
+                    )
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                    // Bedrooms Stat
+                    PropertyStatChip(
+                        icon = Icons.Default.SingleBed,
+                        value = "${property.bedrooms}",
+                        label = "Beds",
+                        iconTint = Color(0xFF2196F3)
+                    )
 
-                    Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${property.bedrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${property.bathrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    // Bathrooms Stat
+                    PropertyStatChip(
+                        icon = Icons.Default.Bathtub,
+                        value = "${property.bathrooms}",
+                        label = "Baths",
+                        iconTint = Color(0xFF9C27B0)
+                    )
                 }
             }
 
@@ -1428,10 +1449,10 @@ fun PropertyDetailOverlay(
                         Text(property.location, fontSize = 14.sp, color = secondaryTextColor)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PropertyInfoChip(Icons.Default.Home, property.sqft, chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.Info, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.Star, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PropertyInfoChip(Icons.Default.SquareFoot, property.sqft, chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.SingleBed, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.Bathtub, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
                     }
                 }
 
@@ -1469,6 +1490,57 @@ fun PropertyInfoChip(
             Icon(icon, null, tint = contentColor, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(text, fontSize = 12.sp, color = contentColor)
+        }
+    }
+}
+
+@Composable
+fun PropertyStatChip(
+    icon: ImageVector,
+    value: String,
+    label: String?,
+    iconTint: Color
+) {
+    Surface(
+        color = Color.White.copy(alpha = 0.15f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Surface(
+                color = iconTint.copy(alpha = 0.2f),
+                shape = CircleShape,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = value,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 14.sp
+                )
+                if (label != null) {
+                    Text(
+                        text = label,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
+                        lineHeight = 11.sp
+                    )
+                }
+            }
         }
     }
 }
