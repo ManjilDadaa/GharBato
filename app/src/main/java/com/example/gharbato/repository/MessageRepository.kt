@@ -86,8 +86,14 @@ interface MessageRepository {
         property: PropertyModel
     )
 
+    // Per-chat unread counts
+    fun listenToPerChatUnreadCounts(
+        userId: String,
+        onChange: (Map<String, Int>) -> Unit
+    ): () -> Unit
 
 }
+
 
 class MessageRepositoryImpl : MessageRepository {
 
@@ -693,6 +699,39 @@ class MessageRepositoryImpl : MessageRepository {
         return {
             chatsRef.removeEventListener(listener)
         }
+    }
+
+    override fun listenToPerChatUnreadCounts(
+        userId: String,
+        onChange: (Map<String, Int>) -> Unit
+    ): () -> Unit {
+        val chatsRef = database.getReference("chats")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val perChat = mutableMapOf<String, Int>()
+                for (chatSnapshot in snapshot.children) {
+                    val chatId = chatSnapshot.key ?: continue
+                    if (chatId.contains(userId)) {
+                        val otherUserId = chatId.split("_").firstOrNull { it != userId } ?: continue
+                        var count = 0
+                        val messagesSnapshot = chatSnapshot.child("messages")
+                        for (msgSnapshot in messagesSnapshot.children) {
+                            try {
+                                val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                                if (msg != null && msg.senderId != userId && !msg.isRead) {
+                                    count++
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        perChat[otherUserId] = count
+                    }
+                }
+                onChange(perChat)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        chatsRef.addValueEventListener(listener)
+        return { chatsRef.removeEventListener(listener) }
     }
 
     override fun markMessagesAsRead(chatId: String, currentUserId: String) {

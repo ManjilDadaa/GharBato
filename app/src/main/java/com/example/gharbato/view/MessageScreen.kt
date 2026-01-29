@@ -84,6 +84,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
     val errorMessage by messageViewModel.errorMessage
     val currentUser by messageViewModel.currentUser
     val chatNavigation by messageViewModel.chatNavigation
+    val unreadCounts by messageViewModel.unreadCounts
     val context = LocalContext.current
     val activity = context as Activity
 
@@ -225,6 +226,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                             time = previewTime,
                             imageUrl = user.profileImageUrl,
                             isDarkMode = isDarkMode,
+                            unreadCount = unreadCounts[user.userId] ?: 0,
                             onClick = {
                                 messageViewModel.requestChatNavigation(user.userId, displayName, user.profileImageUrl)
                             }
@@ -243,6 +245,7 @@ fun ChatListItem(
     time: String,
     imageUrl: String,
     isDarkMode: Boolean,
+    unreadCount: Int,
     onClick: () -> Unit
 ) {
     Row(
@@ -252,28 +255,50 @@ fun ChatListItem(
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Avatar
+        // Avatar with unread badge
         Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0F0F0)),
+            modifier = Modifier.size(56.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (imageUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = imageUrl,
-                    contentDescription = name,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                Text(
-                    text = name.take(1).uppercase(),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                )
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .clip(CircleShape)
+                    .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0F0F0)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (imageUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(
+                        text = name.take(1).uppercase(),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                    )
+                }
+            }
+            if (unreadCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(18.dp)
+                        .clip(CircleShape)
+                        .background(Blue),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
