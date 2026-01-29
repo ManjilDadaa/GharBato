@@ -50,11 +50,18 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -96,9 +103,15 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.rememberAsyncImagePainter
+import android.widget.Toast
 import com.example.gharbato.model.PropertyModel
+import com.example.gharbato.model.ReportedProperty
+import com.example.gharbato.model.ReportStatus
 import com.example.gharbato.model.SortOption
+import com.example.gharbato.repository.ReportPropertyRepoImpl
 import com.example.gharbato.viewmodel.PropertyViewModel
+import com.example.gharbato.viewmodel.ReportViewModel
+import com.google.firebase.auth.FirebaseAuth
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.SearchHistoryViewModel
 import com.example.gharbato.viewmodel.SearchHistoryViewModelFactory
@@ -180,6 +193,13 @@ fun SearchScreen(
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
     var isSearchBarFocused by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
+    var propertyToReport by remember { mutableStateOf<PropertyModel?>(null) }
+    var showHideConfirmDialog by remember { mutableStateOf(false) }
+    var propertyToHide by remember { mutableStateOf<PropertyModel?>(null) }
+
+    // Report ViewModel
+    val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
 
     val listState = rememberLazyListState()
     val isScrolled = listState.firstVisibleItemIndex > 0 ||
@@ -453,6 +473,30 @@ fun SearchScreen(
                                 onFavoriteClick = { property ->
                                     viewModel.toggleFavorite(property)
                                 },
+                                onShareClick = { property ->
+                                    val shareText = buildString {
+                                        append("🏠 ${property.title}\n\n")
+                                        append("💰 ${property.price}\n")
+                                        append("📍 ${property.location}\n")
+                                        append("🛏️ ${property.bedrooms} Beds • 🚿 ${property.bathrooms} Baths\n")
+                                        append("📐 ${property.sqft}\n\n")
+                                        append("Check out this property on GharBato!")
+                                    }
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_TEXT, shareText)
+                                        putExtra(Intent.EXTRA_SUBJECT, "Property: ${property.title}")
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Property"))
+                                },
+                                onReportClick = { property ->
+                                    propertyToReport = property
+                                    showReportDialog = true
+                                },
+                                onHideClick = { property ->
+                                    propertyToHide = property
+                                    showHideConfirmDialog = true
+                                },
                                 isDarkMode = isDarkMode
                             )
                         }
@@ -502,6 +546,58 @@ fun SearchScreen(
             }
         )
     }
+
+    // Report Listing Dialog
+    if (showReportDialog && propertyToReport != null) {
+        ReportListingDialog(
+            onDismiss = {
+                showReportDialog = false
+                propertyToReport = null
+            },
+            onSubmit = { reason, details ->
+                val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: ""
+                val property = propertyToReport!!
+
+                val report = ReportedProperty(
+                    reportId = "",
+                    propertyId = property.id,
+                    propertyTitle = property.title,
+                    propertyImage = property.imageUrl,
+                    ownerId = property.ownerId,
+                    ownerName = property.ownerName.ifBlank { property.developer },
+                    reportedByName = "",
+                    reportedBy = currentUserId,
+                    reportReason = reason,
+                    reportDetails = details,
+                    reportedAt = System.currentTimeMillis(),
+                    status = ReportStatus.PENDING
+                )
+
+                reportViewModel.submitReport(report)
+                showReportDialog = false
+                propertyToReport = null
+                Toast.makeText(context, "Report submitted successfully", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    // Hide Property Confirmation Dialog
+    if (showHideConfirmDialog && propertyToHide != null) {
+        HidePropertyConfirmDialog(
+            propertyTitle = propertyToHide!!.title,
+            isDarkMode = isDarkMode,
+            onConfirm = {
+                viewModel.hideProperty(propertyToHide!!.id)
+                showHideConfirmDialog = false
+                propertyToHide = null
+                Toast.makeText(context, "Property hidden from your feed", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = {
+                showHideConfirmDialog = false
+                propertyToHide = null
+            }
+        )
+    }
 }
 
 // Helper function to convert PropertyFilters to Map for storage
@@ -525,6 +621,126 @@ private fun convertFiltersToMap(filters: com.example.gharbato.model.PropertyFilt
     }
 
     return map
+}
+
+@Composable
+fun HidePropertyConfirmDialog(
+    propertyTitle: String,
+    isDarkMode: Boolean,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = backgroundColor,
+        icon = {
+            Surface(
+                shape = CircleShape,
+                color = Color(0xFFFFF3E0),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = Icons.Default.VisibilityOff,
+                        contentDescription = null,
+                        tint = Color(0xFFFF9800),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        },
+        title = {
+            Text(
+                text = "Hide This Property?",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = textColor,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "You won't see \"$propertyTitle\" in your feed anymore.",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    lineHeight = 20.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "This action cannot be undone from the app.",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFFF9800),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.VisibilityOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Hide Property",
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        dismissButton = {
+            OutlinedButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+                ),
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(
+                    text = "Cancel",
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    )
 }
 
 @Composable
@@ -921,6 +1137,9 @@ fun PropertyList(
     listState: LazyListState,
     onPropertyClick: (PropertyModel) -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit,
+    onShareClick: (PropertyModel) -> Unit,
+    onReportClick: (PropertyModel) -> Unit,
+    onHideClick: (PropertyModel) -> Unit,
     isDarkMode: Boolean
 ) {
     LazyColumn(
@@ -933,6 +1152,9 @@ fun PropertyList(
                 property = property,
                 onClick = { onPropertyClick(property) },
                 onFavoriteClick = { onFavoriteClick(property) },
+                onShareClick = { onShareClick(property) },
+                onReportClick = { onReportClick(property) },
+                onHideClick = { onHideClick(property) },
                 isDarkMode = isDarkMode
             )
         }
@@ -944,9 +1166,13 @@ fun PropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
     onFavoriteClick: (PropertyModel) -> Unit,
+    onShareClick: (PropertyModel) -> Unit,
+    onReportClick: (PropertyModel) -> Unit,
+    onHideClick: (PropertyModel) -> Unit,
     isDarkMode: Boolean
 ) {
     val context = LocalContext.current
+    var showMenu by remember { mutableStateOf(false) }
 
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
@@ -955,6 +1181,8 @@ fun PropertyCard(
     val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
     val overlayBackgroundColor = if (isDarkMode) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.6f)
     val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
+    val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
 
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
@@ -992,17 +1220,90 @@ fun PropertyCard(
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier.size(36.dp)
-                            .background(iconButtonBackgroundColor, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More options",
-                            tint = secondaryTextColor,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Box {
+                        IconButton(
+                            onClick = { showMenu = true },
+                            modifier = Modifier.size(36.dp)
+                                .background(iconButtonBackgroundColor, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More options",
+                                tint = secondaryTextColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
+                            modifier = Modifier.background(menuBackgroundColor)
+                        ) {
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.Share,
+                                            contentDescription = null,
+                                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text("Share", color = menuTextColor)
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onShareClick(property)
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.VisibilityOff,
+                                            contentDescription = null,
+                                            tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text("Not Interested", color = menuTextColor)
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onHideClick(property)
+                                }
+                            )
+
+                            HorizontalDivider(
+                                color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
+                            )
+
+                            DropdownMenuItem(
+                                text = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Default.Report,
+                                            contentDescription = null,
+                                            tint = Color(0xFFD32F2F),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Text("Report", color = Color(0xFFD32F2F))
+                                    }
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    onReportClick(property)
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -1038,7 +1339,7 @@ fun PropertyCard(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(property.developer, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = textColor)
-                        Text("Developer", fontSize = 12.sp, color = secondaryTextColor)
+                        Text("Owner", fontSize = 12.sp, color = secondaryTextColor)
 
                         Spacer(modifier = Modifier.height(8.dp))
 

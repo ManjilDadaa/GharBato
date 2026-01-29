@@ -49,7 +49,7 @@ fun AdminSupportScreen() {
     val usersRef = database.getReference("Users")
 
     // Themed colors
-    val backgroundColor = MaterialTheme.colorScheme.background
+    val backgroundColor = Color.White
     val textColor = MaterialTheme.colorScheme.onBackground
     val surfaceColor = MaterialTheme.colorScheme.surface
 

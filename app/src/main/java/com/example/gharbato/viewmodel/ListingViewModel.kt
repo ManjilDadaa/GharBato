@@ -54,9 +54,6 @@ class ListingViewModel(
             state.title.length < 10 -> {
                 ListingValidationResult(false, "Property title must be at least 10 characters")
             }
-            state.developer.isBlank() -> {
-                ListingValidationResult(false, "Owner/Developer name is required")
-            }
             state.price.isBlank() -> {
                 ListingValidationResult(false, "Price is required")
             }
@@ -280,14 +277,14 @@ class ListingViewModel(
                 _uploadProgress.value = "Fetching owner information..."
 
                 val database = FirebaseDatabase.getInstance()
-                val userRef = database.getReference("users").child(currentUserId)
+                val userRef = database.getReference("Users").child(currentUserId)
 
                 val userSnapshot = userRef.get().await()
 
                 val ownerName = userSnapshot.child("fullName").getValue(String::class.java)
                     ?: FirebaseAuth.getInstance().currentUser?.displayName
                     ?: FirebaseAuth.getInstance().currentUser?.email?.substringBefore("@")
-                    ?: state.developer
+                    ?: "Unknown"
 
                 val ownerImageUrl = userSnapshot.child("profileImageUrl").getValue(String::class.java) ?: ""
                 val ownerEmail = FirebaseAuth.getInstance().currentUser?.email ?: ""
@@ -336,7 +333,7 @@ class ListingViewModel(
                 val property = PropertyModel(
                     id = System.currentTimeMillis().toInt(),
                     title = state.title,
-                    developer = state.developer,
+                    developer = ownerName,
                     price = when (state.selectedPurpose) {
                         "Sell" -> state.price
                         "Rent" -> "${state.price}/month"
