@@ -9,6 +9,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,8 +32,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Bathroom
+import androidx.compose.material.icons.filled.Bed
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.Card
@@ -59,18 +66,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.GeminiChatMessage
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.viewmodel.GeminiChatViewModel
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -510,60 +521,84 @@ fun GeminiMessageBubble(
     errorBackground: Color,
     errorText: Color
 ) {
-    Row(
+    val context = LocalContext.current
+    
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
+        horizontalAlignment = if (isCurrentUser) Alignment.End else Alignment.Start
     ) {
-        Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
-                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
-            ),
-            color = when {
-                message.isError -> errorBackground
-                isCurrentUser -> userMessageColor
-                else -> surfaceColor
-            },
-            modifier = Modifier.widthIn(max = 280.dp),
-            shadowElevation = if (isDarkMode) 2.dp else 2.dp
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (isCurrentUser) Arrangement.End else Arrangement.Start
         ) {
-            Column(
-                modifier = Modifier.padding(12.dp)
+            Surface(
+                shape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                    bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+                ),
+                color = when {
+                    message.isError -> errorBackground
+                    isCurrentUser -> userMessageColor
+                    else -> surfaceColor
+                },
+                modifier = Modifier.widthIn(max = 280.dp),
+                shadowElevation = if (isDarkMode) 2.dp else 2.dp
             ) {
-                if (!isCurrentUser && message.isError) {
-                    Text(
-                        text = "⚠️ Error",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = errorText
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    if (!isCurrentUser && message.isError) {
+                        Text(
+                            text = "⚠️ Error",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = errorText
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    FormattedText(
+                        text = message.text,
+                        color = when {
+                            message.isError -> errorText
+                            isCurrentUser -> Color.White
+                            else -> textColor
+                        },
+                        fontSize = 15.sp
                     )
+
                     Spacer(modifier = Modifier.height(4.dp))
+
+                    Text(
+                        text = formatGeminiTimestamp(message.timestamp),
+                        color = when {
+                            message.isError -> errorText.copy(alpha = 0.7f)
+                            isCurrentUser -> Color.White.copy(alpha = 0.7f)
+                            else -> secondaryTextColor
+                        },
+                        fontSize = 11.sp
+                    )
                 }
-
-                // Format the message text with markdown-style formatting
-                FormattedText(
-                    text = message.text,
-                    color = when {
-                        message.isError -> errorText
-                        isCurrentUser -> Color.White
-                        else -> textColor
+            }
+        }
+        
+        // Show property cards if message has property IDs
+        if (!isCurrentUser && message.propertyIds.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            message.propertyIds.forEach { propertyId ->
+                PropertyCard(
+                    propertyId = propertyId,
+                    onClick = {
+                        // Navigate to PropertyDetailActivity
+                        val intent = Intent(context, PropertyDetailActivity::class.java)
+                        intent.putExtra("propertyId", propertyId.hashCode())
+                        context.startActivity(intent)
                     },
-                    fontSize = 15.sp
+                    isDarkMode = isDarkMode
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = formatGeminiTimestamp(message.timestamp),
-                    color = when {
-                        message.isError -> errorText.copy(alpha = 0.7f)
-                        isCurrentUser -> Color.White.copy(alpha = 0.7f)
-                        else -> secondaryTextColor
-                    },
-                    fontSize = 11.sp
-                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -813,4 +848,187 @@ private fun isYesterday(cal1: Calendar, cal2: Calendar): Boolean {
     val yesterday = cal2.clone() as Calendar
     yesterday.add(Calendar.DAY_OF_YEAR, -1)
     return isSameDay(cal1, yesterday)
+}
+
+@Composable
+fun PropertyCard(
+    propertyId: String,
+    onClick: () -> Unit,
+    isDarkMode: Boolean
+) {
+    var property by remember { mutableStateOf<com.example.gharbato.model.PropertyModel?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    LaunchedEffect(propertyId) {
+        isLoading = true
+        try {
+            val snapshot = com.google.firebase.database.FirebaseDatabase.getInstance()
+                .getReference("Property")
+                .child(propertyId)
+                .get()
+                .await()
+            property = snapshot.getValue(com.example.gharbato.model.PropertyModel::class.java)
+        } catch (e: Exception) {
+            property = null
+        }
+        isLoading = false
+    }
+    
+    if (isLoading) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp),
+            color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+            shadowElevation = 2.dp,
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            }
+        }
+    } else if (property != null) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick),
+            color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+            shadowElevation = 2.dp,
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Column {
+                // Property Image
+                if (property!!.imageUrl.isNotEmpty()) {
+                    androidx.compose.foundation.Image(
+                        painter = coil.compose.rememberAsyncImagePainter(property!!.imageUrl),
+                        contentDescription = "Property",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .background(if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE0E0E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.Home,
+                            contentDescription = "Property",
+                            modifier = Modifier.size(48.dp),
+                            tint = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        )
+                    }
+                }
+                
+                // Property Details
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Text(
+                        text = property!!.developer,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurface else Color.Black,
+                        maxLines = 2
+                    )
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Text(
+                        text = property!!.price,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF4CAF50)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Default.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = property!!.location,
+                            fontSize = 12.sp,
+                            color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                            maxLines = 1
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Bed,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${property!!.bedrooms}",
+                                fontSize = 12.sp,
+                                color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                            )
+                        }
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Bathroom,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${property!!.bathrooms}",
+                                fontSize = 12.sp,
+                                color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Tap to view details",
+                            fontSize = 11.sp,
+                            color = Color(0xFF2196F3),
+                            fontWeight = FontWeight.Medium
+                        )
+                        androidx.compose.material3.Icon(
+                            imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFF2196F3)
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

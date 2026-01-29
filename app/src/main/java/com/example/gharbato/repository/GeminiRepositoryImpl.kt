@@ -83,7 +83,7 @@ Tap property cards below for full details!"
 
     private fun createModel(): GenerativeModel {
         return GenerativeModel(
-            modelName = "gemini-2.5-flash-lite",
+            modelName = "gemini-2.5-flash",
             apiKey = BuildConfig.GEMINI_API_KEY,
             systemInstruction = content { text(systemPrompt) }, // Using systemInstruction
             generationConfig = generationConfig {
