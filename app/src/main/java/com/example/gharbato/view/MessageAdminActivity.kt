@@ -260,7 +260,7 @@ fun MessageAdminScreen() {
                                     senderImage = userProfile?.get("profileImageUrl") as? String ?: "",
                                     message = messageText.trim(),
                                     timestamp = System.currentTimeMillis(),
-                                    isAdmin = false
+                                    admin = false
                                 )
 
                                 messagesRef.child(messageId).setValue(newMessage)
