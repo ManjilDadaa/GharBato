@@ -120,7 +120,6 @@ fun AdminHomeScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                .navigationBarsPadding()
         ) {
             // Custom Header
             Box(
