@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.testTag
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.GharBatoTheme
@@ -175,7 +176,8 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                 ) {
                     // Email Input
                     OutlinedTextField(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth()
+                            .testTag("email_input"),
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedContainerColor = inputBgColor,
                             focusedContainerColor = inputFocusedBgColor,
@@ -280,6 +282,7 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                         interactionSource = buttonInteractionSource,
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag("Send_Reset_Link_Button")
                             .height(54.dp)
                             .scale(buttonScale)
                             .shadow(
