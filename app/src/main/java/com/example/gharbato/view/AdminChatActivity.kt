@@ -160,11 +160,14 @@ fun AdminChatScreen(
                     if (online) {
                         messagesRef.get().addOnSuccessListener { messagesSnapshot ->
                             messagesSnapshot.children.forEach { messageData ->
-                                val isAdmin = messageData.child("isAdmin").getValue(Boolean::class.java) ?: false
+                                // Check both "admin" (old format) and "isAdmin" field names
+                                val isAdminMsg = messageData.child("admin").getValue(Boolean::class.java)
+                                    ?: messageData.child("isAdmin").getValue(Boolean::class.java)
+                                    ?: false
                                 val isDelivered = messageData.child("isDelivered").getValue(Boolean::class.java) ?: false
 
                                 // Mark admin messages as delivered when user comes online
-                                if (isAdmin && !isDelivered) {
+                                if (isAdminMsg && !isDelivered) {
                                     messageData.ref.child("isDelivered").setValue(true)
                                 }
                             }
@@ -560,7 +563,7 @@ fun AdminChatScreen(
                                         senderImage = "",
                                         message = messageText.trim(),
                                         timestamp = System.currentTimeMillis(),
-                                        isAdmin = true,
+                                        admin = true,
                                         isDelivered = false,
                                         isRead = false
                                     )
