@@ -1077,13 +1077,29 @@ fun FeaturedPropertyCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Enhanced Property Stats with proper icons
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    PropertyFeature(Icons.Default.Bed, "${property.bedrooms}")
-                    PropertyFeature(Icons.Default.Bathroom, "${property.bathrooms}")
-                    PropertyFeature(Icons.Default.SquareFoot, property.sqft)
+                    HomePropertyStatChip(
+                        icon = Icons.Default.SquareFoot,
+                        value = property.sqft,
+                        label = null,
+                        iconTint = Color(0xFF4CAF50)
+                    )
+                    HomePropertyStatChip(
+                        icon = Icons.Default.SingleBed,
+                        value = "${property.bedrooms}",
+                        label = "Beds",
+                        iconTint = Color(0xFF2196F3)
+                    )
+                    HomePropertyStatChip(
+                        icon = Icons.Default.Bathtub,
+                        value = "${property.bathrooms}",
+                        label = "Baths",
+                        iconTint = Color(0xFF9C27B0)
+                    )
                 }
             }
         }
@@ -1107,6 +1123,57 @@ fun PropertyFeature(icon: ImageVector, text: String) {
             fontSize = 12.sp,
             color = Color.White
         )
+    }
+}
+
+@Composable
+fun HomePropertyStatChip(
+    icon: ImageVector,
+    value: String,
+    label: String?,
+    iconTint: Color
+) {
+    Surface(
+        color = Color.White.copy(alpha = 0.15f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Surface(
+                color = iconTint.copy(alpha = 0.3f),
+                shape = CircleShape,
+                modifier = Modifier.size(22.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = value,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 13.sp
+                )
+                if (label != null) {
+                    Text(
+                        text = label,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                        lineHeight = 10.sp
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1246,11 +1313,11 @@ fun ModernPropertyCard(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    InfoChip(Icons.Default.Bed, "${property.bedrooms}", onSurfaceVariantColor)
-                    InfoChip(Icons.Default.Bathroom, "${property.bathrooms}", onSurfaceVariantColor)
-                    InfoChip(Icons.Default.SquareFoot, property.sqft, onSurfaceVariantColor)
+                    InfoChip(Icons.Default.SquareFoot, property.sqft, Color(0xFF4CAF50))
+                    InfoChip(Icons.Default.SingleBed, "${property.bedrooms} BD", Color(0xFF2196F3))
+                    InfoChip(Icons.Default.Bathtub, "${property.bathrooms} BA", Color(0xFF9C27B0))
                 }
             }
 

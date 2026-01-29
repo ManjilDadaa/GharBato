@@ -54,9 +54,11 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SingleBed
+import androidx.compose.material.icons.filled.SquareFoot
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Bathtub
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
@@ -759,13 +761,11 @@ fun SearchTopBar(
     val focusRequester = remember { FocusRequester() }
 
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
-    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val hintColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF9E9E9E)
-    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE8E8E8)
     val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
-    val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFAFAFA)
-    val buttonBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
     val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
 
     Surface(
@@ -773,123 +773,189 @@ fun SearchTopBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars),
         color = backgroundColor,
-        shadowElevation = 1.dp
+        shadowElevation = 2.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = onSearchQueryChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .focusRequester(focusRequester)
-                    .onFocusChanged { focusState ->
-                        onSearchBarFocused(focusState.isFocused)
-                    },
-                placeholder = {
-                    Text(
-                        text = "Search location, property type...",
-                        color = hintColor,
-                        fontSize = 15.sp
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
-                        modifier = Modifier.size(24.dp)
-                    )
-                },
-                trailingIcon = {
-                    if (hasActiveSearch) {
-                        IconButton(onClick = {
-                            onClearSearch()
-                            focusManager.clearFocus()
-                        }) {
+            // Header
+            Text(
+                text = "Find Your Dream Property",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Search from thousands of listings",
+                fontSize = 14.sp,
+                color = hintColor
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Enhanced Search Bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = containerColor,
+                shadowElevation = if (isDarkMode) 0.dp else 2.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester)
+                            .onFocusChanged { focusState ->
+                                onSearchBarFocused(focusState.isFocused)
+                            },
+                        placeholder = {
+                            Text(
+                                text = "Search location, property",
+                                color = hintColor,
+                                fontSize = 15.sp
+                            )
+                        },
+                        leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Clear,
-                                contentDescription = "Clear search",
-                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        trailingIcon = {
+                            if (hasActiveSearch) {
+                                IconButton(onClick = {
+                                    onClearSearch()
+                                    focusManager.clearFocus()
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Clear,
+                                        contentDescription = "Clear search",
+                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
+                                    )
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            cursorColor = focusedBorderColor,
+                            focusedTextColor = textColor,
+                            unfocusedTextColor = textColor
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(
+                            onSearch = {
+                                onSearchClick()
+                                focusManager.clearFocus()
+                            }
+                        )
+                    )
+
+                    // Search button inside the bar
+                    Surface(
+                        onClick = {
+                            onSearchClick()
+                            focusManager.clearFocus()
+                        },
+                        modifier = Modifier.size(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = buttonContainerColor
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
                     }
-                },
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = focusedBorderColor,
-                    unfocusedBorderColor = borderColor,
-                    focusedContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
-                    unfocusedContainerColor = containerColor,
-                    cursorColor = focusedBorderColor,
-                    focusedTextColor = textColor,
-                    unfocusedTextColor = textColor,
-                    focusedLabelColor = hintColor,
-                    unfocusedLabelColor = hintColor,
-                    focusedPlaceholderColor = hintColor,
-                    unfocusedPlaceholderColor = hintColor,
-                    focusedLeadingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
-                    unfocusedLeadingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
-                    focusedTrailingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
-                    unfocusedTrailingIconColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
-                ),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        onSearchClick()
-                        focusManager.clearFocus()
-                    }
-                )
-            )
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Quick action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                OutlinedButton(
+                // Filter Button
+                Surface(
                     onClick = onFilterClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Transparent,
-                        contentColor = buttonBorderColor
-                    ),
-                    border = BorderStroke(1.5.dp, buttonBorderColor)
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+                    border = BorderStroke(1.dp, borderColor),
+                    shadowElevation = if (isDarkMode) 0.dp else 1.dp
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = "Filters",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Filters", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Filters",
+                            tint = buttonContainerColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Filters",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textColor
+                        )
+                    }
                 }
 
-                Button(
+                // Location Button
+                Surface(
                     onClick = onLocationClick,
-                    modifier = Modifier.weight(1f).height(48.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(44.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = buttonContainerColor,
-                        contentColor = Color.White
-                    ),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 2.dp,
-                        pressedElevation = 4.dp
-                    )
+                    color = buttonContainerColor.copy(alpha = 0.1f)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.LocationOn,
-                        contentDescription = "Select Location",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Near Me", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Near Me",
+                            tint = buttonContainerColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Near Me",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = buttonContainerColor
+                        )
+                    }
                 }
             }
         }
@@ -1073,8 +1139,8 @@ fun SortBar(
 ) {
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
-    val chipTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
     val iconColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
 
     Surface(
@@ -1085,45 +1151,60 @@ fun SortBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "$propertiesCount Listings",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                color = textColor
-            )
+            Column {
+                Text(
+                    text = "$propertiesCount Listings",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = textColor
+                )
+                Text(
+                    text = "Properties available",
+                    fontSize = 12.sp,
+                    color = secondaryTextColor
+                )
+            }
 
             Surface(
                 onClick = onSortClick,
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(12.dp),
                 color = chipBackgroundColor,
-                modifier = Modifier.height(40.dp)
+                modifier = Modifier.height(42.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Sort,
-                        contentDescription = "Sort",
-                        tint = iconColor,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Surface(
+                        modifier = Modifier.size(24.dp),
+                        shape = CircleShape,
+                        color = iconColor.copy(alpha = 0.15f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Sort",
+                                tint = iconColor,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = currentSort.getShortName(),
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = chipTextColor
+                        color = textColor
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = null,
-                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
-                        modifier = Modifier.size(20.dp)
+                        tint = secondaryTextColor,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }
@@ -1178,186 +1259,296 @@ fun PropertyCard(
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val priceColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
-    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
-    val overlayBackgroundColor = if (isDarkMode) Color.Black.copy(alpha = 0.7f) else Color.Black.copy(alpha = 0.6f)
-    val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.9f)
+    val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.95f)
     val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val marketTypeColor = when (property.marketType.lowercase()) {
+        "rent" -> Color(0xFF4CAF50)
+        "sell" -> Color(0xFF2196F3)
+        "book" -> Color(0xFFFF9800)
+        else -> Color.Gray
+    }
 
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column {
-            Box {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            ) {
                 Image(
                     painter = rememberAsyncImagePainter(property.imageUrl),
                     contentDescription = property.title,
-                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
                     contentScale = ContentScale.Crop
                 )
 
+                // Gradient overlay at top
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .align(Alignment.TopCenter)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.4f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                // Top row with market type badge and action buttons
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    horizontalArrangement = Arrangement.End
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
-                    IconButton(
-                        onClick = { onFavoriteClick(property) },
-                        modifier = Modifier.size(36.dp)
-                            .background(iconButtonBackgroundColor, CircleShape)
+                    // Market type badge
+                    Surface(
+                        color = marketTypeColor,
+                        shape = RoundedCornerShape(8.dp),
+                        shadowElevation = 2.dp
                     ) {
-                        Icon(
-                            imageVector = if (property.isFavorite) Icons.Default.Favorite
-                            else Icons.Default.FavoriteBorder,
-                            contentDescription = if (property.isFavorite) "Remove from favorites"
-                            else "Add to favorites",
-                            tint = if (property.isFavorite) Color.Red else secondaryTextColor,
-                            modifier = Modifier.size(20.dp)
+                        Text(
+                            text = when (property.marketType.lowercase()) {
+                                "sell" -> "For Sale"
+                                "rent" -> "For Rent"
+                                "book" -> "Booking"
+                                else -> property.marketType
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box {
-                        IconButton(
-                            onClick = { showMenu = true },
-                            modifier = Modifier.size(36.dp)
-                                .background(iconButtonBackgroundColor, CircleShape)
+                    // Action buttons
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(
+                            onClick = { onFavoriteClick(property) },
+                            modifier = Modifier.size(38.dp),
+                            shape = CircleShape,
+                            color = iconButtonBackgroundColor,
+                            shadowElevation = 2.dp
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.MoreVert,
-                                contentDescription = "More options",
-                                tint = secondaryTextColor,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                Icon(
+                                    imageVector = if (property.isFavorite) Icons.Default.Favorite
+                                    else Icons.Default.FavoriteBorder,
+                                    contentDescription = if (property.isFavorite) "Remove from favorites"
+                                    else "Add to favorites",
+                                    tint = if (property.isFavorite) Color.Red else secondaryTextColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
 
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false },
-                            modifier = Modifier.background(menuBackgroundColor)
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.Share,
-                                            contentDescription = null,
-                                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Share", color = menuTextColor)
-                                    }
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onShareClick(property)
+                        Box {
+                            Surface(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(38.dp),
+                                shape = CircleShape,
+                                color = iconButtonBackgroundColor,
+                                shadowElevation = 2.dp
+                            ) {
+                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                    Icon(
+                                        imageVector = Icons.Default.MoreVert,
+                                        contentDescription = "More options",
+                                        tint = secondaryTextColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
                                 }
-                            )
+                            }
 
-                            HorizontalDivider(
-                                color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
-                            )
-
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.VisibilityOff,
-                                            contentDescription = null,
-                                            tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Not Interested", color = menuTextColor)
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false },
+                                modifier = Modifier.background(menuBackgroundColor)
+                            ) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Share,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Share", color = menuTextColor)
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onShareClick(property)
                                     }
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onHideClick(property)
-                                }
-                            )
+                                )
 
-                            HorizontalDivider(
-                                color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
-                            )
+                                HorizontalDivider(
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
+                                )
 
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.Report,
-                                            contentDescription = null,
-                                            tint = Color(0xFFD32F2F),
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text("Report", color = Color(0xFFD32F2F))
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.VisibilityOff,
+                                                contentDescription = null,
+                                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Not Interested", color = menuTextColor)
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onHideClick(property)
                                     }
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    onReportClick(property)
-                                }
-                            )
+                                )
+
+                                HorizontalDivider(
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
+                                )
+
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Report,
+                                                contentDescription = null,
+                                                tint = Color(0xFFD32F2F),
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text("Report", color = Color(0xFFD32F2F))
+                                        }
+                                    },
+                                    onClick = {
+                                        showMenu = false
+                                        onReportClick(property)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
 
-                Row(
-                    modifier = Modifier.align(Alignment.BottomStart)
-                        .background(overlayBackgroundColor, RoundedCornerShape(topEnd = 12.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Bottom gradient with stats
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.85f)
+                                )
+                            )
+                        )
                 ) {
-                    Icon(Icons.Default.Home, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(property.sqft, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp)
+                    ) {
+                        // Price on image
+                        Text(
+                            text = property.price,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                    Icon(Icons.Default.Info, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${property.bedrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Icon(Icons.Default.Star, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${property.bathrooms}", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        // Stats row
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PropertyStatChip(
+                                icon = Icons.Default.SquareFoot,
+                                value = property.sqft,
+                                label = null,
+                                iconTint = Color(0xFF4CAF50)
+                            )
+                            PropertyStatChip(
+                                icon = Icons.Default.SingleBed,
+                                value = "${property.bedrooms}",
+                                label = "Beds",
+                                iconTint = Color(0xFF2196F3)
+                            )
+                            PropertyStatChip(
+                                icon = Icons.Default.Bathtub,
+                                value = "${property.bathrooms}",
+                                label = "Baths",
+                                iconTint = Color(0xFF9C27B0)
+                            )
+                        }
+                    }
                 }
             }
 
+            // Content section
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(property.developer, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = textColor)
-                        Text("Owner", fontSize = 12.sp, color = secondaryTextColor)
+                        Text(
+                            text = property.title.ifBlank { property.developer },
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textColor,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                        Text(property.price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = priceColor)
-
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-                            Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                null,
+                                tint = secondaryTextColor,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text(property.location, fontSize = 12.sp, color = secondaryTextColor)
+                            Text(
+                                text = property.location,
+                                fontSize = 13.sp,
+                                color = secondaryTextColor,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
                         }
                     }
 
+                    // Chat button
                     Surface(
-                        shape = CircleShape,
-                        color = priceColor,
-                        modifier = Modifier.size(48.dp).clickable {
+                        onClick = {
                             if (property.ownerId.isNotEmpty()) {
-                                // Fetch actual fullName from Firebase Users before navigating
                                 navigateToMessageWithUserFetch(
                                     context = context,
                                     activity = context as Activity,
@@ -1366,7 +1557,10 @@ fun PropertyCard(
                                     fallbackImage = property.ownerImageUrl ?: ""
                                 )
                             }
-                        }
+                        },
+                        modifier = Modifier.size(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = priceColor
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -1428,10 +1622,10 @@ fun PropertyDetailOverlay(
                         Text(property.location, fontSize = 14.sp, color = secondaryTextColor)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        PropertyInfoChip(Icons.Default.Home, property.sqft, chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.Info, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.Star, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PropertyInfoChip(Icons.Default.SquareFoot, property.sqft, chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.SingleBed, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
+                        PropertyInfoChip(Icons.Default.Bathtub, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
                     }
                 }
 
@@ -1469,6 +1663,57 @@ fun PropertyInfoChip(
             Icon(icon, null, tint = contentColor, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text(text, fontSize = 12.sp, color = contentColor)
+        }
+    }
+}
+
+@Composable
+fun PropertyStatChip(
+    icon: ImageVector,
+    value: String,
+    label: String?,
+    iconTint: Color
+) {
+    Surface(
+        color = Color.White.copy(alpha = 0.15f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Surface(
+                color = iconTint.copy(alpha = 0.2f),
+                shape = CircleShape,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = iconTint,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+            Column {
+                Text(
+                    text = value,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 14.sp
+                )
+                if (label != null) {
+                    Text(
+                        text = label,
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 10.sp,
+                        lineHeight = 11.sp
+                    )
+                }
+            }
         }
     }
 }

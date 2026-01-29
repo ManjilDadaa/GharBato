@@ -479,22 +479,22 @@ fun SavedPropertyCard(
                     }
                 }
 
-                // Property Stats
+                // Property Stats with proper icons
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     PropertyStat(
-                        Icons.Default.Home,
+                        Icons.Default.SquareFoot,
                         property.sqft,
                         textColorSecondary
                     )
                     PropertyStat(
-                        Icons.Default.Info,
+                        Icons.Default.SingleBed,
                         "${property.bedrooms} BD",
                         textColorSecondary
                     )
                     PropertyStat(
-                        Icons.Default.Star,
+                        Icons.Default.Bathtub,
                         "${property.bathrooms} BA",
                         textColorSecondary
                     )
