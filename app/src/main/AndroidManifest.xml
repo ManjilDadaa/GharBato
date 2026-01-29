@@ -74,6 +74,20 @@
             android:exported="false"
             android:label="@string/title_activity_location_picker"
             android:theme="@style/Theme.GharBato" />
+        <!-- ADDED: Message Admin Activity -->
+        <activity
+            android:name=".view.MessageAdminActivity"
+            android:exported="false"
+            android:label="Message Admin"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.GharBato" />
+        <!-- ADDED: Admin Chat Activity -->
+        <activity
+            android:name=".view.AdminChatActivity"
+            android:exported="false"
+            android:label="Admin Chat"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.GharBato" />
         <activity
             android:name=".ui.view.FullMapActivity"
             android:exported="true"

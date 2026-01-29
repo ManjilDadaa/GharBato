@@ -553,7 +553,7 @@ fun PropertyDetailCard(
             )
             DetailRow(
                 "Market Type",
-                property.marketType,
+                if (property.marketType.equals("Sell", ignoreCase = true)) "Buy" else property.marketType,
                 onBackgroundColor = onBackgroundColor,
                 onSurfaceVariantColor = onSurfaceVariantColor
             )

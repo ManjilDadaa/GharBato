@@ -52,6 +52,7 @@ import com.example.gharbato.viewmodel.DashboardViewModelFactory
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.platform.testTag
 import com.example.gharbato.utils.SystemBarUtils
 
 class DashboardActivity : ComponentActivity() {
@@ -162,6 +163,10 @@ fun DashboardBody() {
                         },
                         onClick = {
                             selectedIndex = index
+                            // Refresh properties when navigating to Home or Search
+                            if (index == 0 || index == 1) {
+                                propertyViewModel.refreshProperties()
+                            }
                         },
                         selected = selectedIndex == index,
                         colors = NavigationBarItemDefaults.colors(
@@ -179,6 +184,7 @@ fun DashboardBody() {
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = padding.calculateBottomPadding())
+                .testTag("dashboard_screen")
         ) {
             when (selectedIndex) {
                 0 -> HomeScreen(

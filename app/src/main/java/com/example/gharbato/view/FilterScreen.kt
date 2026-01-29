@@ -129,28 +129,37 @@ fun FilterBottomSheet(
                     .padding(vertical = 16.dp)
             ) {
                 FilterSection(title = "Purpose", isDarkMode = isDarkMode) {
+                    // Display labels map to Firebase-stored values:
+                    // "Buy" (user perspective) -> "Sell" (stored in Firebase)
+                    // "Rent" -> "Rent", "Book" -> "Book"
+                    val purposeOptions = listOf(
+                        "Buy" to "Sell",   // UI label -> Firebase value
+                        "Rent" to "Rent",
+                        "Book" to "Book"
+                    )
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        listOf("Buy", "Rent", "Book").forEach { type ->
+                        purposeOptions.forEach { (displayLabel, firebaseValue) ->
                             FilterChip(
-                                selected = filters.marketType == type,
+                                selected = filters.marketType == firebaseValue,
                                 onClick = {
                                     filters = filters.copy(
-                                        marketType = if (filters.marketType == type) "" else type
+                                        marketType = if (filters.marketType == firebaseValue) "" else firebaseValue
                                     )
                                 },
                                 label = {
                                     Text(
-                                        when (type) {
+                                        when (displayLabel) {
                                             "Buy" -> "Buy"
                                             "Rent" -> "Rent"
                                             "Book" -> "Short-term"
-                                            else -> type
+                                            else -> displayLabel
                                         },
                                         fontWeight = FontWeight.Medium,
-                                        color = if (filters.marketType == type) selectedChipLabelColor else chipLabelColor
+                                        color = if (filters.marketType == firebaseValue) selectedChipLabelColor else chipLabelColor
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(

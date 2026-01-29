@@ -88,7 +88,7 @@ class PropertyRepoImpl : PropertyRepo {
 
                         for (propertySnapshot in snapshot.children) {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
-                            if (property != null) {
+                            if (property != null && property.propertyStatus == "AVAILABLE") {
                                 properties.add(property)
                             }
                         }
@@ -161,7 +161,9 @@ class PropertyRepoImpl : PropertyRepo {
                 val developerMatch = property.developer.lowercase().contains(searchQuery)
                 val propertyTypeMatch = property.propertyType.lowercase().contains(searchQuery)
                 val descriptionMatch = property.description?.lowercase()?.contains(searchQuery) ?: false
-                val marketTypeMatch = property.marketType.lowercase().contains(searchQuery)
+                // Map "Sell" -> "Buy" for user-facing text search
+                val displayMarketType = if (property.marketType.equals("Sell", ignoreCase = true)) "buy" else property.marketType.lowercase()
+                val marketTypeMatch = displayMarketType.contains(searchQuery)
 
                 val matches = titleMatch || locationMatch || developerMatch ||
                         propertyTypeMatch || descriptionMatch || marketTypeMatch
@@ -188,11 +190,13 @@ class PropertyRepoImpl : PropertyRepo {
 
         Log.d(TAG, "Starting with ${filtered.size} properties")
 
-        // Market Type (Buy/Rent/Book)
-        filtered = filtered.filter { property ->
-            property.marketType.equals(filters.marketType, ignoreCase = true)
+        // Market Type (Sell/Rent/Book)
+        if (filters.marketType.isNotBlank()) {
+            filtered = filtered.filter { property ->
+                property.marketType.equals(filters.marketType, ignoreCase = true)
+            }
+            Log.d(TAG, "After market type filter: ${filtered.size} properties")
         }
-        Log.d(TAG, "After market type filter: ${filtered.size} properties")
 
         // Property Types
         if (filters.propertyTypes.isNotEmpty()) {
@@ -510,6 +514,7 @@ class PropertyRepoImpl : PropertyRepo {
                             val property = propertySnapshot.getValue(PropertyModel::class.java)
                             if (property != null &&
                                 property.status == PropertyStatus.APPROVED &&
+                                property.propertyStatus == "AVAILABLE" &&
                                 property.id != currentProperty.id) { // Exclude current property
                                 allProperties.add(property)
                             }

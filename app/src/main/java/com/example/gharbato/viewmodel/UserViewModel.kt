@@ -40,6 +40,10 @@ class UserViewModel(val repo: UserRepo) : ViewModel() {
         repo.login(email, password, callback)
     }
 
+    fun loginWithGoogle(idToken: String, callback: (Boolean, String, Boolean) -> Unit) {
+        repo.loginWithGoogle(idToken, callback)
+    }
+
     fun logout(callback: (Boolean, String) -> Unit) {
         repo.logout(callback)
     }

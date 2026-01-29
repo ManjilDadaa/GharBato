@@ -35,12 +35,18 @@ interface MessageRepository {
     // Chat Session Management
     fun createChatSession(context: Context, otherUserId: String): ChatSession
     fun listenToBlockStatus(myUserId: String, otherUserId: String, callback: (Boolean, Boolean) -> Unit): () -> Unit
-    fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
+    fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit
     fun sendTextMessage(chatId: String, senderId: String, senderName: String, text: String)
     fun sendImageMessage(context: Context, chatId: String, senderId: String, senderName: String, imageUri: Uri)
     fun blockUser(myUserId: String, otherUserId: String)
     fun unblockUser(myUserId: String, otherUserId: String)
     fun deleteChat(chatId: String)
+    fun deleteMessageForMe(chatId: String, messageId: String, userId: String)
+    fun deleteMessageForEveryone(chatId: String, messageId: String)
+
+    // Presence
+    fun setUserOnline(userId: String): () -> Unit
+    fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit
 
     fun navigateToChatWithMessage(
         activity: Activity,
@@ -80,8 +86,14 @@ interface MessageRepository {
         property: PropertyModel
     )
 
+    // Per-chat unread counts
+    fun listenToPerChatUnreadCounts(
+        userId: String,
+        onChange: (Map<String, Int>) -> Unit
+    ): () -> Unit
 
 }
+
 
 class MessageRepositoryImpl : MessageRepository {
 
@@ -396,18 +408,83 @@ class MessageRepositoryImpl : MessageRepository {
         }
     }
 
-    override fun listenToChatMessages(chatId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
+    override fun listenToChatMessages(chatId: String, currentUserId: String, onMessages: (List<ChatMessage>) -> Unit): () -> Unit {
         val messagesRef = database.getReference("chats").child(chatId).child("messages")
-        
+
+        Log.d(TAG, "=== Listening to messages for chat: $chatId ===")
+
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val messageList = mutableListOf<ChatMessage>()
+                Log.d(TAG, "Received ${snapshot.childrenCount} messages from Firebase")
+
                 snapshot.children.forEach { msgSnapshot ->
                     try {
-                        val message = msgSnapshot.getValue(ChatMessage::class.java)
-                        if (message != null) {
-                            messageList.add(message)
+                        val deletedForCurrentUser = msgSnapshot.child("deletedFor").child(currentUserId).getValue(Boolean::class.java) == true
+                        if (deletedForCurrentUser) {
+                            return@forEach
                         }
+
+                        // Manually parse message to handle type conversion issues
+                        val id = msgSnapshot.child("id").getValue(String::class.java) ?: ""
+                        val senderId = msgSnapshot.child("senderId").getValue(String::class.java) ?: ""
+                        val senderName = msgSnapshot.child("senderName").getValue(String::class.java) ?: ""
+                        val text = msgSnapshot.child("text").getValue(String::class.java) ?: ""
+                        val imageUrl = msgSnapshot.child("imageUrl").getValue(String::class.java) ?: ""
+                        val timestamp = msgSnapshot.child("timestamp").getValue(Long::class.java) ?: 0L
+                        val isRead = msgSnapshot.child("isRead").getValue(Boolean::class.java) ?: false
+
+                        // Handle propertyId - Firebase may store as Long, convert to Int safely
+                        val rawPropertyId = msgSnapshot.child("propertyId").value
+                        val propertyId = when (rawPropertyId) {
+                            is Long -> rawPropertyId.toInt()
+                            is Int -> rawPropertyId
+                            is Double -> rawPropertyId.toInt()
+                            is String -> rawPropertyId.toIntOrNull() ?: 0
+                            else -> 0
+                        }
+
+                        val propertyTitle = msgSnapshot.child("propertyTitle").getValue(String::class.java) ?: ""
+                        val propertyPrice = msgSnapshot.child("propertyPrice").getValue(String::class.java) ?: ""
+                        val propertyImage = msgSnapshot.child("propertyImage").getValue(String::class.java) ?: ""
+                        val propertyLocation = msgSnapshot.child("propertyLocation").getValue(String::class.java) ?: ""
+
+                        // Handle bedrooms/bathrooms - Firebase may store as Long
+                        val rawBedrooms = msgSnapshot.child("propertyBedrooms").value
+                        val propertyBedrooms = when (rawBedrooms) {
+                            is Long -> rawBedrooms.toInt()
+                            is Int -> rawBedrooms
+                            is Double -> rawBedrooms.toInt()
+                            else -> 0
+                        }
+
+                        val rawBathrooms = msgSnapshot.child("propertyBathrooms").value
+                        val propertyBathrooms = when (rawBathrooms) {
+                            is Long -> rawBathrooms.toInt()
+                            is Int -> rawBathrooms
+                            is Double -> rawBathrooms.toInt()
+                            else -> 0
+                        }
+
+                        val message = ChatMessage(
+                            id = id,
+                            senderId = senderId,
+                            senderName = senderName,
+                            text = text,
+                            imageUrl = imageUrl,
+                            timestamp = timestamp,
+                            isRead = isRead,
+                            propertyId = propertyId,
+                            propertyTitle = propertyTitle,
+                            propertyPrice = propertyPrice,
+                            propertyImage = propertyImage,
+                            propertyLocation = propertyLocation,
+                            propertyBedrooms = propertyBedrooms,
+                            propertyBathrooms = propertyBathrooms
+                        )
+
+                        Log.d(TAG, "Parsed message - propertyId: ${message.propertyId}, propertyTitle: '${message.propertyTitle}', hasPropertyCard: ${message.hasPropertyCard}")
+                        messageList.add(message)
                     } catch (e: Exception) {
                         Log.e(TAG, "Error parsing message", e)
                     }
@@ -504,6 +581,53 @@ class MessageRepositoryImpl : MessageRepository {
         chatRef.removeValue()
     }
 
+    override fun deleteMessageForMe(chatId: String, messageId: String, userId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId).child("deletedFor").child(userId)
+        msgRef.setValue(true)
+    }
+
+    override fun deleteMessageForEveryone(chatId: String, messageId: String) {
+        val msgRef = database.getReference("chats").child(chatId).child("messages").child(messageId)
+        msgRef.removeValue()
+    }
+
+    override fun setUserOnline(userId: String): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        try {
+            ref.child("online").setValue(true)
+            ref.child("lastSeen").setValue(ServerValue.TIMESTAMP)
+            ref.onDisconnect().updateChildren(
+                mapOf(
+                    "online" to false,
+                    "lastSeen" to ServerValue.TIMESTAMP
+                )
+            )
+        } catch (_: Exception) { }
+        return {
+            try {
+                ref.updateChildren(
+                    mapOf(
+                        "online" to false,
+                        "lastSeen" to ServerValue.TIMESTAMP
+                    )
+                )
+            } catch (_: Exception) { }
+        }
+    }
+
+    override fun listenToUserPresence(userId: String, callback: (Boolean, Long) -> Unit): () -> Unit {
+        val ref = database.getReference("presence").child(userId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val online = snapshot.child("online").getValue(Boolean::class.java) ?: false
+                val lastSeen = snapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                callback(online, lastSeen)
+            }
+            override fun onCancelled(error: DatabaseError) { }
+        }
+        ref.addValueEventListener(listener)
+        return { ref.removeEventListener(listener) }
+    }
 
 
     override fun navigateToChatWithMessage(
@@ -575,6 +699,39 @@ class MessageRepositoryImpl : MessageRepository {
         return {
             chatsRef.removeEventListener(listener)
         }
+    }
+
+    override fun listenToPerChatUnreadCounts(
+        userId: String,
+        onChange: (Map<String, Int>) -> Unit
+    ): () -> Unit {
+        val chatsRef = database.getReference("chats")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val perChat = mutableMapOf<String, Int>()
+                for (chatSnapshot in snapshot.children) {
+                    val chatId = chatSnapshot.key ?: continue
+                    if (chatId.contains(userId)) {
+                        val otherUserId = chatId.split("_").firstOrNull { it != userId } ?: continue
+                        var count = 0
+                        val messagesSnapshot = chatSnapshot.child("messages")
+                        for (msgSnapshot in messagesSnapshot.children) {
+                            try {
+                                val msg = msgSnapshot.getValue(ChatMessage::class.java)
+                                if (msg != null && msg.senderId != userId && !msg.isRead) {
+                                    count++
+                                }
+                            } catch (_: Exception) {}
+                        }
+                        perChat[otherUserId] = count
+                    }
+                }
+                onChange(perChat)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        chatsRef.addValueEventListener(listener)
+        return { chatsRef.removeEventListener(listener) }
     }
 
     override fun markMessagesAsRead(chatId: String, currentUserId: String) {
@@ -696,6 +853,15 @@ class MessageRepositoryImpl : MessageRepository {
         val messagesRef = database.getReference("chats").child(session.chatId).child("messages")
         val messageId = messagesRef.push().key ?: return
 
+        // Validate property data before sending
+        val propertyIdToSend = property.id
+        val propertyTitleToSend = property.developer
+
+        Log.d(TAG, "=== Property Validation Before Send ===")
+        Log.d(TAG, "Property ID: $propertyIdToSend (valid: ${propertyIdToSend > 0})")
+        Log.d(TAG, "Property Title: '$propertyTitleToSend' (valid: ${propertyTitleToSend.isNotEmpty()})")
+        Log.d(TAG, "Will hasPropertyCard be true? ${propertyIdToSend > 0 && propertyTitleToSend.isNotEmpty()}")
+
         val chatMessage = hashMapOf(
             "id" to messageId,
             "senderId" to session.myUserId,
@@ -705,8 +871,8 @@ class MessageRepositoryImpl : MessageRepository {
             "isRead" to false,
             "imageUrl" to "",
             // Property card data
-            "propertyId" to property.id,
-            "propertyTitle" to property.developer,
+            "propertyId" to propertyIdToSend,
+            "propertyTitle" to propertyTitleToSend,
             "propertyPrice" to property.price,
             "propertyImage" to propertyImageUrl,
             "propertyLocation" to property.location,
@@ -714,26 +880,55 @@ class MessageRepositoryImpl : MessageRepository {
             "propertyBathrooms" to property.bathrooms
         )
 
-        Log.d(TAG, "Sending message with property card and navigating:")
+        Log.d(TAG, "=== Sending message with property card ===")
         Log.d(TAG, "Chat ID: ${session.chatId}")
-        Log.d(TAG, "Property ID: ${property.id}")
-        Log.d(TAG, "Property Title: ${property.developer}")
-        Log.d(TAG, "Property Image: $propertyImageUrl")
+        Log.d(TAG, "Current User ID: ${session.myUserId}")
+        Log.d(TAG, "Other User ID (property owner): $otherUserId")
+        Log.d(TAG, "Firebase message data: $chatMessage")
+        Log.d(TAG, "Property Location: ${property.location}")
+        Log.d(TAG, "Property Bedrooms: ${property.bedrooms}")
+        Log.d(TAG, "Property Bathrooms: ${property.bathrooms}")
+        Log.d(TAG, "Property Owner ID: ${property.ownerId}")
+        Log.d(TAG, "hasPropertyCard would be: ${property.id > 0 && property.developer.isNotEmpty()}")
 
         // Send message first
         messagesRef.child(messageId).setValue(chatMessage)
             .addOnSuccessListener {
                 Log.d(TAG, "Property card message sent successfully, navigating to chat")
-                // Small delay to ensure Firebase has processed the write
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    val intent = MessageDetailsActivity.newIntent(
-                        activity = activity,
-                        otherUserId = otherUserId,
-                        otherUserName = otherUserName,
-                        otherUserImage = otherUserImage
-                    )
-                    activity.startActivity(intent)
-                }, 300)
+
+                // Fetch actual user fullName from Firebase before navigating
+                // Note: Uses "Users" with capital U to match fetchUsersByIds
+                database.getReference("Users").child(otherUserId)
+                    .addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            val actualFullName = snapshot.child("fullName").getValue(String::class.java)
+                                ?: otherUserName
+                            val actualProfileImage = snapshot.child("profileImageUrl").getValue(String::class.java)
+                                ?: otherUserImage
+
+                            Log.d(TAG, "Fetched actual user name: $actualFullName (passed: $otherUserName)")
+
+                            val intent = MessageDetailsActivity.newIntent(
+                                activity = activity,
+                                otherUserId = otherUserId,
+                                otherUserName = actualFullName,
+                                otherUserImage = actualProfileImage
+                            )
+                            activity.startActivity(intent)
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            Log.e(TAG, "Failed to fetch user info: ${error.message}")
+                            // Fall back to passed name if fetch fails
+                            val intent = MessageDetailsActivity.newIntent(
+                                activity = activity,
+                                otherUserId = otherUserId,
+                                otherUserName = otherUserName,
+                                otherUserImage = otherUserImage
+                            )
+                            activity.startActivity(intent)
+                        }
+                    })
             }
             .addOnFailureListener { e ->
                 Log.e(TAG, "Failed to send property card message", e)

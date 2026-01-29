@@ -15,6 +15,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.gharbato.R
 import com.example.gharbato.model.PropertyModel
@@ -47,22 +51,41 @@ class RejectedPropertiesActivity : ComponentActivity() {
         enableEdgeToEdge()
         ThemePreference.init(this)
         setContent {
-            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsStateWithLifecycle()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            RejectedPropertiesScreen()
+            RejectedPropertiesScreen(isDarkMode = isDarkMode)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RejectedPropertiesScreen() {
+fun RejectedPropertiesScreen(isDarkMode: Boolean) {
     val context = LocalContext.current
     val userRepo = remember { UserRepoImpl() }
     val currentUserId = userRepo.getCurrentUserId()
 
     var isLoading by remember { mutableStateOf(true) }
     var properties by remember { mutableStateOf<List<PropertyModel>>(emptyList()) }
+
+    // Theme colors
+    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF8F9FB)
+    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
+    val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color(0xFF666666)
+    val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
+    val chipBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF0F0F0)
+    val chipTextColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF666666)
+    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
+    val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+    val warningColor = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFFF9800)
+    val errorColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+    val infoColor = if (isDarkMode) Color(0xFF64B5F6) else Color(0xFF2196F3)
+
+    // Dropdown menu specific colors
+    val dropdownContainerColor = if (isDarkMode) Color(0xFF2C2C2C) else Color.White
+    val dropdownTextColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF333333)
+    val dropdownDividerColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
 
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
@@ -98,24 +121,37 @@ fun RejectedPropertiesScreen() {
     }
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
-                        Text("Rejected Properties", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(
+                            "Rejected Properties",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = textColor
+                        )
                         Text(
                             "${properties.size} ${if (properties.size == 1) "Property" else "Properties"}",
                             fontSize = 12.sp,
-                            color = Color.Gray
+                            color = secondaryTextColor
                         )
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = { (context as ComponentActivity).finish() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Blue)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = primaryColor
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = surfaceColor,
+                    titleContentColor = textColor
+                )
             )
         }
     ) { padding ->
@@ -126,7 +162,7 @@ fun RejectedPropertiesScreen() {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Blue)
+                CircularProgressIndicator(color = primaryColor)
             }
         } else if (properties.isEmpty()) {
             Box(
@@ -142,7 +178,7 @@ fun RejectedPropertiesScreen() {
                     Icon(
                         painter = painterResource(R.drawable.baseline_home_24),
                         contentDescription = null,
-                        tint = Color.LightGray,
+                        tint = secondaryTextColor,
                         modifier = Modifier.size(80.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -150,13 +186,13 @@ fun RejectedPropertiesScreen() {
                         text = "No Rejected Properties",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF2C2C2C)
+                        color = textColor
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "You don't have any rejected properties.",
                         fontSize = 14.sp,
-                        color = Color.Gray
+                        color = secondaryTextColor
                     )
                 }
             }
@@ -164,13 +200,26 @@ fun RejectedPropertiesScreen() {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFFF8F9FB))
+                    .background(backgroundColor)
                     .padding(padding),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(properties, key = { it.firebaseKey ?: it.id }) { property ->
-                    RejectedPropertyCard(property = property)
+                    RejectedPropertyCard(
+                        property = property,
+                        isDarkMode = isDarkMode,
+                        cardBackgroundColor = cardBackgroundColor,
+                        textColor = textColor,
+                        secondaryTextColor = secondaryTextColor,
+                        primaryColor = primaryColor,
+                        errorColor = errorColor,
+                        chipBackgroundColor = chipBackgroundColor,
+                        chipTextColor = chipTextColor,
+                        dropdownContainerColor = dropdownContainerColor,
+                        dropdownTextColor = dropdownTextColor,
+                        dropdownDividerColor = dropdownDividerColor
+                    )
                 }
             }
         }
@@ -178,15 +227,29 @@ fun RejectedPropertiesScreen() {
 }
 
 @Composable
-fun RejectedPropertyCard(property: PropertyModel) {
+fun RejectedPropertyCard(
+    property: PropertyModel,
+    isDarkMode: Boolean,
+    cardBackgroundColor: Color,
+    textColor: Color,
+    secondaryTextColor: Color,
+    primaryColor: Color,
+    errorColor: Color,
+    chipBackgroundColor: Color,
+    chipTextColor: Color,
+    dropdownContainerColor: Color,
+    dropdownTextColor: Color,
+    dropdownDividerColor: Color
+) {
     val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 2.dp else 2.dp)
     ) {
         Column {
             Row(
@@ -223,7 +286,7 @@ fun RejectedPropertyCard(property: PropertyModel) {
                             text = property.title,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2C2C2C),
+                            color = textColor,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -235,13 +298,13 @@ fun RejectedPropertyCard(property: PropertyModel) {
                                 painter = painterResource(R.drawable.baseline_location_on_24),
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = Color.Gray
+                                tint = secondaryTextColor
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = property.location,
                                 fontSize = 12.sp,
-                                color = Color.Gray,
+                                color = secondaryTextColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -253,7 +316,7 @@ fun RejectedPropertyCard(property: PropertyModel) {
                             text = "Rs ${property.price}",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Blue
+                            color = primaryColor
                         )
                     }
 
@@ -266,25 +329,25 @@ fun RejectedPropertyCard(property: PropertyModel) {
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFF0F0F0)
+                            color = chipBackgroundColor
                         ) {
                             Text(
                                 text = property.propertyType,
                                 fontSize = 10.sp,
-                                color = Color(0xFF666666),
+                                color = chipTextColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
 
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFD32F2F).copy(alpha = 0.1f)
+                            color = errorColor.copy(alpha = if (isDarkMode) 0.2f else 0.1f)
                         ) {
                             Text(
                                 text = property.status,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFFD32F2F),
+                                color = errorColor,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
@@ -293,15 +356,35 @@ fun RejectedPropertyCard(property: PropertyModel) {
 
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.Gray)
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "More",
+                            tint = secondaryTextColor
+                        )
                     }
 
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.background(dropdownContainerColor)
                     ) {
+                        // Edit option
                         DropdownMenuItem(
-                            text = { Text("Edit") },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = primaryColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "Edit Property",
+                                        color = dropdownTextColor
+                                    )
+                                }
+                            },
                             onClick = {
                                 showMenu = false
                                 val intent = Intent(context, ListingActivity::class.java).apply {
@@ -309,10 +392,36 @@ fun RejectedPropertyCard(property: PropertyModel) {
                                     putExtra("isEdit", true)
                                 }
                                 context.startActivity(intent)
-                            }
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = dropdownTextColor,
+                                leadingIconColor = primaryColor
+                            )
                         )
+
+                        Divider(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = dropdownDividerColor,
+                            thickness = 0.5.dp
+                        )
+
+                        // Resubmit option
                         DropdownMenuItem(
-                            text = { Text("Resubmit") },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Refresh,
+                                        contentDescription = null,
+                                        tint = primaryColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "Resubmit for Review",
+                                        color = dropdownTextColor
+                                    )
+                                }
+                            },
                             onClick = {
                                 showMenu = false
                                 property.firebaseKey?.let { key ->
@@ -322,29 +431,130 @@ fun RejectedPropertyCard(property: PropertyModel) {
                                         .child("status")
                                         .setValue(PropertyStatus.PENDING)
                                         .addOnSuccessListener {
-                                            Toast.makeText(context, "Property resubmitted for review", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Property resubmitted for review",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                 }
-                            }
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = dropdownTextColor,
+                                leadingIconColor = primaryColor
+                            )
                         )
+
+                        Divider(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = dropdownDividerColor,
+                            thickness = 0.5.dp
+                        )
+
+                        // Delete option
                         DropdownMenuItem(
-                            text = { Text("Delete", color = Color.Red) },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = errorColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        "Delete Property",
+                                        color = errorColor,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            },
                             onClick = {
                                 showMenu = false
-                                property.firebaseKey?.let { key ->
-                                    FirebaseDatabase.getInstance()
-                                        .getReference("Property")
-                                        .child(key)
-                                        .removeValue()
-                                        .addOnSuccessListener {
-                                            Toast.makeText(context, "Property deleted", Toast.LENGTH_SHORT).show()
-                                        }
-                                }
-                            }
+                                showDeleteDialog = true
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = errorColor,
+                                leadingIconColor = errorColor
+                            )
                         )
                     }
                 }
             }
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = null,
+                    tint = errorColor,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Delete Property?",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = textColor
+                )
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete \"${property.title}\"? This action cannot be undone.",
+                    fontSize = 14.sp,
+                    color = secondaryTextColor
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        property.firebaseKey?.let { key ->
+                            FirebaseDatabase.getInstance()
+                                .getReference("Property")
+                                .child(key)
+                                .removeValue()
+                                .addOnSuccessListener {
+                                    Toast.makeText(
+                                        context,
+                                        "Property deleted successfully",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(
+                                        context,
+                                        "Failed to delete property",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = errorColor),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showDeleteDialog = false },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = secondaryTextColor
+                    )
+                ) {
+                    Text("Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White,
+            textContentColor = textColor
+        )
     }
 }

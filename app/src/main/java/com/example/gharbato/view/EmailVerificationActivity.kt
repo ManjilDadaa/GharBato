@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,24 +25,31 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
 
 class EmailVerificationActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        ThemePreference.init(this)
 
         // Get email from intent
         val userEmail = intent.getStringExtra("USER_EMAIL") ?: ""
 
         setContent {
-            EmailVerificationBody(userEmail)
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+            GharBatoTheme(darkTheme = isDarkMode) {
+                EmailVerificationBody(userEmail, isDarkMode = isDarkMode)
+            }
         }
     }
 }
 
 @Composable
-fun EmailVerificationBody(userEmail: String) {
+fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
     val context = LocalContext.current
     val activity = context as? ComponentActivity
@@ -49,8 +57,14 @@ fun EmailVerificationBody(userEmail: String) {
     var isCheckingEmail by remember { mutableStateOf(false) }
     var isResendingEmail by remember { mutableStateOf(false) }
 
+    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+
     Scaffold(
-        containerColor = Color.White
+        containerColor = backgroundColor
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -82,7 +96,7 @@ fun EmailVerificationBody(userEmail: String) {
                         "Verify Your Email",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.DarkGray
+                        color = textColor
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -91,7 +105,7 @@ fun EmailVerificationBody(userEmail: String) {
                     Text(
                         "We've sent a verification link to",
                         fontSize = 15.sp,
-                        color = Color.Gray,
+                        color = secondaryTextColor,
                         textAlign = TextAlign.Center
                     )
 
@@ -111,7 +125,7 @@ fun EmailVerificationBody(userEmail: String) {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFF8F9FA)
+                            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FA)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -121,19 +135,19 @@ fun EmailVerificationBody(userEmail: String) {
                             Text(
                                 "📧 Check your email inbox",
                                 fontSize = 14.sp,
-                                color = Color.DarkGray,
+                                color = textColor,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                             Text(
                                 "🔗 Click the verification link",
                                 fontSize = 14.sp,
-                                color = Color.DarkGray,
+                                color = textColor,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                             Text(
                                 "✅ Come back and tap 'I've Verified'",
                                 fontSize = 14.sp,
-                                color = Color.DarkGray,
+                                color = textColor,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
@@ -200,13 +214,13 @@ fun EmailVerificationBody(userEmail: String) {
                     ) {
                         Text(
                             "Didn't receive the email?",
-                            color = Color.Gray,
+                            color = secondaryTextColor,
                             fontSize = 14.sp
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             if (isResendingEmail) "Sending..." else "Resend",
-                            color = if (isResendingEmail) Color.Gray else Blue,
+                            color = if (isResendingEmail) secondaryTextColor else Blue,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.clickable(enabled = !isResendingEmail) {
@@ -221,7 +235,7 @@ fun EmailVerificationBody(userEmail: String) {
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    HorizontalDivider(color = Color(0xFFE0E0E0))
+                    HorizontalDivider(color = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0))
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -238,7 +252,7 @@ fun EmailVerificationBody(userEmail: String) {
                     ) {
                         Text(
                             "Log out and use different account",
-                            color = Color.Gray,
+                            color = secondaryTextColor,
                             fontSize = 14.sp
                         )
                     }

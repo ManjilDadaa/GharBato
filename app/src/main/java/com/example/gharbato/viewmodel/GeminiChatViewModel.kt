@@ -72,7 +72,7 @@ class GeminiChatViewModel(
             repository.sendMessage(
                 message = text,
                 conversationHistory = currentMessages
-            ) { success, response ->
+            ) { success, response, propertyIds ->
                 _isLoading.value = false
 
                 val aiMessage = GeminiChatMessage(
@@ -80,7 +80,8 @@ class GeminiChatViewModel(
                     text = response,
                     isFromUser = false,
                     timestamp = System.currentTimeMillis(),
-                    isError = !success
+                    isError = !success,
+                    propertyIds = propertyIds
                 )
 
                 val updatedMessages = _messages.value.toMutableList()

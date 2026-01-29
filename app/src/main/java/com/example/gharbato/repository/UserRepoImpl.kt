@@ -51,6 +51,59 @@ class UserRepoImpl : UserRepo {
         }
     }
 
+    override fun loginWithGoogle(idToken: String, callback: (Boolean, String, Boolean) -> Unit) {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        auth.signInWithCredential(credential).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val user = auth.currentUser
+                val isNewUser = task.result?.additionalUserInfo?.isNewUser ?: false
+
+                if (user != null) {
+                    // Check if user exists in database
+                    ref.child(user.uid).addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (!snapshot.exists()) {
+                                // New user - create profile in database
+                                val userModel = UserModel(
+                                    userId = user.uid,
+                                    email = user.email ?: "",
+                                    fullName = user.displayName ?: "",
+                                    phoneNo = user.phoneNumber ?: "",
+                                    selectedCountry = "",
+                                    profileImageUrl = user.photoUrl?.toString() ?: "",
+                                    isSuspended = false,
+                                    suspendedUntil = 0L,
+                                    suspensionReason = ""
+                                )
+                                ref.child(user.uid).setValue(userModel).addOnCompleteListener { dbTask ->
+                                    if (dbTask.isSuccessful) {
+                                        Log.d("GoogleSignIn", "New user created in database")
+                                        callback(true, "Welcome to GharBato!", true)
+                                    } else {
+                                        callback(true, "Login successful", true)
+                                    }
+                                }
+                            } else {
+                                // Existing user
+                                Log.d("GoogleSignIn", "Existing user logged in")
+                                callback(true, "Welcome back!", false)
+                            }
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            callback(true, "Login successful", isNewUser)
+                        }
+                    })
+                } else {
+                    callback(false, "Failed to get user info", false)
+                }
+            } else {
+                Log.e("GoogleSignIn", "signInWithCredential failed", task.exception)
+                callback(false, task.exception?.message ?: "Google sign-in failed", false)
+            }
+        }
+    }
+
     override fun signUp(
         email: String,
         password: String,

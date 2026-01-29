@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,10 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.example.gharbato.R
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.SystemBarUtils
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -59,6 +64,7 @@ class MapLocationPickerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        ThemePreference.init(this)
 
         // Get current location from intent (for editing)
         val currentLatitude = intent.getDoubleExtra("CURRENT_LATITUDE", 27.7172)
@@ -68,24 +74,30 @@ class MapLocationPickerActivity : ComponentActivity() {
         checkLocationPermission()
 
         setContent {
-            MapLocationPickerScreen(
-                initialLatitude = currentLatitude,
-                initialLongitude = currentLongitude,
-                onLocationSelected = { lat, lng, address ->
-                    val resultIntent = Intent().apply {
-                        putExtra(RESULT_LATITUDE, lat)
-                        putExtra(RESULT_LONGITUDE, lng)
-                        putExtra(RESULT_ADDRESS, address)
-                    }
-                    setResult(Activity.RESULT_OK, resultIntent)
-                    finish()
-                },
-                onCancel = {
-                    setResult(Activity.RESULT_CANCELED)
-                    finish()
-                },
-                fusedLocationClient = fusedLocationClient
-            )
+            val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
+            SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
+
+            GharBatoTheme(darkTheme = isDarkMode) {
+                MapLocationPickerScreen(
+                    initialLatitude = currentLatitude,
+                    initialLongitude = currentLongitude,
+                    onLocationSelected = { lat, lng, address ->
+                        val resultIntent = Intent().apply {
+                            putExtra(RESULT_LATITUDE, lat)
+                            putExtra(RESULT_LONGITUDE, lng)
+                            putExtra(RESULT_ADDRESS, address)
+                        }
+                        setResult(Activity.RESULT_OK, resultIntent)
+                        finish()
+                    },
+                    onCancel = {
+                        setResult(Activity.RESULT_CANCELED)
+                        finish()
+                    },
+                    fusedLocationClient = fusedLocationClient,
+                    isDarkMode = isDarkMode
+                )
+            }
         }
     }
 
@@ -118,10 +130,18 @@ fun MapLocationPickerScreen(
     initialLongitude: Double = 85.3240,
     onLocationSelected: (Double, Double, String) -> Unit,
     onCancel: () -> Unit,
-    fusedLocationClient: FusedLocationProviderClient
+    fusedLocationClient: FusedLocationProviderClient,
+    isDarkMode: Boolean = false
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+
+    // Theme colors
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
+    val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
 
     // Initialize with provided location or default
     var selectedLocation by remember { mutableStateOf(LatLng(initialLatitude, initialLongitude)) }
@@ -204,14 +224,14 @@ fun MapLocationPickerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF2196F3)
+                    containerColor = primaryColor
                 )
             )
         },
         bottomBar = {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                color = Color.White,
+                color = surfaceColor,
                 shadowElevation = 8.dp
             ) {
                 Column(
@@ -223,7 +243,7 @@ fun MapLocationPickerScreen(
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFFF5F5F5)
+                            containerColor = cardColor
                         ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -236,7 +256,7 @@ fun MapLocationPickerScreen(
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = Color(0xFF2196F3),
+                                tint = primaryColor,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -244,7 +264,7 @@ fun MapLocationPickerScreen(
                                 Text(
                                     text = "Selected Location",
                                     fontSize = 12.sp,
-                                    color = Color.Gray,
+                                    color = onSurfaceVariantColor,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -252,13 +272,13 @@ fun MapLocationPickerScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(16.dp),
                                         strokeWidth = 2.dp,
-                                        color = Color(0xFF2196F3)
+                                        color = primaryColor
                                     )
                                 } else {
                                     Text(
                                         text = selectedAddress,
                                         fontSize = 14.sp,
-                                        color = Color.Black,
+                                        color = onSurfaceColor,
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -269,7 +289,7 @@ fun MapLocationPickerScreen(
                                         selectedLocation.longitude
                                     ),
                                     fontSize = 11.sp,
-                                    color = Color.Gray
+                                    color = onSurfaceVariantColor
                                 )
                             }
                         }
@@ -320,7 +340,12 @@ fun MapLocationPickerScreen(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = true),
+                properties = MapProperties(
+                    isMyLocationEnabled = true,
+                    mapStyleOptions = if (isDarkMode) {
+                        MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+                    } else null
+                ),
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
                     myLocationButtonEnabled = false
@@ -366,13 +391,13 @@ fun MapLocationPickerScreen(
                         }
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White,
+                    containerColor = surfaceColor,
                     shape = CircleShape
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Zoom In",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
 
@@ -388,13 +413,13 @@ fun MapLocationPickerScreen(
                         }
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White,
+                    containerColor = surfaceColor,
                     shape = CircleShape
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = "Zoom Out",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
             }
@@ -430,13 +455,13 @@ fun MapLocationPickerScreen(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(bottom = 180.dp, end = 16.dp),
-                containerColor = Color.White,
+                containerColor = surfaceColor,
                 shape = CircleShape
             ) {
                 Icon(
                     imageVector = Icons.Default.MyLocation,
                     contentDescription = "My Location",
-                    tint = Color(0xFF2196F3)
+                    tint = primaryColor
                 )
             }
 
@@ -447,7 +472,7 @@ fun MapLocationPickerScreen(
                     .padding(top = 16.dp)
                     .fillMaxWidth(0.9f),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.95f)
+                    containerColor = surfaceColor.copy(alpha = 0.95f)
                 ),
                 shape = RoundedCornerShape(12.dp),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
@@ -459,14 +484,14 @@ fun MapLocationPickerScreen(
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
-                        tint = Color(0xFF2196F3),
+                        tint = primaryColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "Tap anywhere on the map or drag the marker to set exact location",
                         fontSize = 12.sp,
-                        color = Color.Black,
+                        color = onSurfaceColor,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.weight(1f)
                     )

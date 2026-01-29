@@ -149,23 +149,25 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
     val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
 
-    // Exit Dialog
+    // Exit Dialog - Improved UI
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
             title = {
                 Text(
-                    if (isEdit) "Cancel Editing?" else "Exit Listing?",
+                    text = if (isEdit) "Cancel Editing?" else "Exit Listing?",
                     fontWeight = FontWeight.Bold,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                    fontSize = 20.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
                 )
             },
             text = {
                 Text(
-                    if (isEdit) "Are you sure you want to cancel? Any unsaved changes will be lost."
+                    text = if (isEdit) "Are you sure you want to cancel? Any unsaved changes will be lost."
                     else "Are you sure you want to go back? Your progress won't be saved.",
-                    fontSize = 15.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.DarkGray
+                    fontSize = 16.sp,
+                    lineHeight = 24.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
                 )
             },
             confirmButton = {
@@ -174,70 +176,120 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         showExitDialog = false
                         activity.finish()
                     },
+                    modifier = Modifier
+                        .height(48.dp)
+                        .padding(horizontal = 4.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFD32F2F)
+                        containerColor = Color(0xFFDC3545)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
                     )
                 ) {
-                    Text(if (isEdit) "Yes, Cancel" else "Yes, Exit")
+                    Text(
+                        text = if (isEdit) "Yes, Cancel" else "Yes, Exit",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             },
             dismissButton = {
-                Button(
+                OutlinedButton(
                     onClick = { showExitDialog = false },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Gray.copy(0.7f)
-                    )
+                    modifier = Modifier
+                        .height(48.dp)
+                        .padding(horizontal = 4.dp),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        width = 1.5.dp,
+                        brush = androidx.compose.ui.graphics.SolidColor(
+                            if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.5f)
+                        )
+                    ),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Continue Editing")
+                    Text(
+                        text = "Continue Editing",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                    )
                 }
             },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            shape = RoundedCornerShape(20.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+            tonalElevation = 0.dp
         )
     }
 
-    // Confirm Submit Dialog
+    // Confirm Submit Dialog - Improved UI
     if (showConfirmDialog) {
         AlertDialog(
             onDismissRequest = { if (!isUploading) showConfirmDialog = false },
             title = {
                 Text(
-                    if (isUploading) "Uploading..." else "Submit Listing?",
+                    text = if (isUploading) "Uploading..." else "Submit Listing?",
                     fontWeight = FontWeight.Bold,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                    fontSize = 20.sp,
+                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
                 )
             },
             text = {
-                Column {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     if (isUploading) {
-                        CircularProgressIndicator(
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier
-                                .align(Alignment.CenterHorizontally)
-                                .padding(16.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            uploadProgress,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center,
-                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                strokeWidth = 4.dp,
+                                color = Blue
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = uploadProgress,
+                                fontSize = 15.sp,
+                                lineHeight = 22.sp,
+                                textAlign = TextAlign.Center,
+                                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     } else {
-                        Text(
-                            "Review your listing:",
-                            fontWeight = FontWeight.Medium,
-                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("• Purpose: ${listingState.selectedPurpose}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
-                        Text("• Type: ${listingState.selectedPropertyType}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
-                        Text("• Title: ${listingState.title}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
-                        Text("• Price: Rs ${listingState.price}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
-                        Text("• Location: ${listingState.location}", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    else Color(0xFFF5F5F5),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Review your listing:",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
 
-                        val totalImages = listingState.imageCategories.sumOf { it.images.size }
-                        Text("• Images: $totalImages photos", fontSize = 14.sp, color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Black)
+                            ReviewItem("Purpose", listingState.selectedPurpose, isDarkMode)
+                            ReviewItem("Type", listingState.selectedPropertyType, isDarkMode)
+                            ReviewItem("Title", listingState.title, isDarkMode)
+                            ReviewItem("Price", "Rs ${listingState.price}", isDarkMode)
+                            ReviewItem("Location", listingState.location, isDarkMode)
+
+                            val totalImages = listingState.imageCategories.sumOf { it.images.size }
+                            ReviewItem("Images", "$totalImages photos", isDarkMode)
+                        }
                     }
                 }
             },
@@ -263,54 +315,98 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 }
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                        modifier = Modifier
+                            .height(48.dp)
+                            .padding(horizontal = 4.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp
+                        )
                     ) {
-                        Text("Yes, Submit")
+                        Text(
+                            text = "Yes, Submit",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             },
             dismissButton = {
                 if (!isUploading) {
-                    Button(
+                    OutlinedButton(
                         onClick = { showConfirmDialog = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = Gray.copy(0.7f))
+                        modifier = Modifier
+                            .height(48.dp)
+                            .padding(horizontal = 4.dp),
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            width = 1.5.dp,
+                            brush = androidx.compose.ui.graphics.SolidColor(
+                                if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.5f)
+                            )
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Cancel")
+                        Text(
+                            text = "Cancel",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                        )
                     }
                 }
             },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            shape = RoundedCornerShape(20.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+            tonalElevation = 0.dp
         )
     }
 
-    // Success Dialog
+    // Success Dialog - Improved UI
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { },
             title = {
                 Text(
-                    "Success!",
+                    text = "Success!",
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
+                    fontSize = 22.sp,
+                    color = Color(0xFF10B981)
                 )
             },
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.baseline_check_24),
-                        contentDescription = null,
-                        tint = Color(0xFF4CAF50),
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .background(
+                                color = Color(0xFF10B981).copy(alpha = 0.1f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.baseline_check_24),
+                            contentDescription = "Success icon",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        if (isEdit) "Your property has been updated successfully!" else "Your property has been listed successfully!",
+                        text = if (isEdit) "Your property has been updated successfully!"
+                        else "Your property has been listed successfully!",
                         textAlign = TextAlign.Center,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A),
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
             },
@@ -323,18 +419,32 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         context.startActivity(intent)
                         activity.finish()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                        .padding(horizontal = 4.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(
+                        defaultElevation = 0.dp,
+                        pressedElevation = 0.dp
+                    )
                 ) {
-                    Text("Go to Dashboard")
+                    Text(
+                        text = "Go to Dashboard",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            shape = RoundedCornerShape(20.dp),
+            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+            tonalElevation = 0.dp
         )
     }
 
     Scaffold(
-        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFFAFAFA)
     ) { padding ->
         if (isLoadingProperty) {
             Box(
@@ -343,7 +453,21 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     .padding(padding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = Blue)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(
+                        color = Blue,
+                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = "Loading property details...",
+                        fontSize = 15.sp,
+                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                    )
+                }
             }
         } else {
             Column(
@@ -357,99 +481,111 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                 AnimatedVisibility(
                     visible = showHeader,
                     enter = fadeIn(
-                        animationSpec = tween(durationMillis = 600)
+                        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
                     ) + expandVertically(
-                        animationSpec = tween(
-                            durationMillis = 600,
-                            easing = FastOutSlowInEasing
-                        )
+                        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
                     ),
                     exit = fadeOut(
-                        animationSpec = tween(durationMillis = 600)
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
                     ) + shrinkVertically(
-                        animationSpec = tween(
-                            durationMillis = 600,
-                            easing = FastOutSlowInEasing
-                        )
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
                     )
                 ) {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 32.dp)
+                    ) {
                         Row(
                             horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 20.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .background(color = Blue, shape = RoundedCornerShape(16.dp)),
+                                    .size(72.dp)
+                                    .background(color = Blue, shape = RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.home),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(25.dp),
+                                    contentDescription = "Property icon",
+                                    modifier = Modifier.size(32.dp),
                                     tint = Color.White
                                 )
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(15.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
-                                "List Your Property",
+                                text = "List Your Property",
                                 style = TextStyle(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 26.sp,
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                                    fontSize = 28.sp,
+                                    letterSpacing = (-0.5).sp,
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF1A1A1A)
                                 )
                             )
 
-                            Spacer(modifier = Modifier.height(5.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
-                                "Reach thousands of potential buyers and renters",
+                                text = "Reach thousands of potential buyers and renters",
                                 style = TextStyle(
-                                    fontSize = 15.sp,
-                                    color = Gray
-                                )
+                                    fontSize = 16.sp,
+                                    lineHeight = 22.sp,
+                                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                                ),
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(horizontal = 16.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(30.dp))
+                Spacer(modifier = Modifier.height(if (showHeader) 16.dp else 32.dp))
 
-                // Progress Indicator - Dynamic based on purpose
+                // Progress Indicator - Improved UI
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 15.dp),
+                        .padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     for (i in 1..totalSteps) {
-                        Column {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.weight(1f)
+                        ) {
                             val circleColor by animateColorAsState(
-                                targetValue = if (step >= i) Blue else Gray.copy(0.3f),
+                                targetValue = if (step >= i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
+                                animationSpec = tween(durationMillis = 300),
                                 label = "stepColor"
                             )
+
                             Box(
                                 modifier = Modifier
                                     .background(color = circleColor, shape = CircleShape)
-                                    .size(40.dp),
+                                    .size(44.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("$i", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "$i",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
                             Text(
-                                when {
+                                text = when {
                                     i == 1 -> "Purpose"
                                     i == 2 -> "Details"
                                     i == 3 -> "Photos"
@@ -458,29 +594,40 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                     i == 5 -> "Amenities"
                                     else -> ""
                                 },
-                                fontSize = 12.sp,
-                                color = Gray
+                                fontSize = 13.sp,
+                                fontWeight = if (step == i) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (step >= i) {
+                                    if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                                } else {
+                                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                                },
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
                             )
                         }
 
                         if (i < totalSteps) {
                             Box(
                                 modifier = Modifier
-                                    .padding(horizontal = 7.dp)
-                                    .weight(1f)
-                                    .height(2.dp)
-                                    .background(if (step > i) Blue else Gray.copy(0.3f))
+                                    .padding(horizontal = 4.dp, vertical = 0.dp)
+                                    .weight(0.5f)
+                                    .height(3.dp)
+                                    .background(
+                                        color = if (step > i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
+                                        shape = RoundedCornerShape(2.dp)
+                                    )
+                                    .align(Alignment.CenterVertically)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
                 // Content based on step and purpose
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 10.dp)
+                        .padding(horizontal = 16.dp)
                         .fillMaxWidth()
                         .weight(1f, fill = false)
                 ) {
@@ -528,15 +675,17 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     }
                 }
 
-                // Navigation Buttons
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Navigation Buttons - Improved UI
                 Row(
-                    horizontalArrangement = Arrangement.SpaceAround,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 15.dp, vertical = 10.dp)
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
                 ) {
                     // Back Button
-                    Button(
+                    OutlinedButton(
                         onClick = {
                             val newStep = step - 1
                             val minStep = if (isEdit) 2 else 1
@@ -546,16 +695,24 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 step -= 1
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Gray.copy(0.7f)
+                        border = ButtonDefaults.outlinedButtonBorder.copy(
+                            width = 1.5.dp,
+                            brush = androidx.compose.ui.graphics.SolidColor(
+                                if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.4f)
+                            )
                         )
                     ) {
-                        Text("Back")
+                        Text(
+                            text = "Back",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                        )
                     }
-
-                    Spacer(modifier = Modifier.width(7.dp))
 
                     // Next/Submit Button
                     Button(
@@ -576,16 +733,49 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 ).show()
                             }
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue)
+                        colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 0.dp,
+                            pressedElevation = 0.dp
+                        )
                     ) {
                         Text(
-                            if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next"
+                            text = if (step == totalSteps) "Submit" else if (step == 1) "Continue" else "Next",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
                         )
                     }
                 }
             }
         }
+    }
+}
+
+// Helper composable for review items in confirm dialog
+@Composable
+private fun ReviewItem(label: String, value: String, isDarkMode: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "$label:",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666),
+            modifier = Modifier.weight(0.35f)
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Normal,
+            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A),
+            modifier = Modifier.weight(0.65f),
+            textAlign = TextAlign.End
+        )
     }
 }

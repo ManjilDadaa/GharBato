@@ -17,62 +17,55 @@ class GeminiRepositoryImpl(
 ) : GeminiRepository {
 
     private val tag = "GeminiRepository"
-    private val systemPrompt =
-        """
-        You are the AI assistant for "Gharbato", a real estate marketplace app in Nepal.
 
-        CRITICAL INSTRUCTIONS:
-        - When users ask about properties, you will receive REAL property data from the Gharbato database
-        - ALWAYS use the actual property data provided to you
-        - NEVER make up or invent property listings
-        - If no properties match, tell users honestly
-        - Guide users to use the app's Buy/Rent sections to browse all listings
+    private val systemPrompt = """
+You are the AI assistant for GharBato, Nepal's real estate marketplace.
 
-        RESPONSE STYLE:
-        - Keep responses SHORT (2-4 sentences for simple questions)
-        - Be direct and helpful
-        - Use bullet points sparingly (max 3-4 items)
-        - Format important info with **bold**
-        - Use numbered lists for steps
+## RULES
+1. Keep responses SHORT (1-3 sentences)
+2. When showing properties, include [PROPERTY:firebase_key] but NEVER show the ID to users
+3. Ask clarifying questions when needed (property type, location, budget, bedrooms)
+4. Show 2-4 properties maximum per response
 
-        WHEN SHOWING PROPERTIES:
-        - Present the actual properties from the database
-        - Include key details: price, location, bedrooms/bathrooms
-        - Keep descriptions brief
-        - Suggest users tap on listings in the app for full details
+## GREETING
+User: "hi", "hello"
+You: "Hi! 👋 Looking for a property? Tell me your preferred location and budget."
 
-        EXAMPLES:
+## VAGUE REQUESTS
+User: "show properties", "find house"
+You: "I can help! What's your preferred location? (e.g., Kathmandu, Lalitpur, Pokhara)"
 
-        Q: "Show me houses for sale"
-        A: [You'll receive real property data]
-        "Here are available houses for sale:
+User: "apartment in kathmandu"
+You: "Great! What's your budget range? How many bedrooms do you need?"
 
-        1. **Modern Villa in Kathmandu**
-           Rs. 2.5 Cr | 3 bed, 2 bath | Kathmandu
+## SHOWING PROPERTIES
+When user provides details, show properties:
 
-        2. **Family House in Lalitpur**
-           Rs. 1.8 Cr | 4 bed, 3 bath | Lalitpur
+"Here are [number] options in [location]:
 
-        Tap any listing in the app to see photos and contact the seller!"
+[PROPERTY:firebase_key]
+[PROPERTY:firebase_key]
 
-        Q: "What should I check when buying property?"
-        A: "Key things to verify:
-        1. Legal documents and ownership
-        2. Property location and accessibility
-        3. Market price comparison
-        4. Future development plans in area
+Check the cards below for details!"
 
-        Need help with anything specific?"
+DO NOT write property details in text - only include [PROPERTY:id] tags. The cards will show everything.
 
-        GENERAL ADVICE:
-        - Help with real estate questions
-        - Explain buying/renting process
-        - Discuss home loans and EMI
-        - Give property investment tips
-        - Don't give specific legal/financial advice
+## EXAMPLE
+User: "2 bedroom apartment in Lalitpur under 50 lakh"
+You: "Found 3 apartments in Lalitpur within your budget:
 
-        Remember: You have access to REAL Gharbato property data - use it!
-        """.trimIndent()
+[PROPERTY:-abc123]
+[PROPERTY:-xyz789]
+[PROPERTY:-def456]
+
+Tap the cards below to view details!"
+
+## EXPERTISE
+- Nepal real estate terms: lakh, crore, ropani, aana
+- Legal docs: lalpurja, char killa
+- Home loans, investment advice
+""".trimIndent()
+
     private val gson = Gson()
     private val prefs by lazy {
         context.getSharedPreferences("gemini_chat_prefs", Context.MODE_PRIVATE)
@@ -83,11 +76,12 @@ class GeminiRepositoryImpl(
         return GenerativeModel(
             modelName = "gemini-2.5-flash",
             apiKey = BuildConfig.GEMINI_API_KEY,
+            systemInstruction = content { text(systemPrompt) }, // Using systemInstruction
             generationConfig = generationConfig {
-                temperature = 0.4f
-                topK = 20
-                topP = 0.8f
-                maxOutputTokens = 800
+                temperature = 0.7f // Slightly higher for more natural responses
+                topK = 40
+                topP = 0.95f
+                maxOutputTokens = 1024 // Increased for property listings
             }
         )
     }
@@ -95,23 +89,22 @@ class GeminiRepositoryImpl(
     override suspend fun sendMessage(
         message: String,
         conversationHistory: List<GeminiChatMessage>,
-        callback: (Boolean, String) -> Unit
+        callback: (Boolean, String, List<String>) -> Unit
     ) {
         withContext(Dispatchers.IO) {
             try {
-                Log.d(tag, "Sending message to Gemini: $message")
+                Log.d(tag, "Sending message: $message")
+
+                // Fetch real properties from database
+                val properties = propertyDataProvider.fetchApprovedProperties()
+                val propertyContext = propertyDataProvider.formatPropertiesForAI(properties, message)
 
                 val model = createModel()
 
-                val history = mutableListOf(
-                    content(role = "user") {
-                        text(systemPrompt)
-                    }
-                )
-
-                history += conversationHistory
+                // Build conversation history (exclude system prompt since it's in systemInstruction)
+                val history = conversationHistory
                     .filter { !it.isError }
-                    .takeLast(10)
+                    .takeLast(20) // Increased to maintain better context
                     .map { msg ->
                         content(role = if (msg.isFromUser) "user" else "model") {
                             text(msg.text)
@@ -120,50 +113,87 @@ class GeminiRepositoryImpl(
 
                 val chat = model.startChat(history = history)
 
-                // Send message and get response
-                val response = chat.sendMessage(message)
-                val aiResponse = response.text ?: "I apologize, but I couldn't generate a response. Please try again."
+                // Build enhanced message with property context
+                val enhancedMessage = buildString {
+                    append(message)
+                    if (propertyContext.isNotBlank()) {
+                        append("\n\n---AVAILABLE PROPERTIES---\n")
+                        append(propertyContext)
+                        append("\n---END PROPERTIES---")
+                    }
+                }
 
-                Log.d(tag, "Gemini response received successfully")
+                Log.d(tag, "Enhanced message length: ${enhancedMessage.length}")
+
+                // Send message and get response
+                val response = chat.sendMessage(enhancedMessage)
+                val aiResponse = response.text?.trim()
+                    ?: "I apologize, I couldn't generate a response. Please try again."
+
+                // Extract property IDs from AI response
+                val propertyIds = extractPropertyIds(aiResponse)
+                
+                // Remove property ID tags from user-facing response
+                val cleanResponse = aiResponse.replace(Regex("\\[PROPERTY:[^\\]]+\\]"), "").trim()
+
+                Log.d(tag, "Response received: ${propertyIds.size} properties referenced")
+
                 withContext(Dispatchers.Main) {
-                    callback(true, aiResponse)
+                    callback(true, cleanResponse, propertyIds)
                 }
 
             } catch (e: Exception) {
-                Log.e(tag, "Error sending message to Gemini", e)
-                Log.e(tag, "Error details: ${e.message}")
-                Log.e(tag, "Error stacktrace: ", e)
+                Log.e(tag, "Error sending message", e)
 
-                val errorMessage = when {
-                    e.message?.contains("API_KEY_INVALID", ignoreCase = true) == true ->
-                        "Invalid API key. Please check your Gemini API key."
-
-                    e.message?.contains("quota", ignoreCase = true) == true ->
-                        "API quota exceeded. Please try again in a few minutes."
-
-                    e.message?.contains("PERMISSION_DENIED", ignoreCase = true) == true ->
-                        "Permission denied. Please check your API key permissions."
-
-                    e.message?.contains("404") == true || e.message?.contains("NOT_FOUND") == true ->
-                        "Model not available. Please try again."
-
-                    e.message?.contains("429") == true || e.message?.contains("RESOURCE_EXHAUSTED") == true ->
-                        "Too many requests. Please wait and try again."
-
-                    e.message?.contains("network", ignoreCase = true) == true ||
-                            e.message?.contains("Unable to resolve host", ignoreCase = true) == true ->
-                        "Network error. Please check your internet connection."
-
-                    e.message?.contains("DEADLINE_EXCEEDED", ignoreCase = true) == true ->
-                        "Request timeout. Please try again."
-
-                    else -> "Sorry, something went wrong. Please try again."
-                }
+                val errorMessage = getErrorMessage(e)
 
                 withContext(Dispatchers.Main) {
-                    callback(false, errorMessage)
+                    callback(false, errorMessage, emptyList())
                 }
             }
+        }
+    }
+
+    private fun extractPropertyIds(response: String): List<String> {
+        val regex = """\[PROPERTY:([^\]]+)\]""".toRegex()
+        return regex.findAll(response)
+            .map { it.groupValues[1].trim() }
+            .distinct() // Remove duplicates
+            .take(10) // Support up to 10 properties
+            .toList()
+    }
+
+    private fun getErrorMessage(e: Exception): String {
+        val message = e.message ?: ""
+        return when {
+            message.contains("API_KEY_INVALID", ignoreCase = true) ->
+                "Configuration error. Please contact support."
+
+            message.contains("quota", ignoreCase = true) ||
+                    message.contains("429") == true ||
+                    message.contains("RESOURCE_EXHAUSTED", ignoreCase = true) ->
+                "Service is busy. Please try again in a moment."
+
+            message.contains("PERMISSION_DENIED", ignoreCase = true) ->
+                "Service access error. Please contact support."
+
+            message.contains("404", ignoreCase = true) ||
+                    message.contains("NOT_FOUND", ignoreCase = true) ->
+                "Service temporarily unavailable. Please try again."
+
+            message.contains("network", ignoreCase = true) ||
+                    message.contains("Unable to resolve host", ignoreCase = true) ||
+                    message.contains("UnknownHost", ignoreCase = true) ->
+                "No internet connection. Please check your network."
+
+            message.contains("DEADLINE_EXCEEDED", ignoreCase = true) ||
+                    message.contains("timeout", ignoreCase = true) ->
+                "Request timed out. Please try again."
+
+            message.contains("INVALID_ARGUMENT", ignoreCase = true) ->
+                "Invalid request. Please rephrase your question."
+
+            else -> "Something went wrong. Please try again."
         }
     }
 
@@ -171,7 +201,10 @@ class GeminiRepositoryImpl(
         return try {
             val json = prefs.getString("conversation_$userId", null) ?: return emptyList()
             val type = object : TypeToken<List<GeminiChatMessage>>() {}.type
-            gson.fromJson(json, type) ?: emptyList()
+            val messages: List<GeminiChatMessage> = gson.fromJson(json, type) ?: emptyList()
+
+            // Limit stored messages to prevent memory issues
+            messages.takeLast(50)
         } catch (e: Exception) {
             Log.e(tag, "Error loading conversation", e)
             emptyList()
@@ -180,16 +213,22 @@ class GeminiRepositoryImpl(
 
     override fun saveConversation(userId: String, messages: List<GeminiChatMessage>) {
         try {
-            val json = gson.toJson(messages)
+            // Only save last 50 messages to prevent storage bloat
+            val messagesToSave = messages.takeLast(50)
+            val json = gson.toJson(messagesToSave)
             prefs.edit().putString("conversation_$userId", json).apply()
-            Log.d(tag, "Conversation saved successfully")
+            Log.d(tag, "Conversation saved: ${messagesToSave.size} messages")
         } catch (e: Exception) {
             Log.e(tag, "Error saving conversation", e)
         }
     }
 
     override fun clearConversation(userId: String) {
-        prefs.edit().remove("conversation_$userId").apply()
-        Log.d(tag, "Conversation cleared")
+        try {
+            prefs.edit().remove("conversation_$userId").apply()
+            Log.d(tag, "Conversation cleared for user: $userId")
+        } catch (e: Exception) {
+            Log.e(tag, "Error clearing conversation", e)
+        }
     }
 }

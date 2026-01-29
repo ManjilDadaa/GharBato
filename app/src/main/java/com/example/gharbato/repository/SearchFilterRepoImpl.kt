@@ -18,11 +18,13 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         Log.d(TAG, "Searching text: '$searchQuery' in ${properties.size} properties")
 
         val filtered = properties.filter { property ->
+            // Map "Sell" -> "Buy" for user-facing text search
+            val displayMarketType = if (property.marketType.equals("Sell", ignoreCase = true)) "buy" else property.marketType.lowercase()
             property.title.lowercase().contains(searchQuery) ||
                     property.location.lowercase().contains(searchQuery) ||
                     property.developer.lowercase().contains(searchQuery) ||
                     property.propertyType.lowercase().contains(searchQuery) ||
-                    property.marketType.lowercase().contains(searchQuery) ||
+                    displayMarketType.contains(searchQuery) ||
                     property.description?.lowercase()?.contains(searchQuery) == true
         }
 
@@ -57,11 +59,13 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         var filtered = properties
         Log.d(TAG, "Applying filters to ${properties.size} properties: $filters")
 
-        // Market Type (always applied)
-        filtered = filtered.filter { property ->
-            property.marketType.equals(filters.marketType, ignoreCase = true)
+        // Market Type (Sell/Rent/Book)
+        if (filters.marketType.isNotBlank()) {
+            filtered = filtered.filter { property ->
+                property.marketType.equals(filters.marketType, ignoreCase = true)
+            }
+            Log.d(TAG, "After market type: ${filtered.size}")
         }
-        Log.d(TAG, "After market type: ${filtered.size}")
 
         // Property Types
         if (filters.propertyTypes.isNotEmpty()) {

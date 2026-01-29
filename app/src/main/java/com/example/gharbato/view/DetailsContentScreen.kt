@@ -159,18 +159,6 @@ fun DetailsContentScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Developer/Owner Name
-        CustomOutlinedTextField(
-            value = state.developer,
-            onValueChange = { onStateChange(state.copy(developer = it)) },
-            label = "Owner/Developer Name",
-            placeholder = "e.g., Ram Sharma",
-            modifier = Modifier.fillMaxWidth(),
-            isDarkMode = isDarkMode
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
         // Price and Area
         Row(
             modifier = Modifier.fillMaxWidth(),

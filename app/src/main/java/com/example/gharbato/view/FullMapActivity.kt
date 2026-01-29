@@ -33,6 +33,9 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.view.ThemePreference
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.R
+import com.google.android.gms.maps.model.MapStyleOptions
 
 class FullMapActivity : ComponentActivity() {
 
@@ -56,10 +59,13 @@ class FullMapActivity : ComponentActivity() {
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
-            FullMapScreen(
-                viewModel = viewModel,
-                onBack = { finish() }
-            )
+            GharBatoTheme(darkTheme = isDarkMode) {
+                FullMapScreen(
+                    viewModel = viewModel,
+                    onBack = { finish() },
+                    isDarkMode = isDarkMode
+                )
+            }
         }
     }
 }
@@ -68,13 +74,27 @@ class FullMapActivity : ComponentActivity() {
 @Composable
 fun FullMapScreen(
     viewModel: MapViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    isDarkMode: Boolean = false
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(uiState.propertyLocation, 14f)
     }
+
+    val mapProperties = remember(isDarkMode) {
+        MapProperties(
+            mapStyleOptions = if (isDarkMode) {
+                MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark)
+            } else null
+        )
+    }
+
+    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+    val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
 
     Scaffold(
         topBar = {
@@ -95,7 +115,7 @@ fun FullMapScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 )
             )
         }
@@ -109,6 +129,7 @@ fun FullMapScreen(
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
+                properties = mapProperties,
                 uiSettings = MapUiSettings(
                     zoomControlsEnabled = false,
                     myLocationButtonEnabled = false,
@@ -151,7 +172,7 @@ fun FullMapScreen(
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .zIndex(1f),
-                color = Color.White,
+                color = surfaceColor,
                 shadowElevation = 8.dp,
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             ) {
@@ -160,7 +181,7 @@ fun FullMapScreen(
                         text = "Show nearby",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = onSurfaceColor
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -198,12 +219,12 @@ fun FullMapScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Zoom In",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
 
@@ -216,12 +237,12 @@ fun FullMapScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 ) {
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = "Zoom Out",
-                        tint = Color.Black
+                        tint = onSurfaceColor
                     )
                 }
 
@@ -237,12 +258,12 @@ fun FullMapScreen(
                         )
                     },
                     modifier = Modifier.size(48.dp),
-                    containerColor = Color.White
+                    containerColor = surfaceColor
                 ) {
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = "Center on Property",
-                        tint = Color(0xFF2196F3)
+                        tint = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
                     )
                 }
             }
@@ -276,13 +297,20 @@ fun LocationFilterChip(
     count: Int = 0,
     onClick: () -> Unit
 ) {
+    val selectedColor = MaterialTheme.colorScheme.primary
+    val unselectedColor = MaterialTheme.colorScheme.surfaceVariant
+    val selectedTextColor = MaterialTheme.colorScheme.onPrimary
+    val unselectedTextColor = MaterialTheme.colorScheme.onSurface
+    val unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
-        color = if (isSelected) Color(0xFF2196F3) else Color(0xFFF5F5F5),
+        color = if (isSelected) selectedColor else unselectedColor,
         shape = RoundedCornerShape(20.dp),
         border = if (isSelected) null else androidx.compose.foundation.BorderStroke(
             1.dp,
-            Color(0xFFE0E0E0)
+            borderColor
         )
     ) {
         Row(
@@ -292,13 +320,13 @@ fun LocationFilterChip(
             Icon(
                 imageVector = icon,
                 contentDescription = text,
-                tint = if (isSelected) Color.White else Color.Gray,
+                tint = if (isSelected) selectedTextColor else unselectedIconColor,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = if (count > 0) "$text ($count)" else text,
-                color = if (isSelected) Color.White else Color.Black,
+                color = if (isSelected) selectedTextColor else unselectedTextColor,
                 fontSize = 14.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )

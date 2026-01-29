@@ -52,12 +52,10 @@ class TrustAndVerificationActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        // Initialize the theme preference - from 1st code
         ThemePreference.init(this)
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-            // SystemBarUtils from 1st code
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
             GharBatoTheme(darkTheme = isDarkMode) {
@@ -79,7 +77,7 @@ fun TrustAndVerificationScreen() {
 
     var kycStatus by remember { mutableStateOf("Not Verified") }
     var selectedDoc by remember { mutableStateOf<String?>(null) }
-    var trustScore by remember { mutableStateOf(60) } // Default score with email and phone verified
+    var trustScore by remember { mutableStateOf(60) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     var hasSubmittedKyc by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
@@ -93,10 +91,15 @@ fun TrustAndVerificationScreen() {
     var rejectionReason by remember { mutableStateOf<String?>(null) }
 
     // Constants for trust score calculation
-    val emailVerified = true // Email verified by default
-    val phoneVerified = true // Phone verified by default
-    val profilePhoto = false // Profile photo not set by default
-    val noReports = true // No reports by default
+    val emailVerified = true
+    val phoneVerified = true
+    var profilePhoto by remember { mutableStateOf(false) }
+    val noReports = true
+
+    // Update profilePhoto based on userData
+    LaunchedEffect(userData) {
+        profilePhoto = !userData?.profileImageUrl.isNullOrEmpty() && userData?.profileImageUrl != ""
+    }
 
     // Theme colors
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
@@ -124,7 +127,6 @@ fun TrustAndVerificationScreen() {
                     submittedBackUrl = kycModel.backImageUrl
                     rejectionReason = kycModel.rejectionReason
 
-                    // Calculate trust score based on status
                     trustScore = calculateTrustScore(
                         kycStatus = kycModel.status,
                         emailVerified = emailVerified,
@@ -154,6 +156,17 @@ fun TrustAndVerificationScreen() {
                 noReports = noReports
             )
         }
+    }
+
+    // Recalculate trust score when profilePhoto status changes
+    LaunchedEffect(profilePhoto, kycStatus) {
+        trustScore = calculateTrustScore(
+            kycStatus = kycStatus,
+            emailVerified = emailVerified,
+            phoneVerified = phoneVerified,
+            profilePhoto = profilePhoto,
+            noReports = noReports
+        )
     }
 
     val frontPicker = rememberLauncherForActivityResult(
@@ -267,7 +280,7 @@ fun TrustAndVerificationScreen() {
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // KYC Verification Section - using card layout from 3rd code
+                // KYC Verification Section
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -429,7 +442,6 @@ fun TrustAndVerificationScreen() {
                                                         )
                                                         showSuccessDialog = true
 
-                                                        // Create notification
                                                         userViewModel.createNotification(
                                                             title = "✅ KYC Submitted Successfully",
                                                             message = "Your KYC verification request has been submitted. We'll notify you once it's reviewed (typically within 24-48 hours).",
