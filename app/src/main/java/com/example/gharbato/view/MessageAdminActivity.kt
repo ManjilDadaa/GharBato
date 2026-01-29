@@ -71,7 +71,8 @@ fun MessageAdminScreen() {
 
     val currentUser = FirebaseAuth.getInstance().currentUser
     val currentUserId = currentUser?.uid ?: ""
-    val database = FirebaseDatabase.getInstance()
+    // Use explicit Firebase URL to ensure consistency with AdminChatActivity
+    val database = FirebaseDatabase.getInstance("https://gharbatodb-default-rtdb.firebaseio.com")
     val messagesRef = database.getReference("support_messages").child(currentUserId)
     val usersRef = database.getReference("users").child(currentUserId)
     val userPresenceRef = database.getReference("user_presence").child(currentUserId)
