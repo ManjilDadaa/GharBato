@@ -122,7 +122,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                             painter = if (userData?.profileImageUrl?.isNotEmpty() == true) {
                                 rememberAsyncImagePainter(userData?.profileImageUrl)
                             } else {
-                                painterResource(R.drawable.billu)
+                                painterResource(R.drawable.profile)
                             },
                             contentDescription = "Profile Image",
                             modifier = Modifier
