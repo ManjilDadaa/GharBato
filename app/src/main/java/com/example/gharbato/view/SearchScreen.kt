@@ -820,7 +820,7 @@ fun SearchTopBar(
                             },
                         placeholder = {
                             Text(
-                                text = "Search location, property type...",
+                                text = "Search location, property",
                                 color = hintColor,
                                 fontSize = 15.sp
                             )
