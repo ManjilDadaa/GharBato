@@ -587,18 +587,21 @@ fun GeminiMessageBubble(
         // Show property cards if message has property IDs
         if (!isCurrentUser && message.propertyIds.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            message.propertyIds.forEach { propertyId ->
-                PropertyCard(
-                    propertyId = propertyId,
-                    onClick = {
-                        // Navigate to PropertyDetailActivity
-                        val intent = Intent(context, PropertyDetailActivity::class.java)
-                        intent.putExtra("propertyId", propertyId.hashCode())
-                        context.startActivity(intent)
-                    },
-                    isDarkMode = isDarkMode
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                message.propertyIds.forEach { propertyId ->
+                    PropertyCard(
+                        propertyId = propertyId,
+                        onClick = {
+                            val intent = Intent(context, PropertyDetailActivity::class.java)
+                            intent.putExtra("propertyId", propertyId.hashCode())
+                            context.startActivity(intent)
+                        },
+                        isDarkMode = isDarkMode
+                    )
+                }
             }
         }
     }
@@ -877,7 +880,7 @@ fun PropertyCard(
     if (isLoading) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
+                .width(280.dp)
                 .height(200.dp),
             color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
             shadowElevation = 2.dp,
@@ -896,27 +899,26 @@ fun PropertyCard(
     } else if (property != null) {
         Surface(
             modifier = Modifier
-                .fillMaxWidth()
+                .width(280.dp)
                 .clickable(onClick = onClick),
             color = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
             shadowElevation = 2.dp,
             shape = RoundedCornerShape(8.dp)
         ) {
             Column {
-                // Property Image
                 if (property!!.imageUrl.isNotEmpty()) {
                     androidx.compose.foundation.Image(
                         painter = coil.compose.rememberAsyncImagePainter(property!!.imageUrl),
                         contentDescription = "Property",
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .width(280.dp)
                             .height(120.dp),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .width(280.dp)
                             .height(120.dp)
                             .background(if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant else Color(0xFFE0E0E0)),
                         contentAlignment = Alignment.Center
@@ -1010,12 +1012,11 @@ fun PropertyCard(
                     Spacer(modifier = Modifier.height(8.dp))
                     
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Tap to view details",
+                            text = "View details",
                             fontSize = 11.sp,
                             color = Color(0xFF2196F3),
                             fontWeight = FontWeight.Medium
@@ -1023,7 +1024,7 @@ fun PropertyCard(
                         androidx.compose.material3.Icon(
                             imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(14.dp),
                             tint = Color(0xFF2196F3)
                         )
                     }
