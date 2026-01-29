@@ -148,13 +148,28 @@ fun AdminChatScreen(
         }
     }
 
-    // Listen to user online status
+    // Listen to user online status and mark messages as delivered when user comes online
     LaunchedEffect(userId) {
         if (userId.isNotEmpty()) {
             userPresenceRef.addValueEventListener(object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val online = snapshot.child("online").getValue(Boolean::class.java) ?: false
                     isUserOnline = online
+
+                    // When user comes online, mark all undelivered admin messages as delivered
+                    if (online) {
+                        messagesRef.get().addOnSuccessListener { messagesSnapshot ->
+                            messagesSnapshot.children.forEach { messageData ->
+                                val isAdmin = messageData.child("isAdmin").getValue(Boolean::class.java) ?: false
+                                val isDelivered = messageData.child("isDelivered").getValue(Boolean::class.java) ?: false
+
+                                // Mark admin messages as delivered when user comes online
+                                if (isAdmin && !isDelivered) {
+                                    messageData.ref.child("isDelivered").setValue(true)
+                                }
+                            }
+                        }
+                    }
                 }
 
                 override fun onCancelled(error: DatabaseError) {}
