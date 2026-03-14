@@ -14,7 +14,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- ADD THIS LINE - For Android 13+ notification permission -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
@@ -25,117 +24,88 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GharBato">
+
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.ReportedUsersActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_reported_users"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.ReportedPropertiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_reported_properties"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.PendingListingsActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_pending_listing"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.AdminActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_admin"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
         <activity
             android:name=".view.LocationPickerActivity"
             android:exported="false"
             android:label="@string/title_activity_location_picker"
             android:theme="@style/Theme.GharBato" />
-        <!-- ADDED: Message Admin Activity -->
+
         <activity
             android:name=".view.MessageAdminActivity"
             android:exported="false"
             android:label="Message Admin"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.GharBato" />
-        <!-- ADDED: Admin Chat Activity -->
+
         <activity
             android:name=".view.AdminChatActivity"
             android:exported="false"
             android:label="Admin Chat"
             android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.GharBato" />
+
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".ui.view.FullMapActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_full_map"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity> <!-- Google Maps API Key - Using direct value -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
 
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.PropertyDetailActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_property_detail"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.FullSearchMapActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="FullSearchMapActivity"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.ListingActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="@string/title_activity_listing"
-            android:theme="@style/Theme.GharBato">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:theme="@style/Theme.GharBato" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ✅ ONLY LAUNCHER ACTIVITY — untouched -->
         <activity
             android:name=".view.SplashActivity"
             android:exported="true"
@@ -143,19 +113,16 @@
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
             android:name=".view.MessageScreenActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+            android:exported="false" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- ↓ exported kept true — required by ACTION_VIEW intent-filter -->
         <activity
             android:name=".view.MessageDetailsActivity"
             android:exported="true"
@@ -163,104 +130,119 @@
             android:theme="@style/Theme.GharBato">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
-
                 <data android:mimeType="text/plain" />
             </intent-filter>
         </activity>
+
         <activity
             android:name=".view.ZegoCallActivity"
-            android:exported="true"
+            android:exported="false"
             android:launchMode="singleTop"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.MapLocationPickerActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato"
             android:screenOrientation="portrait" />
+
         <activity
             android:name=".view.ForgotActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.MyActivitiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.DashboardActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.NotificationActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.ApplicationSettingsActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.SignUpActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.ContactUsActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.PropertyDetailsActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.LoginActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.HelpCenterActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.TermsAndPoliciesActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Help Center"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.TrustAndVerificationActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.PendingPropertiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.RejectedPropertiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.AllPropertiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
+
         <activity
             android:name=".view.ApprovedPropertiesActivity"
-            android:exported="true"
+            android:exported="false"
             android:theme="@style/Theme.GharBato" />
 
         <activity android:name=".view.GeminiChatActivity" />
 
         <activity
             android:name=".view.EditProfileActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Edit Profile"
             android:theme="@style/Theme.GharBato" />
 
         <activity
             android:name=".view.EmailVerificationActivity"
-            android:exported="true"
+            android:exported="false"
             android:label="Email Verify"
             android:theme="@style/Theme.GharBato" />
 
-        <!-- ========== ADD THIS SERVICE - Firebase Cloud Messaging ========== -->
         <service
             android:name=".service.MyFirebaseMessagingService"
             android:exported="false">
@@ -269,14 +251,12 @@
             </intent-filter>
         </service>
 
-        <!-- ========== ADD THESE META-DATA - Default Notification Settings ========== -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@drawable/outline_notifications_24" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@android:color/holo_blue_dark" />
-        <!-- ========== END OF FCM ADDITIONS ========== -->
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -287,6 +267,7 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
     </application>
 
 </manifest>
