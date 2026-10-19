@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -67,8 +69,8 @@ import com.example.gharbato.viewmodel.ReportedUsersViewModel
 import com.google.firebase.auth.FirebaseAuth
 
 // Modern color palette
-private val PrimaryBlue = Color(0xFF1E88E5)
-private val DarkBlue = Color(0xFF1565C0)
+private val PrimaryBlue = GharBatoPalette.brand
+private val DarkBlue = GharBatoPalette.brandDeep
 private val AccentGreen = Color(0xFF43A047)
 private val DarkGreen = Color(0xFF2E7D32)
 private val WarnOrange = Color(0xFFFF9800)

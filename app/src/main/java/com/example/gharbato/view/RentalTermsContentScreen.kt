@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -137,7 +139,7 @@ fun RentalTermsContentScreen(
                 containerColor = if (isDarkMode)
                     Color(0xFF1A2F3A)
                 else
-                    Color(0xFFF0F9FF)
+                    GharBatoPalette.brandContainerLight
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -148,7 +150,7 @@ fun RentalTermsContentScreen(
                 Icon(
                     painter = painterResource(R.drawable.baseline_info_24),
                     contentDescription = null,
-                    tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                    tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                     modifier = Modifier.size(24.dp)
                 )
                 Text(
@@ -205,7 +207,7 @@ fun TermDropdownField(
                     .menuAnchor(),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                    focusedBorderColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                     unfocusedBorderColor = if (isDarkMode)
                         MaterialTheme.colorScheme.outline
                     else
@@ -248,7 +250,7 @@ fun TermDropdownField(
                                 fontSize = 14.sp,
                                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                 color = if (isSelected) {
-                                    if (isDarkMode) Color(0xFF82B1FF) else Blue
+                                    if (isDarkMode) GharBatoPalette.brandLight else Blue
                                 } else {
                                     if (isDarkMode)
                                         MaterialTheme.colorScheme.onSurface

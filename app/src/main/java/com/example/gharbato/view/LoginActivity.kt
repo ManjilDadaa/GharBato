@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -23,14 +25,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -99,16 +96,16 @@ import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingExcept
 import kotlinx.coroutines.launch
 
 // Modern color palette
-private val PrimaryBlue = Color(0xFF2563EB)
-private val DarkBlue = Color(0xFF1D4ED8)
-private val LightBlue = Color(0xFF3B82F6)
-private val AccentBlue = Color(0xFF60A5FA)
+private val PrimaryBlue = GharBatoPalette.brand
+private val DarkBlue = GharBatoPalette.brandDeep
+private val LightBlue = GharBatoPalette.brandLight
+private val AccentBlue = GharBatoPalette.brandLight
 private val BackgroundLight = Color(0xFFF8FAFC)
 private val CardWhite = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF1E293B)
 private val TextSecondary = Color(0xFF64748B)
 private val InputBackground = Color(0xFFF1F5F9)
-private val InputFocusedBackground = Color(0xFFEFF6FF)
+private val InputFocusedBackground = GharBatoPalette.brandContainerLight
 private val ErrorRed = Color(0xFFEF4444)
 private val ErrorBackground = Color(0xFFFEF2F2)
 private val DividerColor = Color(0xFFE2E8F0)
@@ -151,9 +148,6 @@ fun LoginBody(isDarkMode: Boolean = false) {
 
     var emailFocused by remember { mutableStateOf(false) }
     var passwordFocused by remember { mutableStateOf(false) }
-
-    val adminEmail = "admin@gmail.com"
-    val adminPassword = "Admin@123"
 
     // Theme-aware colors
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else BackgroundLight
@@ -213,46 +207,22 @@ fun LoginBody(isDarkMode: Boolean = false) {
     Scaffold(
         containerColor = backgroundColor
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .imePadding()
         ) {
-            item {
                 // Header Section with Logo
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 24.dp)
+                        .padding(top = 12.dp)
                 ) {
                     Image(
                         painter = painterResource(R.drawable.gharbato_logo),
                         contentDescription = "Ghar Bato Logo",
-                        modifier = Modifier.size(160.dp)
-                    )
-
-                    // Welcome Text - close to logo
-                    Text(
-                        "Welcome Back!",
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 26.sp,
-                            color = textColor
-                        ),
-                        modifier = Modifier.offset(y = (-32).dp)
-                    )
-
-                    Text(
-                        "Sign in to continue to GharBato",
-                        style = TextStyle(
-                            fontSize = 14.sp,
-                            color = secondaryTextColor
-                        ),
-                        modifier = Modifier.offset(y = (-28).dp)
+                        modifier = Modifier.size(112.dp)
                     )
                 }
 
@@ -331,7 +301,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                 .fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // Password Input
                         Text(
@@ -473,28 +443,22 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(28.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Login Button
                         Button(
                             onClick = {
-                                if(email == adminEmail && password == adminPassword) {
-                                    val intent = Intent(context, AdminActivity::class.java)
-                                    context.startActivity(intent)
-                                    activity.finish()
-                                }
-                                else {
-                                    if (email.isEmpty() || password.isEmpty()) {
-                                        isErrorEmail = email.isEmpty()
-                                        isErrorPassword = password.isEmpty()
-                                        Toast.makeText(
-                                            context,
-                                            "Please enter all fields",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    } else {
-                                        isLoading = true
-                                        userViewModel.login(email, password) { success, message ->
+                                if (email.isEmpty() || password.isEmpty()) {
+                                    isErrorEmail = email.isEmpty()
+                                    isErrorPassword = password.isEmpty()
+                                    Toast.makeText(
+                                        context,
+                                        "Please enter all fields",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                } else {
+                                    isLoading = true
+                                    userViewModel.login(email, password) { success, message ->
                                             if (success) {
                                                 userViewModel.checkIsSuspended { isSuspended, reason, until ->
                                                     if (isSuspended) {
@@ -554,7 +518,6 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                                     context, message, Toast.LENGTH_LONG
                                                 ).show()
                                             }
-                                        }
                                     }
                                 }
                             },
@@ -594,7 +557,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(28.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Divider with "or"
                 Row(
@@ -633,7 +596,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Google Sign In Button
                 OutlinedButton(
@@ -685,7 +648,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 // Sign Up Section
                 Column(
@@ -693,7 +656,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
-                        .padding(bottom = 32.dp)
+                        .padding(bottom = 12.dp)
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.Center,
@@ -729,7 +692,6 @@ fun LoginBody(isDarkMode: Boolean = false) {
                         )
                     }
                 }
-            }
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -106,7 +108,7 @@ private val SuccessGreen = Color(0xFF4CAF50)
 private val DarkGreen = Color(0xFF388E3C)
 private val WarningOrange = Color(0xFFFF9800)
 private val SuspendedGray = Color(0xFF757575)
-private val ResolveBlue = Color(0xFF1E88E5)
+private val ResolveBlue = GharBatoPalette.brand
 private val BackgroundGray = Color(0xFFF5F7FA)
 private val CardWhite = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF1A1A2E)

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -57,7 +59,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C)
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
-    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF0061FF)
+    val appBlue = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
 
     LaunchedEffect(Unit) {
@@ -340,7 +342,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
 fun ContactInfoRow(icon: Int, label: String, value: String, isDarkMode: Boolean) {
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
-    val iconColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
+    val iconColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(

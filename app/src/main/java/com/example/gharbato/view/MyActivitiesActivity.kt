@@ -579,7 +579,7 @@ fun EmptyStateCard(isDarkMode: Boolean, onAddListing: () -> Unit) {
                 painter = painterResource(R.drawable.baseline_home_24),
                 contentDescription = null,
                 tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.LightGray,
-                modifier = Modifier.size(80.dp)
+                modifier = Modifier.size(48.dp)
             )
 
             Spacer(modifier = Modifier.height(16.dp))

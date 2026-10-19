@@ -5,8 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.example.gharbato.ui.theme.GharBatoPalette
 import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
@@ -20,7 +20,7 @@ object CustomMarkerHelper {
 
         // Background paint (green bubble)
         val bgPaint = Paint().apply {
-            color = Color(0xFF4CAF50).toArgb()
+            color = GharBatoPalette.brand.toArgb()
             style = Paint.Style.FILL
             isAntiAlias = true
         }

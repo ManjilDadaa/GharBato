@@ -384,7 +384,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(56.dp)
                             .background(
                                 color = Color(0xFF10B981).copy(alpha = 0.1f),
                                 shape = CircleShape
@@ -395,7 +395,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             painter = painterResource(R.drawable.baseline_check_24),
                             contentDescription = "Success icon",
                             tint = Color(0xFF10B981),
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(20.dp))
@@ -502,14 +502,14 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(72.dp)
+                                    .size(56.dp)
                                     .background(color = Blue, shape = RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.home),
                                     contentDescription = "Property icon",
-                                    modifier = Modifier.size(32.dp),
+                                    modifier = Modifier.size(24.dp),
                                     tint = Color.White
                                 )
                             }
@@ -525,7 +525,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 text = "List Your Property",
                                 style = TextStyle(
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 28.sp,
+                                    fontSize = 24.sp,
                                     letterSpacing = (-0.5).sp,
                                     color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF1A1A1A)
                                 )
@@ -550,74 +550,99 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                 Spacer(modifier = Modifier.height(if (showHeader) 16.dp else 32.dp))
 
                 // Progress Indicator - Improved UI
-                Row(
+                BoxWithConstraints(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 12.dp)
                 ) {
-                    for (i in 1..totalSteps) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            val circleColor by animateColorAsState(
-                                targetValue = if (step >= i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
-                                animationSpec = tween(durationMillis = 300),
-                                label = "stepColor"
-                            )
+                    val stepCircleSize = 36.dp
+                    val progressLineY = stepCircleSize / 2 - 1.5.dp
+                    val progressLineWidth = (maxWidth - stepCircleSize).coerceAtLeast(0.dp)
+                    val stepColumnWidth = maxWidth / totalSteps.toFloat()
+                    val progressFraction = if (totalSteps > 1) {
+                        (step - 1).toFloat() / (totalSteps - 1).toFloat()
+                    } else {
+                        1f
+                    }
 
-                            Box(
-                                modifier = Modifier
-                                    .background(color = circleColor, shape = CircleShape)
-                                    .size(44.dp),
-                                contentAlignment = Alignment.Center
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(
+                                start = stepCircleSize / 2,
+                                end = stepCircleSize / 2,
+                                top = progressLineY
+                            )
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(
+                                color = if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
+                                shape = RoundedCornerShape(2.dp)
+                            )
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = stepCircleSize / 2, top = progressLineY)
+                            .width(progressLineWidth * progressFraction)
+                            .height(3.dp)
+                            .background(Blue, shape = RoundedCornerShape(2.dp))
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        for (i in 1..totalSteps) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.width(stepColumnWidth)
                             ) {
+                                val circleColor by animateColorAsState(
+                                    targetValue = if (step >= i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
+                                    animationSpec = tween(durationMillis = 300),
+                                    label = "stepColor"
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .background(color = circleColor, shape = CircleShape)
+                                        .size(stepCircleSize),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "$i",
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
                                 Text(
-                                    text = "$i",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    text = when {
+                                        i == 1 -> "Purpose"
+                                        i == 2 -> "Details"
+                                        i == 3 -> "Photos"
+                                        i == 4 && !isRent -> "Amenities"
+                                        i == 4 && isRent -> "Terms"
+                                        i == 5 -> "Amenities"
+                                        else -> ""
+                                    },
+                                    fontSize = 12.sp,
+                                    fontWeight = if (step == i) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (step >= i) {
+                                        if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                                    } else {
+                                        if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                                    },
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 16.sp
                                 )
                             }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = when {
-                                    i == 1 -> "Purpose"
-                                    i == 2 -> "Details"
-                                    i == 3 -> "Photos"
-                                    i == 4 && !isRent -> "Amenities"
-                                    i == 4 && isRent -> "Terms"
-                                    i == 5 -> "Amenities"
-                                    else -> ""
-                                },
-                                fontSize = 13.sp,
-                                fontWeight = if (step == i) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (step >= i) {
-                                    if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
-                                } else {
-                                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
-                                },
-                                textAlign = TextAlign.Center,
-                                lineHeight = 18.sp
-                            )
-                        }
-
-                        if (i < totalSteps) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 4.dp, vertical = 0.dp)
-                                    .weight(0.5f)
-                                    .height(3.dp)
-                                    .background(
-                                        color = if (step > i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
-                                        shape = RoundedCornerShape(2.dp)
-                                    )
-                                    .align(Alignment.CenterVertically)
-                            )
                         }
                     }
                 }

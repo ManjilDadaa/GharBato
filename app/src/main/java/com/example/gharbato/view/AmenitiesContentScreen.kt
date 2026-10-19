@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -127,13 +129,13 @@ fun AmenitiesContentScreen(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                    tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     "$selectedCount selected",
                     fontSize = 13.sp,
-                    color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                    color = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -181,7 +183,7 @@ fun AmenitiesContentScreen(
                         else
                             Blue.copy(alpha = 0.12f),
                         selectedLabelColor = if (isDarkMode)
-                            Color(0xFF82B1FF)
+                            GharBatoPalette.brandLight
                         else
                             Blue,
                         containerColor = if (isDarkMode)
@@ -197,7 +199,7 @@ fun AmenitiesContentScreen(
                         enabled = true,
                         selected = selected,
                         borderColor = if (selected) {
-                            if (isDarkMode) Color(0xFF82B1FF) else Blue
+                            if (isDarkMode) GharBatoPalette.brandLight else Blue
                         } else {
                             if (isDarkMode)
                                 MaterialTheme.colorScheme.outline
@@ -309,7 +311,7 @@ fun InfoHint(text: String, isDarkMode: Boolean) {
             containerColor = if (isDarkMode)
                 Color(0xFF1A2F3A)
             else
-                Color(0xFFF0F9FF)
+                GharBatoPalette.brandContainerLight
         ),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -320,7 +322,7 @@ fun InfoHint(text: String, isDarkMode: Boolean) {
             Icon(
                 painter = painterResource(R.drawable.baseline_info_24),
                 contentDescription = null,
-                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                 modifier = Modifier.size(24.dp)
             )
             Text(

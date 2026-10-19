@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -796,14 +798,14 @@ fun PropertyCardInMessage(
                     Text(
                         text = "Tap to view details",
                         fontSize = 11.sp,
-                        color = Color(0xFF2196F3),
+                        color = GharBatoPalette.brand,
                         fontWeight = FontWeight.Medium
                     )
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF2196F3)
+                        tint = GharBatoPalette.brand
                     )
                 }
             }

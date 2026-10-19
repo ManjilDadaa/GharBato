@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -141,8 +143,8 @@ fun GeminiChatScreen(
     val textColor = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
     val secondaryTextColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
     val inputBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF5F5F5)
-    val aiGradientStart = if (isDarkMode) Color(0xFF6D28D9) else Color(0xFF667EEA)
-    val aiGradientEnd = if (isDarkMode) Color(0xFF8B5CF6) else Color(0xFF764BA2)
+    val aiGradientStart = if (isDarkMode) GharBatoPalette.brandDeep else GharBatoPalette.brand
+    val aiGradientEnd = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brandDeep
     val userMessageColor = if (isDarkMode) Color(0xFF0D47A1) else Blue
     val errorBackground = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFFEBEE)
     val errorText = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
@@ -404,7 +406,7 @@ fun WelcomeSection(
         // AI Icon
         Box(
             modifier = Modifier
-                .size(80.dp)
+                .size(64.dp)
                 .background(
                     brush = Brush.linearGradient(
                         colors = listOf(
@@ -426,7 +428,7 @@ fun WelcomeSection(
 
         Text(
             text = "Hello! I'm your AI Assistant",
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             color = textColor
         )
@@ -1018,14 +1020,14 @@ fun PropertyCard(
                         Text(
                             text = "View details",
                             fontSize = 11.sp,
-                            color = Color(0xFF2196F3),
+                            color = GharBatoPalette.brand,
                             fontWeight = FontWeight.Medium
                         )
                         androidx.compose.material3.Icon(
                             imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF2196F3)
+                            tint = GharBatoPalette.brand
                         )
                     }
                 }

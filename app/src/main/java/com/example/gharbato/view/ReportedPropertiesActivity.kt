@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -102,10 +104,10 @@ import java.util.Date
 import java.util.Locale
 
 // Modern color palette for Reported Properties
-private val PrimaryBlue = Color(0xFF1E88E5)
-private val DarkBlue = Color(0xFF1565C0)
-private val LightBlue = Color(0xFF42A5F5)
-private val AccentBlue = Color(0xFF64B5F6)
+private val PrimaryBlue = GharBatoPalette.brand
+private val DarkBlue = GharBatoPalette.brandDeep
+private val LightBlue = GharBatoPalette.brandLight
+private val AccentBlue = GharBatoPalette.brandLight
 private val KeepGreen = Color(0xFF4CAF50)
 private val DarkGreen = Color(0xFF388E3C)
 private val DeleteRed = Color(0xFFE53935)

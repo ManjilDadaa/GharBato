@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -15,8 +17,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
@@ -55,15 +55,15 @@ import com.example.gharbato.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
 
 // Modern Color Palette
-private val PrimaryBlue = Color(0xFF2563EB)
-private val DarkBlue = Color(0xFF1D4ED8)
-private val LightBlue = Color(0xFF3B82F6)
+private val PrimaryBlue = GharBatoPalette.brand
+private val DarkBlue = GharBatoPalette.brandDeep
+private val LightBlue = GharBatoPalette.brandLight
 private val BackgroundLight = Color(0xFFF8FAFC)
 private val CardWhite = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF1E293B)
 private val TextSecondary = Color(0xFF64748B)
 private val InputBackground = Color(0xFFF1F5F9)
-private val InputFocusedBackground = Color(0xFFEFF6FF)
+private val InputFocusedBackground = GharBatoPalette.brandContainerLight
 private val SuccessGreen = Color(0xFF22C55E)
 private val SuccessGreenLight = Color(0xFFDCFCE7)
 
@@ -142,7 +142,6 @@ fun SignUpBody(isDarkMode: Boolean = false) {
     val userViewModel = remember { UserViewModel(UserRepoImpl()) }
     val context = LocalContext.current
     val activity = context as Activity
-    val listState = rememberLazyListState()
 
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else BackgroundLight
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else TextPrimary
@@ -205,45 +204,40 @@ fun SignUpBody(isDarkMode: Boolean = false) {
             )
         }
     ) { innerPadding ->
-        LazyColumn(
-            state = listState,
+        Column(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .imePadding()
         ) {
-            item {
                 // Logo Section
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp)
+                        .padding(top = if (isPhoneVerified) 4.dp else 8.dp)
                 ) {
-                    Image(
-                        painter = painterResource(R.drawable.gharbato_logo),
-                        contentDescription = "Ghar Bato Logo",
-                        modifier = Modifier.size(160.dp)
-                    )
-
-                    Text(
-                        "Create Account",
-                        style = TextStyle(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 24.sp,
-                            color = textColor
-                        ),
-                        modifier = Modifier.offset(y = (-32).dp)
-                    )
-
-                    Text(
-                        "Sign up to get started with GharBato",
-                        style = TextStyle(
-                            color = secondaryTextColor,
-                            fontSize = 14.sp
-                        ),
-                        modifier = Modifier.offset(y = (-28).dp)
-                    )
+                    if (isPhoneVerified) {
+                        Text(
+                            "Finish creating your account",
+                            style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 21.sp, color = textColor)
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(R.drawable.gharbato_logo),
+                            contentDescription = "Ghar Bato Logo",
+                            modifier = Modifier.size(112.dp)
+                        )
+                        Text(
+                            "Create Account",
+                            style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, color = textColor),
+                            modifier = Modifier.offset(y = (-24).dp)
+                        )
+                        Text(
+                            "Verify your phone to continue",
+                            style = TextStyle(color = secondaryTextColor, fontSize = 13.sp),
+                            modifier = Modifier.offset(y = (-20).dp)
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -265,9 +259,10 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 24.dp)
+                            .padding(horizontal = 20.dp, vertical = 16.dp)
                     ) {
 
+                        if (!isPhoneVerified) {
                         // Full Name
                         OutlinedTextField(
                             value = fullname,
@@ -291,7 +286,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             shape = RoundedCornerShape(14.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // Email
                         OutlinedTextField(
@@ -316,7 +311,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             shape = RoundedCornerShape(14.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // Phone Number
                         CountryPickerOutlinedTextField(
@@ -351,10 +346,9 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             shape = RoundedCornerShape(14.dp)
                         )
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         // OTP Section
-                        if (!isPhoneVerified) {
                             if (!isOtpSent) {
                                 val sendOtpInteractionSource = remember { MutableInteractionSource() }
                                 val isSendOtpPressed by sendOtpInteractionSource.collectIsPressedAsState()
@@ -523,15 +517,23 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                         }
                                     )
                                 }
-                            }
-                        } else {
-                            // Phone Verified Badge
+                        }
+                        }
+
+                        if (isPhoneVerified) {
+                            Text(
+                                "$fullname · $email",
+                                color = secondaryTextColor,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                            )
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
                                     .background(SuccessGreenLight)
-                                    .padding(16.dp),
+                                    .padding(10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
@@ -542,20 +544,20 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                         painterResource(R.drawable.baseline_check_24),
                                         null,
                                         tint = SuccessGreen,
-                                        modifier = Modifier.size(22.dp)
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                    Spacer(Modifier.width(10.dp))
+                                    Spacer(Modifier.width(8.dp))
                                     Text(
                                         "Phone Verified",
                                         color = SuccessGreen,
                                         fontWeight = FontWeight.SemiBold,
-                                        fontSize = 16.sp
+                                        fontSize = 14.sp
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(18.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
                         // Password Fields (only show after phone verified)
                         if (isPhoneVerified) {
@@ -600,7 +602,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             )
 
                             if (showPasswordRequirements) {
-                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
                                     Text("Password must contain:", fontSize = 13.sp, color = secondaryTextColor, fontWeight = FontWeight.Medium)
                                     Spacer(modifier = Modifier.height(6.dp))
                                     PasswordRequirementItem("At least 8 characters", passwordValidation.hasMinLength)
@@ -611,7 +613,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             OutlinedTextField(
                                 value = confirmPassword,
@@ -636,7 +638,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 shape = RoundedCornerShape(14.dp)
                             )
 
-                            Spacer(modifier = Modifier.height(18.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             // Terms & Conditions
                             Row(
@@ -678,7 +680,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             // Create Account Button
                             val createAccountInteractionSource = remember { MutableInteractionSource() }
@@ -791,36 +793,18 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Sign In Card (Outside the main form card)
+                // Keep the sign-in shortcut compact so this screen remains fixed-height.
                 if (isPhoneVerified) {
-                    Card(
-                        modifier = Modifier
-                            .padding(horizontal = 20.dp)
-                            .fillMaxWidth()
-                            .shadow(
-                                elevation = 4.dp,
-                                shape = RoundedCornerShape(16.dp),
-                                ambientColor = Color.Black.copy(alpha = 0.04f),
-                                spotColor = Color.Black.copy(alpha = 0.06f)
-                            ),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else CardWhite
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 20.dp)
-                        ) {
                             Text(
                                 "Already have an account?",
                                 style = TextStyle(fontSize = 14.sp, color = secondaryTextColor)
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 "Sign in",
                                 style = TextStyle(
@@ -836,20 +820,16 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                         context.startActivity(Intent(context, LoginActivity::class.java))
                                         activity.finish()
                                     }
-                                    .padding(8.dp)
+                                    .padding(4.dp)
                             )
-                        }
                     }
-
-                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
     }
-}
 
 @Preview
 @Composable
 fun PreviewSignUp() {
     SignUpBody()
-} 
+}

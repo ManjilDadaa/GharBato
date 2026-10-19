@@ -8,14 +8,21 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.fragment.app.FragmentActivity
-import com.example.gharbato.utils.ZegoCloudConstants
+import androidx.lifecycle.lifecycleScope
+import com.example.gharbato.utils.FirebaseFunctionsConfig
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.functions.FirebaseFunctions
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallConfig
 import com.zegocloud.uikit.prebuilt.call.ZegoUIKitPrebuiltCallFragment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
 
 import com.example.gharbato.R
 
@@ -42,17 +49,6 @@ class ZegoCallActivity : FragmentActivity() {
 
         // Mark this call as active
         CallInvitationManager.setCurrentCall(callId)
-
-        if (ZegoCloudConstants.APP_ID == 0L || ZegoCloudConstants.APP_SIGN.isBlank()) {
-            android.util.Log.e("ZegoCall", "ZEGOCLOUD missing. Detected appId=${ZegoCloudConstants.APP_ID}, appSignLen=${ZegoCloudConstants.APP_SIGN.length}. Set ZEGO_APP_ID/ZEGO_APP_SIGN in local.properties and sync.")
-            Toast.makeText(
-                this,
-                "Calling service not available. Please contact support.",
-                Toast.LENGTH_LONG
-            ).show()
-            finish()
-            return
-        }
 
         if (callId.isBlank() || userId.isBlank() || userName.isBlank()) {
             Toast.makeText(this, "Missing call parameters", Toast.LENGTH_LONG).show()
@@ -86,13 +82,37 @@ class ZegoCallActivity : FragmentActivity() {
         }
         setContentView(container)
 
-        // Initialize call immediately without delay
-        try {
-            initializeCall(containerId, callId, userId, userName, isVideoCall, targetUserId, isIncomingCall)
-        } catch (e: Exception) {
-            android.util.Log.e("ZegoCall", "Failed to initialize call", e)
-            Toast.makeText(this, "Failed to initialize call: ${e.message}", Toast.LENGTH_LONG).show()
-            finish()
+        lifecycleScope.launch {
+            try {
+                val (appId, token) = withContext(Dispatchers.IO) {
+                    requestZegoToken(userId, callId)
+                }
+                if (isIncomingCall) {
+                    FirebaseDatabase.getInstance()
+                        .getReference("call_invitations")
+                        .child(userId)
+                        .removeValue()
+                }
+                initializeCall(
+                    containerId,
+                    callId,
+                    userId,
+                    userName,
+                    isVideoCall,
+                    targetUserId,
+                    isIncomingCall,
+                    appId,
+                    token
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("ZegoCall", "Failed to initialize call", e)
+                Toast.makeText(
+                    this@ZegoCallActivity,
+                    "Calling service is unavailable. Please try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                finish()
+            }
         }
     }
 
@@ -132,7 +152,9 @@ class ZegoCallActivity : FragmentActivity() {
         userName: String,
         isVideoCall: Boolean,
         targetUserId: String,
-        isIncomingCall: Boolean
+        isIncomingCall: Boolean,
+        appId: Long,
+        token: String
     ) {
         try {
             // Check and request permissions first with better error handling
@@ -177,9 +199,9 @@ class ZegoCallActivity : FragmentActivity() {
             try {
                 android.util.Log.d("ZegoCall", "Creating ZegoCloud fragment with callId: $callId, userId: $userId")
                 
-                val fragment = ZegoUIKitPrebuiltCallFragment.newInstance(
-                    ZegoCloudConstants.APP_ID,
-                    ZegoCloudConstants.APP_SIGN,
+                val fragment = ZegoUIKitPrebuiltCallFragment.newInstanceWithToken(
+                    appId,
+                    token,
                     userId,
                     userName,
                     callId,
@@ -233,6 +255,23 @@ class ZegoCallActivity : FragmentActivity() {
             Toast.makeText(this, "Failed to start call: ${t.message}", Toast.LENGTH_LONG).show()
             finish()
         }
+    }
+
+    private fun requestZegoToken(userId: String, callId: String): Pair<Long, String> {
+        val result = Tasks.await(
+            FirebaseFunctions.getInstance(FirebaseFunctionsConfig.REGION)
+                .getHttpsCallable("createZegoCallToken")
+                .call(mapOf("userId" to userId, "callId" to callId)),
+            30,
+            TimeUnit.SECONDS
+        )
+        val data = result.data as? Map<*, *>
+            ?: throw IllegalStateException("Invalid call authorization response")
+        val appId = (data["appId"] as? Number)?.toLong()
+            ?: throw IllegalStateException("Call service is not configured")
+        val token = data["token"] as? String
+            ?: throw IllegalStateException("Call authorization response is invalid")
+        return appId to token
     }
 
     private fun hasCameraAndMicPermissions(): Boolean {
@@ -346,6 +385,10 @@ data class IncomingCall(
 
 object CallInvitationManager {
     private var isListening = false
+    private var listeningUid: String? = null
+    private var invitationRef: com.google.firebase.database.DatabaseReference? = null
+    private var invitationListener: com.google.firebase.database.ValueEventListener? = null
+    private var authStateListener: FirebaseAuth.AuthStateListener? = null
     private var pendingInvitation: Map<String, Any>? = null
     private var currentCallId: String? = null // Track ongoing call
 
@@ -354,51 +397,53 @@ object CallInvitationManager {
 
     fun startListening(context: android.content.Context) {
         if (isListening) return
+        val appContext = context.applicationContext
+        val auth = FirebaseAuth.getInstance()
+        val listener = FirebaseAuth.AuthStateListener { changedAuth ->
+            val currentUserId = changedAuth.currentUser?.uid
+            if (currentUserId != listeningUid) {
+                invitationListener?.let { listener ->
+                    invitationRef?.removeEventListener(listener)
+                }
+                invitationRef = null
+                invitationListener = null
+                listeningUid = currentUserId
+                pendingInvitation = null
+                currentCallId = null
+                _incomingCall.value = null
+
+                if (currentUserId != null) {
+                    val callRef = FirebaseDatabase.getInstance()
+                        .getReference("call_invitations")
+                        .child(currentUserId)
+                    val listener = object : com.google.firebase.database.ValueEventListener {
+                        override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                            try {
+                                val invitation = snapshot.getValue(
+                                    object : com.google.firebase.database.GenericTypeIndicator<Map<String, Any>>() {}
+                                )
+                                if (invitation != null) {
+                                    processInvitation(invitation, appContext, currentUserId)
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("CallInvitation", "Error processing invitation", e)
+                            }
+                        }
+
+                        override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                            android.util.Log.e("CallInvitation", "Database error", error.toException())
+                        }
+                    }
+                    invitationRef = callRef
+                    invitationListener = listener
+                    callRef.addValueEventListener(listener)
+                    android.util.Log.d("CallInvitation", "Listening for calls on: $currentUserId")
+                }
+            }
+        }
+        authStateListener = listener
         isListening = true
-
-        val currentUserId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val database = FirebaseDatabase.getInstance()
-        
-        // For demo: Listen to both current user and demo_user
-        // This allows testing between any two users
-        val callRef1 = database.getReference("call_invitations").child(currentUserId)
-        val callRef2 = database.getReference("call_invitations").child("demo_user")
-        
-        android.util.Log.d("CallInvitation", "Listening for calls on: $currentUserId and demo_user")
-
-        callRef1.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
-            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                try {
-                    val invitation = snapshot.getValue(object : com.google.firebase.database.GenericTypeIndicator<Map<String, Any>>() {})
-                    if (invitation != null) {
-                        processInvitation(invitation, context, currentUserId)
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("CallInvitation", "Error processing invitation", e)
-                }
-            }
-
-            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                android.util.Log.e("CallInvitation", "Database error", error.toException())
-            }
-        })
-        
-        callRef2.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
-            override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
-                try {
-                    val invitation = snapshot.getValue(object : com.google.firebase.database.GenericTypeIndicator<Map<String, Any>>() {})
-                    if (invitation != null) {
-                        processInvitation(invitation, context, currentUserId)
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("CallInvitation", "Error processing invitation", e)
-                }
-            }
-
-            override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
-                android.util.Log.e("CallInvitation", "Database error", error.toException())
-            }
-        })
+        auth.addAuthStateListener(listener)
     }
     
     private fun processInvitation(
@@ -406,6 +451,8 @@ object CallInvitationManager {
         context: android.content.Context,
         currentUserId: String
     ) {
+        if (FirebaseAuth.getInstance().currentUser?.uid != currentUserId) return
+
         val callId = invitation["callId"] as? String ?: ""
         val callerId = invitation["callerId"] as? String ?: ""
         val callerName = invitation["callerName"] as? String ?: "Unknown"
@@ -419,7 +466,6 @@ object CallInvitationManager {
         if (currentTime - timestamp > 30000) {
             // Remove old invitation
             FirebaseDatabase.getInstance().getReference("call_invitations").child(currentUserId).removeValue()
-            FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
             return
         }
 
@@ -427,7 +473,6 @@ object CallInvitationManager {
         if (currentCallId != null && currentCallId == callId) {
             // Already in this call, remove invitation
             FirebaseDatabase.getInstance().getReference("call_invitations").child(currentUserId).removeValue()
-            FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
             return
         }
 
@@ -505,8 +550,6 @@ object CallInvitationManager {
             return
         }
         startIncomingCall(context, call.callId, call.currentUserId, call.callerId, call.isVideoCall)
-        FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
-        FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
         FirebaseDatabase.getInstance().getReference("call_sessions").child(call.callId).child("status").setValue("active")
         _incomingCall.value = null
     }
@@ -514,7 +557,6 @@ object CallInvitationManager {
     fun rejectCurrentCall() {
         val call = _incomingCall.value ?: return
         FirebaseDatabase.getInstance().getReference("call_invitations").child(call.currentUserId).removeValue()
-        FirebaseDatabase.getInstance().getReference("call_invitations").child("demo_user").removeValue()
         FirebaseDatabase.getInstance().getReference("call_sessions").child(call.callId).child("status").setValue("ended")
         _incomingCall.value = null
     }

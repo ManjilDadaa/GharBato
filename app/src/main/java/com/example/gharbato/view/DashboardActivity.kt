@@ -16,9 +16,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -39,7 +41,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
-import com.example.gharbato.ui.theme.Blue
+import com.example.gharbato.ui.theme.GharBatoDimensions
 import com.example.gharbato.ui.theme.GharBatoTheme
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -85,7 +87,6 @@ class NoRippleInteractionSource : MutableInteractionSource {
 fun DashboardBody() {
     val context = LocalContext.current
     val activity = context as Activity
-    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
     // Hoist PropertyViewModel to Dashboard level so it's shared across screens
     val propertyViewModel: PropertyViewModel = viewModel(
@@ -131,11 +132,11 @@ fun DashboardBody() {
     val incomingCall by CallInvitationManager.incomingCall.collectAsState(initial = null)
 
     Scaffold(
-        containerColor = if (isDarkMode) androidx.compose.material3.MaterialTheme.colorScheme.background else Color.White,
+        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar(
-                tonalElevation = 4.dp,
-                containerColor = Color.Transparent,
+                tonalElevation = 0.dp,
+                containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
             ) {
                 listNav.forEachIndexed { index, item ->
                     NavigationBarItem(
@@ -143,18 +144,25 @@ fun DashboardBody() {
                             if (item.label == "Messages" && unreadCount > 0) {
                                 BadgedBox(
                                     badge = {
-                                        Badge { Text(text = unreadCount.toString()) }
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ) {
+                                            Text(text = unreadCount.toString())
+                                        }
                                     }
                                 ) {
                                     Icon(
                                         painter = painterResource(item.icon),
-                                        contentDescription = item.label
+                                        contentDescription = item.label,
+                                        modifier = Modifier.size(GharBatoDimensions.standardIcon)
                                     )
                                 }
                             } else {
                                 Icon(
                                     painter = painterResource(item.icon),
-                                    contentDescription = item.label
+                                    contentDescription = item.label,
+                                    modifier = Modifier.size(GharBatoDimensions.standardIcon)
                                 )
                             }
                         },
@@ -170,8 +178,8 @@ fun DashboardBody() {
                         },
                         selected = selectedIndex == index,
                         colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = Blue,
-                            selectedTextColor = Blue,
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
                             indicatorColor = Color.Transparent,
                         ),
                         interactionSource = remember { NoRippleInteractionSource() }
@@ -249,7 +257,7 @@ fun FloatingMessageOverlay(
                 .padding(horizontal = 16.dp, vertical = 48.dp)
                 .clickable { onClick() },
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF222222),
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 8.dp
         ) {
             Row(
@@ -260,7 +268,7 @@ fun FloatingMessageOverlay(
                 Icon(
                     painter = painterResource(R.drawable.round_message_24),
                     contentDescription = null,
-                    tint = Color.White
+                    tint = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 androidx.compose.foundation.layout.Column(
@@ -268,13 +276,13 @@ fun FloatingMessageOverlay(
                 ) {
                     Text(
                         text = message.senderName,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontSize = 14.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = message.text,
-                        color = Color(0xFFDDDDDD),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 12.sp,
                         maxLines = 1
                     )
@@ -282,14 +290,14 @@ fun FloatingMessageOverlay(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "View",
-                    color = Blue,
+                    color = MaterialTheme.colorScheme.primary,
                     fontSize = 12.sp
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     painter = painterResource(R.drawable.baseline_close_24),
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .clickable { onDismiss() }
                 )
@@ -315,7 +323,7 @@ fun FloatingIncomingCallOverlay(
                 .align(Alignment.TopCenter)
                 .padding(horizontal = 16.dp, vertical = 32.dp),
             shape = RoundedCornerShape(16.dp),
-            color = Color(0xFF111111),
+            color = MaterialTheme.colorScheme.surface,
             shadowElevation = 10.dp
         ) {
             androidx.compose.foundation.layout.Column(
@@ -325,13 +333,13 @@ fun FloatingIncomingCallOverlay(
             ) {
                 Text(
                     text = call.callerName,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 16.sp
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (call.isVideoCall) "Incoming video call" else "Incoming audio call",
-                    color = Color(0xFFDDDDDD),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
@@ -343,7 +351,7 @@ fun FloatingIncomingCallOverlay(
                             .weight(1f)
                             .clickable { onReject() },
                         shape = RoundedCornerShape(24.dp),
-                        color = Color(0xFFB00020)
+                        color = MaterialTheme.colorScheme.error
                     ) {
                         Box(
                             modifier = Modifier
@@ -352,7 +360,7 @@ fun FloatingIncomingCallOverlay(
                         ) {
                             Text(
                                 text = "Reject",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onError,
                                 fontSize = 14.sp
                             )
                         }
@@ -362,7 +370,7 @@ fun FloatingIncomingCallOverlay(
                             .weight(1f)
                             .clickable { onAccept() },
                         shape = RoundedCornerShape(24.dp),
-                        color = Blue
+                        color = MaterialTheme.colorScheme.primary
                     ) {
                         Box(
                             modifier = Modifier
@@ -371,7 +379,7 @@ fun FloatingIncomingCallOverlay(
                         ) {
                             Text(
                                 text = "Accept",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontSize = 14.sp
                             )
                         }

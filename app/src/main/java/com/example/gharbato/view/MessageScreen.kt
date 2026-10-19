@@ -125,7 +125,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             Text(
                 text = "Messages",
                 color = Blue,
-                fontSize = 32.sp,
+                fontSize = 24.sp,
                 fontWeight = FontWeight.W500,
                 fontFamily = FontFamily.SansSerif,
                 modifier = Modifier.padding(top = 16.dp, bottom = 16.dp)

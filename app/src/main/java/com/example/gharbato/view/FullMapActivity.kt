@@ -1,5 +1,7 @@
 package com.example.gharbato.ui.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -263,7 +265,7 @@ fun FullMapScreen(
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = "Center on Property",
-                        tint = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
+                        tint = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
                     )
                 }
             }

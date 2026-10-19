@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -96,7 +98,7 @@ fun DetailsContentScreen(
                 containerColor = if (isDarkMode)
                     MaterialTheme.colorScheme.surfaceVariant
                 else
-                    Color(0xFFF0F9FF)
+                    GharBatoPalette.brandContainerLight
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -119,7 +121,7 @@ fun DetailsContentScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isDarkMode)
-                            Color(0xFF82B1FF)
+                            GharBatoPalette.brandLight
                         else
                             Blue
                     )
@@ -139,7 +141,7 @@ fun DetailsContentScreen(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (isDarkMode)
-                            Color(0xFF82B1FF)
+                            GharBatoPalette.brandLight
                         else
                             Blue
                     )
@@ -329,7 +331,7 @@ fun DetailsContentScreen(
                         checked = state.parking,
                         onCheckedChange = { onStateChange(state.copy(parking = it)) },
                         colors = CheckboxDefaults.colors(
-                            checkedColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                            checkedColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                             uncheckedColor = if (isDarkMode)
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             else
@@ -367,7 +369,7 @@ fun DetailsContentScreen(
                             checked = state.petsAllowed,
                             onCheckedChange = { onStateChange(state.copy(petsAllowed = it)) },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                                checkedColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                                 uncheckedColor = if (isDarkMode)
                                     MaterialTheme.colorScheme.onSurfaceVariant
                                 else
@@ -412,7 +414,7 @@ fun LocationPickerField(
             .clickable(onClick = onPickLocation),
         colors = CardDefaults.cardColors(
             containerColor = if (hasSelectedLocation) {
-                if (isDarkMode) Color(0xFF1B3A1F) else Color(0xFFE8F5E9)
+                if (isDarkMode) GharBatoPalette.brandContainerDark else GharBatoPalette.brandContainerLight
             } else {
                 if (isDarkMode) MaterialTheme.colorScheme.surface else Color(0xFFF5F5F5)
             }
@@ -421,7 +423,7 @@ fun LocationPickerField(
         border = androidx.compose.foundation.BorderStroke(
             width = 1.dp,
             color = if (hasSelectedLocation) {
-                if (isDarkMode) Color(0xFF4CAF50) else Color(0xFF4CAF50)
+                GharBatoPalette.brand
             } else {
                 if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFF999999).copy(0.5f)
             }
@@ -436,7 +438,7 @@ fun LocationPickerField(
             Icon(
                 imageVector = if (hasSelectedLocation) Icons.Default.LocationOn else Icons.Default.AddLocation,
                 contentDescription = "Location",
-                tint = if (hasSelectedLocation) Color(0xFF4CAF50) else {
+                tint = if (hasSelectedLocation) GharBatoPalette.brand else {
                     if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
                 },
                 modifier = Modifier.size(32.dp)
@@ -450,7 +452,7 @@ fun LocationPickerField(
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (hasSelectedLocation) {
-                        Color(0xFF4CAF50)
+                        GharBatoPalette.brand
                     } else {
                         if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
                     }
@@ -491,9 +493,9 @@ fun LocationPickerField(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
                 containerColor = if (isDarkMode)
-                    Color(0xFF1A2F3A)
+                    GharBatoPalette.brandContainerDark
                 else
-                    Color(0xFFF0F9FF)
+                    GharBatoPalette.brandContainerLight
             ),
             shape = RoundedCornerShape(8.dp)
         ) {
@@ -506,7 +508,7 @@ fun LocationPickerField(
                 Icon(
                     imageVector = Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = Color(0xFF4CAF50),
+                    tint = GharBatoPalette.brand,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -547,7 +549,7 @@ fun FurnishingDropdown(
                 Text(
                     "Furnishing",
                     color = if (expanded) {
-                        if (isDarkMode) Color(0xFF82B1FF) else Blue
+                        if (isDarkMode) GharBatoPalette.brandLight else Blue
                     } else {
                         if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
                     }
@@ -562,12 +564,12 @@ fun FurnishingDropdown(
                 .menuAnchor(),
             shape = RoundedCornerShape(12.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                focusedBorderColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                 unfocusedBorderColor = if (isDarkMode)
                     MaterialTheme.colorScheme.outline
                 else
                     Color(0xFF999999).copy(0.5f),
-                focusedLabelColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                focusedLabelColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                 unfocusedLabelColor = if (isDarkMode)
                     MaterialTheme.colorScheme.onSurfaceVariant
                 else
@@ -604,7 +606,7 @@ fun FurnishingDropdown(
                             fontSize = 14.sp,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color = if (isSelected) {
-                                if (isDarkMode) Color(0xFF82B1FF) else Blue
+                                if (isDarkMode) GharBatoPalette.brandLight else Blue
                             } else {
                                 if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.DarkGray
                             }
@@ -648,7 +650,7 @@ fun CustomOutlinedTextField(
             Text(
                 label,
                 color = if (value.isNotEmpty()) {
-                    if (isDarkMode) Color(0xFF82B1FF) else Blue
+                    if (isDarkMode) GharBatoPalette.brandLight else Blue
                 } else {
                     if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
                 }
@@ -666,12 +668,12 @@ fun CustomOutlinedTextField(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+            focusedBorderColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
             unfocusedBorderColor = if (isDarkMode)
                 MaterialTheme.colorScheme.outline
             else
                 Color(0xFF999999).copy(0.5f),
-            focusedLabelColor = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+            focusedLabelColor = if (isDarkMode) GharBatoPalette.brandLight else Blue,
             unfocusedLabelColor = if (isDarkMode)
                 MaterialTheme.colorScheme.onSurfaceVariant
             else
@@ -686,7 +688,7 @@ fun CustomOutlinedTextField(
                 MaterialTheme.colorScheme.onSurface
             else
                 Color(0xFF2C2C2C),
-            cursorColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
+            cursorColor = if (isDarkMode) GharBatoPalette.brandLight else Blue
         ),
         maxLines = maxLines,
         singleLine = singleLine,

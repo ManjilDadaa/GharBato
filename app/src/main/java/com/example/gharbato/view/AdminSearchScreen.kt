@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -84,8 +86,8 @@ import com.example.gharbato.viewmodel.AdminSearchViewModel
 import com.example.gharbato.viewmodel.AdminSearchViewModelFactory
 
 // Modern color palette for Search Screen
-private val PrimaryBlue = Color(0xFF1E88E5)
-private val DarkBlue = Color(0xFF1565C0)
+private val PrimaryBlue = GharBatoPalette.brand
+private val DarkBlue = GharBatoPalette.brandDeep
 private val AccentGreen = Color(0xFF43A047)
 private val DarkGreen = Color(0xFF2E7D32)
 private val PendingOrange = Color(0xFFFF9800)
@@ -362,7 +364,7 @@ fun AdminSearchScreen() {
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(80.dp)
+                                    .size(64.dp)
                                     .clip(CircleShape)
                                     .background(RejectedRed.copy(alpha = 0.1f)),
                                 contentAlignment = Alignment.Center

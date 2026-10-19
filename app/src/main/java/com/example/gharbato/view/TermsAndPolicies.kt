@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -63,7 +65,7 @@ fun TermsAndConditionsScreen() {
     val dividerColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFEEEEEE)
     val cardBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF8F9FA)
     val cardTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF4A4A4A)
-    val blueColor = if (isDarkMode) Color(0xFF90CAF9) else Blue
+    val blueColor = if (isDarkMode) GharBatoPalette.brandLight else Blue
     val darkGray = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.DarkGray
 
     Scaffold(

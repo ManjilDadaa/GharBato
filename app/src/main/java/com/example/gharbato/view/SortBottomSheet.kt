@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -44,13 +46,13 @@ fun SortBottomSheet(
                 surfaceColor = Color(0xFF1E1E1E),
                 textColor = Color(0xFFE0E0E0),
                 secondaryTextColor = Color(0xFFA0A0A0),
-                selectedBackgroundColor = Color(0xFF1E3A5F).copy(alpha = 0.7f),
-                selectedTextColor = Color(0xFF64B5F6),
+                selectedBackgroundColor = GharBatoPalette.brandContainerDark.copy(alpha = 0.7f),
+                selectedTextColor = GharBatoPalette.brandLight,
                 dividerColor = Color(0xFF424242),
                 iconColor = Color(0xFFB0B0B0),
-                primaryColor = Color(0xFF64B5F6),
+                primaryColor = GharBatoPalette.brandLight,
                 closeIconColor = Color(0xFFB0B0B0),
-                checkIconColor = Color(0xFF4FC3F7),
+                checkIconColor = GharBatoPalette.brandLight,
                 dragHandleColor = Color(0xFF616161),
                 rippleColor = Color(0x1AFFFFFF)
             )
@@ -60,13 +62,13 @@ fun SortBottomSheet(
                 surfaceColor = Color(0xFFF5F5F5),
                 textColor = Color(0xFF212121),
                 secondaryTextColor = Color(0xFF757575),
-                selectedBackgroundColor = Color(0xFFE3F2FD),
-                selectedTextColor = Color(0xFF1976D2),
+                selectedBackgroundColor = GharBatoPalette.brandContainerLight,
+                selectedTextColor = GharBatoPalette.brand,
                 dividerColor = Color(0xFFE0E0E0),
                 iconColor = Color(0xFF757575),
                 primaryColor = Blue,
                 closeIconColor = Color(0xFF616161),
-                checkIconColor = Color(0xFF2196F3),
+                checkIconColor = GharBatoPalette.brand,
                 dragHandleColor = Color(0xFFBDBDBD),
                 rippleColor = Color(0x1A000000)
             )
@@ -326,13 +328,13 @@ data class DarkThemeColors(
     override val surfaceColor: Color = Color(0xFF1E1E1E),
     override val textColor: Color = Color(0xFFE0E0E0),
     override val secondaryTextColor: Color = Color(0xFFA0A0A0),
-    override val selectedBackgroundColor: Color = Color(0xFF1E3A5F).copy(alpha = 0.7f),
-    override val selectedTextColor: Color = Color(0xFF64B5F6),
+    override val selectedBackgroundColor: Color = GharBatoPalette.brandContainerDark.copy(alpha = 0.7f),
+    override val selectedTextColor: Color = GharBatoPalette.brandLight,
     override val dividerColor: Color = Color(0xFF424242),
     override val iconColor: Color = Color(0xFFB0B0B0),
-    override val primaryColor: Color = Color(0xFF64B5F6),
+    override val primaryColor: Color = GharBatoPalette.brandLight,
     override val closeIconColor: Color = Color(0xFFB0B0B0),
-    override val checkIconColor: Color = Color(0xFF4FC3F7),
+    override val checkIconColor: Color = GharBatoPalette.brandLight,
     override val dragHandleColor: Color = Color(0xFF616161),
     override val rippleColor: Color = Color(0x1AFFFFFF)
 ) : ThemeColors()
@@ -342,13 +344,13 @@ data class LightThemeColors(
     override val surfaceColor: Color = Color(0xFFF5F5F5),
     override val textColor: Color = Color(0xFF212121),
     override val secondaryTextColor: Color = Color(0xFF757575),
-    override val selectedBackgroundColor: Color = Color(0xFFE3F2FD),
-    override val selectedTextColor: Color = Color(0xFF1976D2),
+    override val selectedBackgroundColor: Color = GharBatoPalette.brandContainerLight,
+    override val selectedTextColor: Color = GharBatoPalette.brand,
     override val dividerColor: Color = Color(0xFFE0E0E0),
     override val iconColor: Color = Color(0xFF757575),
     override val primaryColor: Color = Blue,
     override val closeIconColor: Color = Color(0xFF616161),
-    override val checkIconColor: Color = Color(0xFF2196F3),
+    override val checkIconColor: Color = GharBatoPalette.brand,
     override val dragHandleColor: Color = Color(0xFFBDBDBD),
     override val rippleColor: Color = Color(0x1A000000)
 ) : ThemeColors()

@@ -155,7 +155,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2C365E),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -223,7 +223,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2C365E),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -308,7 +308,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2C365E),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -362,7 +362,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A4A90E2),
+                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2C365E),
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
@@ -140,7 +142,7 @@ fun MapLocationPickerScreen(
     val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
 
     // Initialize with provided location or default
@@ -310,7 +312,7 @@ fun MapLocationPickerScreen(
                             .fillMaxWidth()
                             .height(56.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF4CAF50)
+                            containerColor = GharBatoPalette.brand
                         ),
                         shape = RoundedCornerShape(12.dp),
                         enabled = !isLoading

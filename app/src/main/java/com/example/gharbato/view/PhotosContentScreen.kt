@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -90,7 +92,7 @@ fun PhotosContentScreen(
                 Text(
                     "$totalImages Photos",
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                    color = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
@@ -234,7 +236,7 @@ fun PhotosContentScreen(
                         Text(
                             "•",
                             fontSize = 16.sp,
-                            color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                            color = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                             modifier = Modifier.padding(end = 8.dp)
                         )
                         Text(
@@ -343,7 +345,7 @@ fun ImageCategorySection(
                             Icon(
                                 painter = painterResource(category.icon),
                                 contentDescription = null,
-                                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                                tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -397,7 +399,7 @@ fun ImageCategorySection(
                     "${category.images.size}/${category.maxImages}",
                     fontSize = 13.sp,
                     color = if (category.images.size == category.maxImages) {
-                        if (isDarkMode) Color(0xFF82B1FF) else Blue
+                        if (isDarkMode) GharBatoPalette.brandLight else Blue
                     } else {
                         if (isDarkMode)
                             MaterialTheme.colorScheme.onSurfaceVariant
@@ -452,7 +454,7 @@ fun ImageCategorySection(
                     border = BorderStroke(
                         width = 1.5.dp,
                         color = if (isDarkMode)
-                            Color(0xFF82B1FF).copy(alpha = 0.5f)
+                            GharBatoPalette.brandLight.copy(alpha = 0.5f)
                         else
                             Blue.copy(alpha = 0.3f)
                     )
@@ -463,13 +465,13 @@ fun ImageCategorySection(
                         Icon(
                             painter = painterResource(R.drawable.baseline_add_24),
                             contentDescription = null,
-                            tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                            tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                             modifier = Modifier.size(28.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             "Add ${category.title}",
-                            color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                            color = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -537,7 +539,7 @@ fun AddImageButton(
             .border(
                 width = 1.5.dp,
                 color = if (isDarkMode)
-                    Color(0xFF82B1FF).copy(alpha = 0.5f)
+                    GharBatoPalette.brandLight.copy(alpha = 0.5f)
                 else
                     Blue.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(8.dp)
@@ -551,13 +553,13 @@ fun AddImageButton(
             Icon(
                 painter = painterResource(R.drawable.baseline_add_24),
                 contentDescription = null,
-                tint = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                tint = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                 modifier = Modifier.size(32.dp)
             )
             Text(
                 "Add More",
                 fontSize = 11.sp,
-                color = if (isDarkMode) Color(0xFF82B1FF) else Blue,
+                color = if (isDarkMode) GharBatoPalette.brandLight else Blue,
                 textAlign = TextAlign.Center
             )
         }

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -100,7 +102,7 @@ fun PropertyDetailsScreen(
     val onBackgroundColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
     val onSurfaceColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
     val onSurfaceVariantColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
-    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val dividerColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFE0E0E0)
     val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
 
@@ -152,7 +154,7 @@ fun PropertyDetailsScreen(
                         painter = painterResource(R.drawable.baseline_home_24),
                         contentDescription = null,
                         tint = onSurfaceVariantColor,
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
@@ -267,7 +269,7 @@ fun PropertyDetailsContent(
                     painter = painterResource(R.drawable.baseline_home_24),
                     contentDescription = null,
                     tint = onSurfaceVariantColor,
-                    modifier = Modifier.size(80.dp)
+                    modifier = Modifier.size(48.dp)
                 )
             }
         }
@@ -458,11 +460,11 @@ fun StatusBadge(status: String, modifier: Modifier = Modifier, isDarkMode: Boole
     val (backgroundColor, textColor) = when (status) {
         PropertyStatus.APPROVED -> {
             if (isDarkMode) Color(0xFF1B5E20) to Color(0xFFA5D6A7)
-            else Color(0xFF4CAF50) to Color.White
+            else GharBatoPalette.brand to Color.White
         }
         PropertyStatus.PENDING -> {
             if (isDarkMode) Color(0xFFE65100) to Color(0xFFFFCC80)
-            else Color(0xFFFF9800) to Color.White
+            else GharBatoPalette.brand to Color.White
         }
         PropertyStatus.REJECTED -> {
             if (isDarkMode) Color(0xFFB71C1C) to Color(0xFFFF8A80)

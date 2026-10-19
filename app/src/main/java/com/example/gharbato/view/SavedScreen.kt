@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -23,6 +25,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,9 +69,9 @@ fun SavedScreenContent(
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val primaryColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
-    val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F9FF)
-    val errorColor = if (isDarkMode) Color(0xFFCF6679) else Color(0xFFE91E63)
+    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
+    val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else GharBatoPalette.brandContainerLight
+    val errorColor = MaterialTheme.colorScheme.error
     val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
     val soldBgColor = if (isDarkMode) Color(0xFFB71C1C).copy(alpha = 0.2f) else Color(0xFFD32F2F).copy(alpha = 0.1f)
     val soldTextColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
@@ -401,119 +404,81 @@ fun SavedPropertyCard(
         shape = RoundedCornerShape(12.dp),
         border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
         ) {
-            // Property Image
             Image(
                 painter = rememberAsyncImagePainter(property.imageUrl),
                 contentDescription = property.title,
                 modifier = Modifier
-                    .size(120.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+                    .fillMaxWidth()
+                    .height(190.dp),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Property Details
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(120.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Column {
-                    Text(
-                        text = property.developer,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textColorPrimary,
-                        maxLines = 1
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = property.price,
-                        fontSize = 18.sp,
+                        fontSize = 19.sp,
                         fontWeight = FontWeight.Bold,
-                        color = successColor
+                        color = primaryColor,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = textColorSecondary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = property.location,
-                            fontSize = 12.sp,
-                            color = textColorSecondary,
-                            maxLines = 1
-                        )
-                    }
-
-                    // SOLD badge with dark mode support from 1st code
                     if (isSold) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = soldBgColor
-                        ) {
+                        Surface(shape = RoundedCornerShape(6.dp), color = soldBgColor) {
                             Text(
                                 text = "SOLD",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = soldTextColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
                             )
                         }
                     }
+                    IconButton(onClick = onRemoveClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Favorite,
+                            contentDescription = "Remove from favorites",
+                            tint = primaryColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
-                // Property Stats with proper icons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    PropertyStat(
-                        Icons.Default.SquareFoot,
-                        property.sqft,
-                        textColorSecondary
-                    )
-                    PropertyStat(
-                        Icons.Default.SingleBed,
-                        "${property.bedrooms} BD",
-                        textColorSecondary
-                    )
-                    PropertyStat(
-                        Icons.Default.Bathtub,
-                        "${property.bathrooms} BA",
-                        textColorSecondary
-                    )
-                }
-            }
-
-            // Remove Button - red color preserved from all codes
-            IconButton(
-                onClick = onRemoveClick,
-                modifier = Modifier
-                    .size(40.dp)
-                    .align(Alignment.Top)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Favorite,
-                    contentDescription = "Remove from favorites",
-                    tint = Color.Red,
-                    modifier = Modifier.size(24.dp)
+                Text(
+                    text = property.title.ifBlank { property.developer },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColorPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+
+                Text(
+                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
+                    fontSize = 12.sp,
+                    color = textColorSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = textColorSecondary, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(property.location, fontSize = 12.sp, color = textColorSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                PropertyCardFacts(property = property, tint = primaryColor, contentColor = textColorSecondary)
             }
         }
     }
@@ -565,7 +530,7 @@ fun UnsavePropertyConfirmDialog(
                     Icon(
                         imageVector = Icons.Default.HeartBroken,
                         contentDescription = null,
-                        tint = Color(0xFFE91E63),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -606,7 +571,7 @@ fun UnsavePropertyConfirmDialog(
                         Icon(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = null,
-                            tint = Color(0xFFFFC107),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -623,7 +588,7 @@ fun UnsavePropertyConfirmDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFE91E63),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(12.dp),

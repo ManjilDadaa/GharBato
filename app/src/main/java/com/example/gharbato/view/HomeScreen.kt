@@ -30,9 +30,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.R
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.view.ui.theme.LightBlue
-import com.example.gharbato.view.ui.theme.LightGreen
+import com.example.gharbato.ui.theme.GharBatoDimensions
+import com.example.gharbato.ui.theme.GharBatoSpacing
 import com.example.gharbato.viewmodel.PropertyViewModel
 import com.example.gharbato.viewmodel.PropertyViewModelFactory
 import com.example.gharbato.viewmodel.UserViewModelProvider
@@ -101,7 +100,7 @@ fun HomeScreen(
                     val intent = Intent(context, GeminiChatActivity::class.java)
                     context.startActivity(intent)
                 },
-                backgroundColor = LightBlue
+                backgroundColor = MaterialTheme.colorScheme.primary
             )
         },
         floatingActionButtonPosition = FabPosition.End
@@ -119,7 +118,7 @@ fun HomeScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Blue)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             "Loading properties...",
@@ -146,19 +145,6 @@ fun HomeScreen(
                         )
                     }
 
-                    // Search Bar
-                    item {
-                        SearchBarSection(
-                            onSearchClick = onNavigateToSearch,
-                            onMapClick = {
-                                val intent = Intent(context, FullSearchMapActivity::class.java)
-                                context.startActivity(intent)
-                            },
-                            surfaceColor = surfaceColor,
-                            onSurfaceVariantColor = onSurfaceVariantColor
-                        )
-                    }
-
                     // Quick Actions - Navigate to Search with pre-applied filter
                     item {
                         QuickActionsSection(
@@ -177,25 +163,12 @@ fun HomeScreen(
                         )
                     }
 
-                    // Statistics Section
-                    item {
-                        PropertyStatsSection(
-                            totalProperties = allProperties.size,
-                            rentProperties = allProperties.count { it.marketType.equals("Rent", ignoreCase = true) },
-                            saleProperties = allProperties.count { it.marketType.equals("Sell", ignoreCase = true) },
-                            bookProperties = allProperties.count { it.marketType.equals("Book", ignoreCase = true) },
-                            surfaceColor = surfaceColor,
-                            onBackgroundColor = onBackgroundColor,
-                            onSurfaceVariantColor = onSurfaceVariantColor
-                        )
-                    }
-
                     // Featured Properties (Algorithm-based)
                     if (featuredProperties.isNotEmpty()) {
                         item {
                             SectionHeader(
                                 title = "Featured Properties",
-                                subtitle = "Top rated properties based on engagement",
+                                subtitle = "",
                                 icon = Icons.Default.Star,
                                 showViewAll = true,
                                 onViewAllClick = {
@@ -227,7 +200,7 @@ fun HomeScreen(
                         item {
                             SectionHeader(
                                 title = "New Listings",
-                                subtitle = "Recently added properties",
+                                subtitle = "",
                                 icon = Icons.Default.NewReleases,
                                 showViewAll = true,
                                 onViewAllClick = onNavigateToSearch,
@@ -259,7 +232,7 @@ fun HomeScreen(
                         item {
                             SectionHeader(
                                 title = "Most Viewed",
-                                subtitle = "Properties everyone's checking out",
+                                subtitle = "",
                                 icon = Icons.Default.Visibility,
                                 showViewAll = false,
                                 onBackgroundColor = onBackgroundColor,
@@ -431,69 +404,6 @@ fun calculateCompletenessScore(property: PropertyModel): Float {
 }
 
 @Composable
-fun PropertyStatsSection(
-    totalProperties: Int,
-    rentProperties: Int,
-    saleProperties: Int,
-    bookProperties: Int,
-    surfaceColor: Color,
-    onBackgroundColor: Color,
-    onSurfaceVariantColor: Color
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Properties Available",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = onSurfaceVariantColor
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                StatItem("Total", totalProperties, Color(0xFF2196F3), onBackgroundColor)
-                StatItem("Rent", rentProperties, Color(0xFF4CAF50), onBackgroundColor)
-                StatItem("Sale", saleProperties, Color(0xFFFF9800), onBackgroundColor)
-                StatItem("Book", bookProperties, Color(0xFF9C27B0), onBackgroundColor)
-            }
-        }
-    }
-}
-
-@Composable
-fun StatItem(label: String, count: Int, color: Color, textColor: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = count.toString(),
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = textColor.copy(alpha = 0.7f)
-        )
-    }
-}
-
-@Composable
 fun PopularPropertiesRow(
     properties: List<PropertyModel>,
     onPropertyClick: (PropertyModel) -> Unit,
@@ -502,8 +412,8 @@ fun PopularPropertiesRow(
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(horizontal = GharBatoSpacing.screenHorizontal),
+        horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.small)
     ) {
         items(properties) { property ->
             CompactPropertyCard(
@@ -537,7 +447,7 @@ fun CompactPropertyCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(104.dp)
             ) {
                 val imageUrl = property.images.values.flatten().firstOrNull()
                     ?: "https://via.placeholder.com/600x400?text=No+Image"
@@ -549,33 +459,6 @@ fun CompactPropertyCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // Views Badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                    color = Color.Black.copy(alpha = 0.7f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Visibility,
-                            contentDescription = "Views",
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = property.totalViews.toString(),
-                            fontSize = 10.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
 
             // Property Info
@@ -586,9 +469,9 @@ fun CompactPropertyCard(
             ) {
                 Text(
                     text = property.price,
-                    fontSize = 14.sp,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50),
+                    color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -600,6 +483,22 @@ fun CompactPropertyCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = "Views",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${property.totalViews} views",
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
@@ -612,27 +511,11 @@ fun HomeHeader(
     backgroundColor: Color,
     onBackgroundColor: Color
 ) {
-    val isDarkTheme = MaterialTheme.colorScheme.background == Color(0xFF121212)
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = if (isDarkTheme) {
-                        listOf(
-                            Blue.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
-                    } else {
-                        listOf(
-                            Blue.copy(alpha = 0.1f),
-                            Color.Transparent
-                        )
-                    }
-                )
-            )
-            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .background(backgroundColor)
+            .padding(horizontal = GharBatoSpacing.screenHorizontal, vertical = GharBatoSpacing.medium)
     ) {
         Column {
             Row(
@@ -642,15 +525,8 @@ fun HomeHeader(
             ) {
                 Column {
                     Text(
-                        text = "Hello 👋",
-                        fontSize = 16.sp,
-                        color = onBackgroundColor.copy(alpha = 0.7f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Find Your Dream Home",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "Find your next home",
+                        style = MaterialTheme.typography.titleLarge,
                         color = onBackgroundColor
                     )
                 }
@@ -660,104 +536,34 @@ fun HomeHeader(
                     IconButton(
                         onClick = onNotificationClick,
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(GharBatoDimensions.touchTarget)
                             .background(
-                                MaterialTheme.colorScheme.surface,
-                                CircleShape
-                            )
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                MaterialTheme.colorScheme.surfaceVariant,
                                 CircleShape
                             )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Notifications,
                             contentDescription = "Notifications",
-                            tint = if (unreadCount > 0) Blue else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(GharBatoDimensions.standardIcon)
                         )
                     }
 
                     if (unreadCount > 0) {
                         Badge(
                             modifier = Modifier.align(Alignment.TopEnd),
-                            containerColor = Color.Red
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         ) {
                             Text(
                                 text = if (unreadCount > 9) "9+" else unreadCount.toString(),
                                 fontSize = 10.sp,
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun SearchBarSection(
-    onSearchClick: () -> Unit,
-    onMapClick: () -> Unit,
-    surfaceColor: Color,
-    onSurfaceVariantColor: Color
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Search Bar
-        Surface(
-            modifier = Modifier
-                .weight(1f)
-                .height(56.dp)
-                .clickable(onClick = onSearchClick),
-            shape = RoundedCornerShape(16.dp),
-            color = surfaceColor,
-            shadowElevation = 2.dp,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = onSurfaceVariantColor
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = "Search location, property...",
-                    fontSize = 14.sp,
-                    color = onSurfaceVariantColor
-                )
-            }
-        }
-
-        // Map Button
-        Surface(
-            modifier = Modifier
-                .size(56.dp)
-                .clickable(onClick = onMapClick),
-            shape = RoundedCornerShape(16.dp),
-            color = Blue,
-            shadowElevation = 2.dp
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Map,
-                    contentDescription = "Map View",
-                    tint = Color.White
-                )
             }
         }
     }
@@ -769,53 +575,41 @@ fun QuickActionsSection(
     onBuyClick: () -> Unit,
     onBookClick: () -> Unit
 ) {
-    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
-
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = GharBatoSpacing.screenHorizontal, vertical = GharBatoSpacing.small)
     ) {
         Text(
             text = "Browse by Category",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleSmall,
             color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 12.dp)
+            modifier = Modifier.padding(bottom = GharBatoSpacing.small)
         )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.small)
         ) {
             QuickActionCard(
-                title = "For Rent",
-                subtitle = "Monthly rentals",
+                title = "Rent",
                 icon = Icons.Default.Key,
-                color = Color(0xFF4CAF50),
                 onClick = onRentClick,
-                modifier = Modifier.weight(1f),
-                surfaceVariantColor = surfaceVariantColor
+                modifier = Modifier.weight(1f)
             )
 
             QuickActionCard(
-                title = "For Sale",
-                subtitle = "Buy property",
+                title = "Buy",
                 icon = Icons.Default.Home,
-                color = Color(0xFF2196F3),
                 onClick = onBuyClick,
-                modifier = Modifier.weight(1f),
-                surfaceVariantColor = surfaceVariantColor
+                modifier = Modifier.weight(1f)
             )
 
             QuickActionCard(
-                title = "For Book",
-                subtitle = "Short stays",
+                title = "Stay",
                 icon = Icons.Default.Hotel,
-                color = Color(0xFFFF9800),
                 onClick = onBookClick,
-                modifier = Modifier.weight(1f),
-                surfaceVariantColor = surfaceVariantColor
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -824,54 +618,42 @@ fun QuickActionsSection(
 @Composable
 fun QuickActionCard(
     title: String,
-    subtitle: String,
     icon: ImageVector,
-    color: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    surfaceVariantColor: Color
+    modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
-            .height(100.dp)
+            .height(64.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (MaterialTheme.colorScheme.background == Color(0xFF121212)) {
-                color.copy(alpha = 0.2f)
-            } else {
-                color.copy(alpha = 0.1f)
-            }
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(1.dp, surfaceVariantColor.copy(alpha = 0.3f))
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = GharBatoSpacing.small),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = color,
-                modifier = Modifier.size(32.dp)
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(GharBatoDimensions.compactIcon)
             )
-
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = color.copy(alpha = 0.7f)
-                )
-            }
+            Spacer(modifier = Modifier.width(GharBatoSpacing.xSmall))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -889,7 +671,7 @@ fun SectionHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(horizontal = GharBatoSpacing.screenHorizontal, vertical = GharBatoSpacing.small),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -898,32 +680,33 @@ fun SectionHeader(
             modifier = Modifier.weight(1f)
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(32.dp),
                 shape = CircleShape,
-                color = Blue.copy(alpha = if (MaterialTheme.colorScheme.background == Color(0xFF121212)) 0.2f else 0.1f)
+                color = MaterialTheme.colorScheme.primaryContainer
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = Blue,
-                    modifier = Modifier.padding(8.dp)
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(7.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(GharBatoSpacing.small))
 
             Column {
                 Text(
                     text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
                     color = onBackgroundColor
                 )
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = onSurfaceVariantColor
-                )
+                if (subtitle.isNotBlank()) {
+                    Text(
+                        text = subtitle,
+                        fontSize = 11.sp,
+                        color = onSurfaceVariantColor
+                    )
+                }
             }
         }
 
@@ -931,13 +714,13 @@ fun SectionHeader(
             TextButton(onClick = onViewAllClick) {
                 Text(
                     text = "View All",
-                    fontSize = 14.sp,
-                    color = Blue
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary
                 )
                 Icon(
                     imageVector = Icons.Default.ArrowForward,
                     contentDescription = "View All",
-                    tint = Blue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -953,8 +736,8 @@ fun FeaturedPropertiesCarousel(
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(horizontal = GharBatoSpacing.screenHorizontal),
+        horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.medium)
     ) {
         items(properties) { property ->
             FeaturedPropertyCard(
@@ -974,133 +757,68 @@ fun FeaturedPropertyCard(
 ) {
     Card(
         modifier = Modifier
-            .width(300.dp)
-            .height(220.dp)
+            .width(280.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Property Image
+        Column {
             val imageUrl = property.images.values.flatten().firstOrNull()
                 ?: "https://via.placeholder.com/600x400?text=No+Image"
 
-            Image(
-                painter = rememberAsyncImagePainter(imageUrl),
-                contentDescription = property.title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-
-            // Gradient Overlay
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.7f)
-                            ),
-                            startY = 100f
-                        )
-                    )
-            )
+                    .fillMaxWidth()
+                    .height(152.dp)
+            ) {
+                Image(
+                    painter = rememberAsyncImagePainter(imageUrl),
+                    contentDescription = property.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
-            // Featured Badge
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp),
-                color = Color(0xFFFFD700),
-                shape = RoundedCornerShape(8.dp)
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = "Featured",
-                        tint = Color.White,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Text(
-                        text = "Featured",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    Text(property.price, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
+                        Text("Featured", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        IconButton(onClick = onFavoriteClick, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = if (property.isFavorite) "Remove from favorites" else "Add to favorites",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
                 }
-            }
-
-            // Favorite Button
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(12.dp)
-                    .size(36.dp)
-                    .background(Color.White.copy(alpha = 0.9f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (property.isFavorite) Color.Red else Color.Gray
-                )
-            }
-
-            // Property Info
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = property.price,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = property.developer,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White,
+                    text = property.title.ifBlank { property.developer },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Enhanced Property Stats with proper icons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    HomePropertyStatChip(
-                        icon = Icons.Default.SquareFoot,
-                        value = property.sqft,
-                        label = null,
-                        iconTint = Color(0xFF4CAF50)
-                    )
-                    HomePropertyStatChip(
-                        icon = Icons.Default.SingleBed,
-                        value = "${property.bedrooms}",
-                        label = "Beds",
-                        iconTint = Color(0xFF2196F3)
-                    )
-                    HomePropertyStatChip(
-                        icon = Icons.Default.Bathtub,
-                        value = "${property.bathrooms}",
-                        label = "Baths",
-                        iconTint = Color(0xFF9C27B0)
-                    )
-                }
+                Text(
+                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                PropertyCardFacts(property = property)
             }
         }
     }
@@ -1134,28 +852,20 @@ fun HomePropertyStatChip(
     iconTint: Color
 ) {
     Surface(
-        color = Color.White.copy(alpha = 0.15f),
+        color = Color.White.copy(alpha = 0.16f),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.xSmall)
         ) {
-            Surface(
-                color = iconTint.copy(alpha = 0.3f),
-                shape = CircleShape,
-                modifier = Modifier.size(22.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = iconTint,
-                        modifier = Modifier.size(12.dp)
-                    )
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(14.dp)
+            )
             Column {
                 Text(
                     text = value,
@@ -1189,180 +899,128 @@ fun ModernPropertyCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = GharBatoSpacing.screenHorizontal, vertical = GharBatoSpacing.small)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Property Image
-            Box(
+        Column(modifier = Modifier.fillMaxWidth()) {
+            val imageUrl = property.images.values.flatten().firstOrNull()
+                ?: "https://via.placeholder.com/600x400?text=No+Image"
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = property.title,
                 modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(12.dp))
-            ) {
-                val imageUrl = property.images.values.flatten().firstOrNull()
-                    ?: "https://via.placeholder.com/600x400?text=No+Image"
+                    .fillMaxWidth()
+                    .height(190.dp),
+                contentScale = ContentScale.Crop
+            )
 
-                Image(
-                    painter = rememberAsyncImagePainter(imageUrl),
-                    contentDescription = property.title,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                // Market Type Badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(6.dp),
-                    color = when (property.marketType.lowercase()) {
-                        "rent" -> Color(0xFF4CAF50)
-                        "sell" -> Color(0xFF2196F3)
-                        "book" -> Color(0xFFFF9800)
-                        else -> Color.Gray
-                    },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = when (property.marketType.lowercase()) {
-                            "sell" -> "Buy"
-                            else -> property.marketType
-                        },
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-
-                // NEW Badge
-                val isNew = (System.currentTimeMillis() - property.updatedAt) < (3 * 24 * 60 * 60 * 1000)
-                if (isNew) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp),
-                        color = Color.Red,
-                        shape = RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = "NEW",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Property Details
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = property.price,
-                        fontSize = 16.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF4CAF50)
-                    )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = property.developer,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = onSurfaceColor,
-                        maxLines = 2,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Location",
-                            tint = onSurfaceVariantColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(6.dp)) {
                         Text(
-                            text = property.location,
-                            fontSize = 12.sp,
-                            color = onSurfaceVariantColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = when (property.marketType.lowercase()) {
+                                "sell" -> "For sale"
+                                "rent" -> "For rent"
+                                "book" -> "Booking"
+                                else -> property.marketType
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                        )
+                    }
+                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (property.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (property.isFavorite) MaterialTheme.colorScheme.primary else onSurfaceVariantColor,
+                            modifier = Modifier.size(19.dp)
                         )
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    InfoChip(Icons.Default.SquareFoot, property.sqft, Color(0xFF4CAF50))
-                    InfoChip(Icons.Default.SingleBed, "${property.bedrooms} BD", Color(0xFF2196F3))
-                    InfoChip(Icons.Default.Bathtub, "${property.bathrooms} BA", Color(0xFF9C27B0))
-                }
-            }
-
-            // Favorite Button
-            IconButton(
-                onClick = onFavoriteClick,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (property.isFavorite) Color.Red else onSurfaceVariantColor
+                Text(
+                    text = property.title.ifBlank { property.developer },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = onSurfaceColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Text(
+                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = onSurfaceVariantColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = onSurfaceVariantColor, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = property.location,
+                        fontSize = 12.sp,
+                        color = onSurfaceVariantColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                PropertyCardFacts(property = property, tint = MaterialTheme.colorScheme.primary, contentColor = onSurfaceVariantColor)
             }
         }
     }
 }
 
 @Composable
-fun InfoChip(icon: ImageVector, text: String, chipColor: Color) {
+fun InfoChip(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
     Surface(
-        color = if (MaterialTheme.colorScheme.background == Color(0xFF121212)) {
-            chipColor.copy(alpha = 0.2f)
-        } else {
-            chipColor.copy(alpha = 0.1f)
-        },
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.primaryContainer,
         shape = RoundedCornerShape(6.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = chipColor,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(12.dp)
             )
             Text(
                 text = text,
                 fontSize = 11.sp,
-                color = chipColor,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -1375,30 +1033,30 @@ fun EmptyStateSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
             imageVector = Icons.Default.SearchOff,
             contentDescription = null,
-            modifier = Modifier.size(80.dp),
+            modifier = Modifier.size(48.dp),
             tint = onSurfaceVariantColor.copy(alpha = 0.5f)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(GharBatoSpacing.medium))
 
         Text(
             text = "No properties available",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
             color = onSurfaceVariantColor
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(GharBatoSpacing.xSmall))
 
         Text(
             text = "Check back later for new listings",
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             color = onSurfaceVariantColor.copy(alpha = 0.7f)
         )
     }

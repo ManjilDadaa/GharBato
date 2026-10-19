@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.location.Geocoder
 import android.os.Bundle
@@ -129,10 +131,10 @@ fun LocationPickerScreen(
     val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val fabBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color.White
     val fabContentColor = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
-    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
-    val circleFillColor = if (isDarkMode) Color(0x4D82B1FF) else Color(0x4D2196F3)
-    val circleStrokeColor = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF2196F3)
-    val sliderInactiveColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE3F2FD)
+    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else Blue
+    val circleFillColor = if (isDarkMode) Color(0x4D7885AE) else Color(0x4D2C365E)
+    val circleStrokeColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
+    val sliderInactiveColor = if (isDarkMode) Color(0xFF424242) else GharBatoPalette.brandContainerLight
     val disabledButtonColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
     val cardBorderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
 

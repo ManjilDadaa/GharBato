@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -95,12 +97,12 @@ fun EditProfileScreen() {
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
-    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
+    val appBlue = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val borderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
     val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
     val lockedFieldBg = if (isDarkMode) Color(0xFF1E1E1E) else Color(0xFFF5F7FA)
-    val infoBoxBg = if (isDarkMode) Color(0xFF2C3E50).copy(alpha = 0.3f) else Color(0xFFE3F2FD)
-    val infoBoxBorder = if (isDarkMode) Color(0xFF3498DB).copy(alpha = 0.3f) else Color(0xFFBBDEFB)
+    val infoBoxBg = if (isDarkMode) Color(0xFF2C3E50).copy(alpha = 0.3f) else GharBatoPalette.brandContainerLight
+    val infoBoxBorder = if (isDarkMode) GharBatoPalette.brandLight.copy(alpha = 0.3f) else GharBatoPalette.brandContainerLight
 
     // Image picker launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
@@ -631,7 +633,7 @@ fun DeleteAccountConfirmationDialog(
     isDarkMode: Boolean
 ) {
     val isCodeCorrect = verificationCode == generatedCode
-    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Color(0xFF4D8DFF)
+    val appBlue = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val errorColor = if (isDarkMode) Color(0xFFEF5350) else Color(0xFFE53935)
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)

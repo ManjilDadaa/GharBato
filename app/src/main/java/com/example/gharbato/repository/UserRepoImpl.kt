@@ -6,10 +6,9 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.cloudinary.Cloudinary
-import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.NotificationModel
 import com.example.gharbato.model.UserModel
+import com.example.gharbato.utils.SecureCloudinaryUploader
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.*
 import com.google.firebase.database.*
@@ -21,14 +20,6 @@ class UserRepoImpl : UserRepo {
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
     private val ref: DatabaseReference = database.getReference("Users")
-
-    private val cloudinary = Cloudinary(
-        mapOf(
-            "cloud_name" to "dwqybrjf2",
-            "api_key" to "929885821451753",
-            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
-        )
-    )
 
     // Store listeners so we can remove them later
     private var notificationsListener: ValueEventListener? = null
@@ -164,12 +155,9 @@ class UserRepoImpl : UserRepo {
     override fun uploadProfileImage(context: Context, imageUri: Uri, callback: (String?) -> Unit) {
         Executors.newSingleThreadExecutor().execute {
             try {
-                val response = cloudinary.uploader().upload(
-                    context.contentResolver.openInputStream(imageUri),
-                    ObjectUtils.asMap("resource_type", "image")
-                )
+                val imageUrl = SecureCloudinaryUploader.uploadImage(context, imageUri, "profile")
                 Handler(Looper.getMainLooper()).post {
-                    callback((response["url"] as String?)?.replace("http://", "https://"))
+                    callback(imageUrl)
                 }
             } catch (e: Exception) {
                 Handler(Looper.getMainLooper()).post { callback(null) }

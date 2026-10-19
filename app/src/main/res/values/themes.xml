@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.GharBato" parent="Theme.MaterialComponents.Light.NoActionBar" />
+    <style name="Theme.GharBato" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/gharbato_brand</item>
+        <item name="colorPrimaryDark">@color/gharbato_brand</item>
+        <item name="colorAccent">@color/gharbato_brand_light</item>
+        <item name="android:statusBarColor">@color/app_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
 </resources>

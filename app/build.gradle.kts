@@ -31,42 +31,15 @@ android {
             }
         }
 
-        val zegoAppId = (
-                project.findProperty("ZEGO_APP_ID")
-                    ?: localProps.getProperty("ZEGO_APP_ID")
-                    ?: System.getenv("ZEGO_APP_ID")
-                    ?: System.getProperty("ZEGO_APP_ID")
-                    ?: "1133461036"
-                ).toString().trim()
-
-        val zegoAppSign = (
-                project.findProperty("ZEGO_APP_SIGN")
-                    ?: localProps.getProperty("ZEGO_APP_SIGN")
-                    ?: System.getenv("ZEGO_APP_SIGN")
-                    ?: System.getProperty("ZEGO_APP_SIGN")
-                    ?: "ad619cb6c617136dcf892c2cb4d7fbc6769e2124ca616670283f09c3c6297c45"
-                ).toString().trim()
-
-        val zegoAppSignEscaped = zegoAppSign
-            .replace("\\\\", "\\\\\\\\")
-            .replace("\"", "\\\\\"")
-
-        buildConfigField("long", "ZEGO_APP_ID", zegoAppId)
-        buildConfigField("String", "ZEGO_APP_SIGN", "\"${zegoAppSignEscaped}\"")
-
-        val geminiApiKey = (
-                project.findProperty("GEMINI_API_KEY")
-                    ?: localProps.getProperty("GEMINI_API_KEY")
-                    ?: System.getenv("GEMINI_API_KEY")
-                    ?: System.getProperty("GEMINI_API_KEY")
-                    ?: ""
-                ).toString().trim()
-
-        val geminiApiKeyEscaped = geminiApiKey
-            .replace("\\\\", "\\\\\\\\")
-            .replace("\"", "\\\\\"")
-
-        buildConfigField("String", "GEMINI_API_KEY", "\"${geminiApiKeyEscaped}\"")
+        // Maps keys are client identifiers, not server secrets. Supply one through
+        // local.properties or a CI environment variable and restrict it by package,
+        // signing certificate, and the Maps APIs used in Google Cloud Console.
+        manifestPlaceholders["MAPS_API_KEY"] = (
+            project.findProperty("MAPS_API_KEY")
+                ?: localProps.getProperty("MAPS_API_KEY")
+                ?: System.getenv("MAPS_API_KEY")
+                ?: ""
+            ).toString().trim()
     }
 
     buildTypes {
@@ -93,11 +66,14 @@ android {
 
 dependencies {
     // ========== FIREBASE - USE SINGLE BOM VERSION ==========
-    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-database-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-database")
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-messaging")
+    implementation("com.google.firebase:firebase-functions")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
+    debugImplementation("com.google.firebase:firebase-appcheck-debug")
 
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
@@ -141,11 +117,7 @@ dependencies {
     implementation("com.github.ZEGOCLOUD:zego_uikit_prebuilt_call_android:+")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
 
-    // Cloudinary
-    implementation("com.cloudinary:cloudinary-android:2.1.0")
-
-    // Gemini AI
-    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
+    // Cloudinary uploads and Gemini requests go through authenticated Firebase Functions.
     implementation(libs.androidx.compose.foundation)
 
     // Testing

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -211,7 +213,7 @@ fun FullSearchMapScreen(
                                     text = property.price,
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF4CAF50)
+                                    color = GharBatoPalette.brand
                                 )
 
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -262,7 +264,7 @@ fun FullSearchMapScreen(
                             },
                             modifier = Modifier.fillMaxWidth(),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF2196F3)
+                                containerColor = GharBatoPalette.brand
                             ),
                             shape = RoundedCornerShape(8.dp)
                         ) {

@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -83,11 +85,11 @@ fun AllPropertiesScreen(isDarkMode: Boolean) {
     val cardBackgroundColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
     val chipBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color(0xFFF0F0F0)
     val chipTextColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF666666)
-    val primaryColor = if (isDarkMode) Color(0xFF82B1FF) else Blue
+    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else Blue
     val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
     val warningColor = if (isDarkMode) Color(0xFFFFB74D) else Color(0xFFFF9800)
     val errorColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
-    val infoColor = if (isDarkMode) Color(0xFF64B5F6) else Color(0xFF2196F3)
+    val infoColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
 
     LaunchedEffect(currentUserId) {
         if (currentUserId != null) {
@@ -192,7 +194,7 @@ fun AllPropertiesScreen(isDarkMode: Boolean) {
                         painter = painterResource(R.drawable.baseline_home_24),
                         contentDescription = null,
                         tint = secondaryTextColor,
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.size(48.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(

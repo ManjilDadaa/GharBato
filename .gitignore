@@ -13,3 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
+/functions/node_modules/
+/functions/.env*
+!/functions/.env.example

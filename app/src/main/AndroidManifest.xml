@@ -82,7 +82,7 @@
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDTQKHcwwRuOHGOt-fPlvu4Mm2baO3pcMs" />
+            android:value="${MAPS_API_KEY}" />
 
         <!-- ↓ Launcher intent-filter removed, exported set to false -->
         <activity
@@ -175,6 +175,7 @@
         <activity
             android:name=".view.SignUpActivity"
             android:exported="false"
+            android:windowSoftInputMode="adjustPan"
             android:theme="@style/Theme.GharBato" />
 
         <activity
@@ -190,6 +191,7 @@
         <activity
             android:name=".view.LoginActivity"
             android:exported="false"
+            android:windowSoftInputMode="adjustPan"
             android:theme="@style/Theme.GharBato" />
 
         <activity

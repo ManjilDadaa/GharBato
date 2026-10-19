@@ -17,10 +17,8 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ServerValue
-import com.cloudinary.Cloudinary
-import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.PropertyModel
-import java.io.InputStream
+import com.example.gharbato.utils.SecureCloudinaryUploader
 import java.util.concurrent.Executors
 
 interface MessageRepository {
@@ -104,15 +102,6 @@ class MessageRepositoryImpl : MessageRepository {
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance()
     
-    // Cloudinary configuration
-    private val cloudinary = Cloudinary(
-        mapOf(
-            "cloud_name" to "dwqybrjf2",
-            "api_key" to "929885821451753",
-            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
-        )
-    )
-
     override fun getOrCreateLocalUserId(context: Context): String {
         val prefs = context.getSharedPreferences("gharbato_prefs", Context.MODE_PRIVATE)
         val existing = prefs.getString("local_user_id", null)
@@ -524,22 +513,7 @@ class MessageRepositoryImpl : MessageRepository {
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
-                if (inputStream == null) {
-                    Log.e(TAG, "Could not open input stream for $imageUri")
-                    return@execute
-                }
-
-                val fileName = "chat_${chatId}_${System.currentTimeMillis()}"
-
-                val response = cloudinary.uploader().upload(
-                    inputStream, ObjectUtils.asMap(
-                        "public_id", fileName,
-                        "folder", "chat_images"
-                    )
-                )
-                // Use secure_url to ensure HTTPS, which is required by Android by default
-                val imageUrl = response["secure_url"] as String? ?: response["url"] as String?
+                val imageUrl = SecureCloudinaryUploader.uploadImage(context, imageUri, "chat")
 
                 if (imageUrl != null) {
                     Log.d(TAG, "Image uploaded successfully: $imageUrl")

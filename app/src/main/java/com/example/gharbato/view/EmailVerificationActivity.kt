@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -61,7 +63,7 @@ fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Scaffold(
         containerColor = backgroundColor
@@ -86,7 +88,7 @@ fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
                         painter = painterResource(R.drawable.outline_email_24),
                         contentDescription = null,
                         tint = Blue,
-                        modifier = Modifier.size(80.dp)
+                        modifier = Modifier.size(48.dp)
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
@@ -94,7 +96,7 @@ fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
                     // Title
                     Text(
                         "Verify Your Email",
-                        fontSize = 28.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = textColor
                     )

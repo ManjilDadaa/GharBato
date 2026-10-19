@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -44,14 +46,14 @@ import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.utils.SystemBarUtils
 
 // Modern Color Palette
-private val PrimaryBlue = Color(0xFF2563EB)
-private val LightBlue = Color(0xFF3B82F6)
+private val PrimaryBlue = GharBatoPalette.brand
+private val LightBlue = GharBatoPalette.brandLight
 private val BackgroundLight = Color(0xFFF8FAFC)
 private val CardWhite = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF1E293B)
 private val TextSecondary = Color(0xFF64748B)
 private val InputBackground = Color(0xFFF1F5F9)
-private val InputFocusedBackground = Color(0xFFEFF6FF)
+private val InputFocusedBackground = GharBatoPalette.brandContainerLight
 private val ErrorRed = Color(0xFFEF4444)
 private val ErrorRedLight = Color(0xFFFEF2F2)
 
@@ -134,7 +136,7 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                     "Forgot Password?",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 26.sp,
+                        fontSize = 24.sp,
                         color = textColor
                     ),
                     modifier = Modifier.offset(y = (-32).dp)

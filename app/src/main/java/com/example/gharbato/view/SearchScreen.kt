@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -98,6 +100,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -191,6 +194,17 @@ fun SearchScreen(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val historyUiState by searchHistoryViewModel.uiState.collectAsStateWithLifecycle()
+    val filters = uiState.currentFilters
+    val hasSearchCriteria = uiState.searchQuery.isNotBlank() ||
+        uiState.searchLocation != null ||
+        filters.marketType.isNotBlank() ||
+        filters.propertyTypes.isNotEmpty() ||
+        filters.minPrice > 0 || filters.maxPrice > 0 ||
+        filters.minArea > 0 || filters.maxArea > 0 ||
+        filters.bedrooms.isNotBlank() || filters.furnishing.isNotBlank() ||
+        filters.parking != null || filters.petsAllowed != null ||
+        filters.amenities.isNotEmpty() || filters.floor.isNotBlank() ||
+        filters.rentalPeriod != "Long-term"
 
     var showFilterSheet by remember { mutableStateOf(false) }
     var showSortSheet by remember { mutableStateOf(false) }
@@ -311,6 +325,15 @@ fun SearchScreen(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
+                    SortBar(
+                        propertiesCount = uiState.properties.size.takeIf { hasSearchCriteria },
+                        currentSort = uiState.currentSort,
+                        onSortClick = {
+                            showSortSheet = true
+                        },
+                        isDarkMode = isDarkMode
+                    )
+
                     // Map Section
                     if (mapHeight > 0.dp && uiState.properties.isNotEmpty()) {
                         Box(
@@ -351,15 +374,6 @@ fun SearchScreen(
                         }
                     }
 
-                    SortBar(
-                        propertiesCount = uiState.properties.size,
-                        currentSort = uiState.currentSort,
-                        onSortClick = {
-                            showSortSheet = true
-                        },
-                        isDarkMode = isDarkMode
-                    )
-
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // Content
@@ -372,7 +386,7 @@ fun SearchScreen(
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    CircularProgressIndicator(color = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3))
+                                    CircularProgressIndicator(color = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand)
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         "Searching properties...",
@@ -394,7 +408,7 @@ fun SearchScreen(
                                     Icon(
                                         imageVector = Icons.Default.SearchOff,
                                         contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
+                                        modifier = Modifier.size(48.dp),
                                         tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -419,7 +433,7 @@ fun SearchScreen(
                                                 viewModel.clearSearch()
                                             },
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+                                                containerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
                                             )
                                         ) {
                                             Icon(Icons.Default.Clear, contentDescription = null)
@@ -443,7 +457,7 @@ fun SearchScreen(
                                     Icon(
                                         imageVector = Icons.Default.Home,
                                         contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
+                                        modifier = Modifier.size(48.dp),
                                         tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
                                     )
                                     Spacer(modifier = Modifier.height(16.dp))
@@ -642,14 +656,14 @@ fun HidePropertyConfirmDialog(
         icon = {
             Surface(
                 shape = CircleShape,
-                color = Color(0xFFFFF3E0),
+                color = GharBatoPalette.brandContainerLight,
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
                         imageVector = Icons.Default.VisibilityOff,
                         contentDescription = null,
-                        tint = Color(0xFFFF9800),
+                        tint = GharBatoPalette.brand,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -690,7 +704,7 @@ fun HidePropertyConfirmDialog(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -707,7 +721,7 @@ fun HidePropertyConfirmDialog(
             Button(
                 onClick = onConfirm,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFF9800),
+                    containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(12.dp),
@@ -764,9 +778,9 @@ fun SearchTopBar(
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val hintColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF9E9E9E)
     val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE8E8E8)
-    val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
     val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
-    val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Surface(
         modifier = Modifier
@@ -1006,7 +1020,7 @@ fun PropertiesMapSection(
 
     val fabBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val fabContentColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val badgeBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val badgeBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
@@ -1132,7 +1146,7 @@ fun PropertiesMapSection(
 
 @Composable
 fun SortBar(
-    propertiesCount: Int,
+    propertiesCount: Int?,
     currentSort: SortOption,
     onSortClick: () -> Unit,
     isDarkMode: Boolean
@@ -1141,7 +1155,7 @@ fun SortBar(
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
-    val iconColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val iconColor = MaterialTheme.colorScheme.primary
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1155,19 +1169,14 @@ fun SortBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Text(
-                    text = "$propertiesCount Listings",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = textColor
-                )
-                Text(
-                    text = "Properties available",
-                    fontSize = 12.sp,
-                    color = secondaryTextColor
-                )
-            }
+            Text(
+                text = propertiesCount?.let { count ->
+                    "$count matching ${if (count == 1) "property" else "properties"}"
+                } ?: "Explore properties",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                color = textColor
+            )
 
             Surface(
                 onClick = onSortClick,
@@ -1258,16 +1267,11 @@ fun PropertyCard(
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val priceColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
+    val priceColor = MaterialTheme.colorScheme.primary
     val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.95f)
     val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val marketTypeColor = when (property.marketType.lowercase()) {
-        "rent" -> Color(0xFF4CAF50)
-        "sell" -> Color(0xFF2196F3)
-        "book" -> Color(0xFFFF9800)
-        else -> Color.Gray
-    }
+    val marketTypeColor = GharBatoPalette.brand
 
     Card(
         modifier = Modifier
@@ -1292,50 +1296,14 @@ fun PropertyCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // Gradient overlay at top
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(80.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.4f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-
-                // Top row with market type badge and action buttons
+                // Keep the photograph unobstructed by leaving only controls over it.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Market type badge
-                    Surface(
-                        color = marketTypeColor,
-                        shape = RoundedCornerShape(8.dp),
-                        shadowElevation = 2.dp
-                    ) {
-                        Text(
-                            text = when (property.marketType.lowercase()) {
-                                "sell" -> "For Sale"
-                                "rent" -> "For Rent"
-                                "book" -> "Booking"
-                                else -> property.marketType
-                            },
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-
                     // Action buttons
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Surface(
@@ -1351,7 +1319,7 @@ fun PropertyCard(
                                     else Icons.Default.FavoriteBorder,
                                     contentDescription = if (property.isFavorite) "Remove from favorites"
                                     else "Add to favorites",
-                                    tint = if (property.isFavorite) Color.Red else secondaryTextColor,
+                                    tint = if (property.isFavorite) MaterialTheme.colorScheme.primary else secondaryTextColor,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -1386,7 +1354,7 @@ fun PropertyCard(
                                             Icon(
                                                 Icons.Default.Share,
                                                 contentDescription = null,
-                                                tint = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3),
+                                                tint = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                             Spacer(modifier = Modifier.width(12.dp))
@@ -1449,61 +1417,6 @@ fun PropertyCard(
                     }
                 }
 
-                // Bottom gradient with stats
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp)
-                    ) {
-                        // Price on image
-                        Text(
-                            text = property.price,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        // Stats row
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            PropertyStatChip(
-                                icon = Icons.Default.SquareFoot,
-                                value = property.sqft,
-                                label = null,
-                                iconTint = Color(0xFF4CAF50)
-                            )
-                            PropertyStatChip(
-                                icon = Icons.Default.SingleBed,
-                                value = "${property.bedrooms}",
-                                label = "Beds",
-                                iconTint = Color(0xFF2196F3)
-                            )
-                            PropertyStatChip(
-                                icon = Icons.Default.Bathtub,
-                                value = "${property.bathrooms}",
-                                label = "Baths",
-                                iconTint = Color(0xFF9C27B0)
-                            )
-                        }
-                    }
-                }
             }
 
             // Content section
@@ -1514,6 +1427,37 @@ fun PropertyCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = property.price,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = priceColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Surface(color = marketTypeColor, shape = RoundedCornerShape(8.dp)) {
+                                Text(
+                                    text = when (property.marketType.lowercase()) {
+                                        "sell" -> "For Sale"
+                                        "rent" -> "For Rent"
+                                        "book" -> "Booking"
+                                        else -> property.marketType
+                                    },
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
                         Text(
                             text = property.title.ifBlank { property.developer },
                             fontSize = 17.sp,
@@ -1521,6 +1465,16 @@ fun PropertyCard(
                             color = textColor,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Text(
+                            text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
+                            fontSize = 12.sp,
+                            color = secondaryTextColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
 
                         Spacer(modifier = Modifier.height(6.dp))
@@ -1572,6 +1526,13 @@ fun PropertyCard(
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                PropertyCardFacts(
+                    property = property,
+                    tint = priceColor,
+                    contentColor = secondaryTextColor
+                )
             }
         }
     }
@@ -1588,9 +1549,9 @@ fun PropertyDetailOverlay(
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val priceColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
+    val priceColor = MaterialTheme.colorScheme.primary
     val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
-    val buttonColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val buttonColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Card(
         modifier = modifier.fillMaxWidth().wrapContentHeight(),

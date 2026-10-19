@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -106,11 +108,11 @@ fun TrustAndVerificationScreen() {
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
-    val appBlue = if (isDarkMode) Color(0xFF82B1FF) else Blue
+    val appBlue = if (isDarkMode) GharBatoPalette.brandLight else Blue
     val successColor = Color(0xFF4CAF50)
     val warningColor = Color(0xFFFF9800)
     val errorColor = Color(0xFFD32F2F)
-    val infoColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+    val infoColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
 
     // Load KYC data on start
     LaunchedEffect(Unit) {

@@ -4,9 +4,8 @@ import android.content.Context
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
-import com.cloudinary.Cloudinary
-import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.KycModel
+import com.example.gharbato.utils.SecureCloudinaryUploader
 import com.google.firebase.database.*
 import java.util.concurrent.Executors
 
@@ -14,14 +13,6 @@ class KycRepoImpl : KycRepo {
     
     private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
     private val kycRef: DatabaseReference = database.getReference("KycSubmissions")
-    
-    private val cloudinary = Cloudinary(
-        mapOf(
-            "cloud_name" to "dwqybrjf2",
-            "api_key" to "929885821451753",
-            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
-        )
-    )
     
     override fun submitKyc(
         userId: String,
@@ -67,20 +58,11 @@ class KycRepoImpl : KycRepo {
     ) {
         Executors.newSingleThreadExecutor().execute {
             try {
-                val frontResponse = cloudinary.uploader().upload(
-                    context.contentResolver.openInputStream(frontUri),
-                    ObjectUtils.asMap("resource_type", "image")
-                )
-                val backResponse = cloudinary.uploader().upload(
-                    context.contentResolver.openInputStream(backUri),
-                    ObjectUtils.asMap("resource_type", "image")
-                )
+                val frontUrl = SecureCloudinaryUploader.uploadImage(context, frontUri, "kyc_front")
+                val backUrl = SecureCloudinaryUploader.uploadImage(context, backUri, "kyc_back")
                 
                 Handler(Looper.getMainLooper()).post {
-                    callback(
-                        (frontResponse["url"] as String?)?.replace("http://", "https://"),
-                        (backResponse["url"] as String?)?.replace("http://", "https://")
-                    )
+                    callback(frontUrl, backUrl)
                 }
             } catch (e: Exception) {
                 Handler(Looper.getMainLooper()).post { callback(null, null) }

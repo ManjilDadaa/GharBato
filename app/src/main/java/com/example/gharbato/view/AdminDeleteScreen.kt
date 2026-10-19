@@ -399,7 +399,7 @@ fun RejectedPropertiesTab(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(80.dp)
+                            .size(64.dp)
                             .clip(CircleShape)
                             .background(DeleteRed.copy(alpha = 0.1f)),
                         contentAlignment = Alignment.Center
@@ -507,7 +507,7 @@ fun RejectedPropertyCard(
             icon = {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
                         .background(DeleteRed.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
@@ -589,7 +589,7 @@ fun RejectedPropertyCard(
             icon = {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(56.dp)
                         .clip(CircleShape)
                         .background(RestoreGreen.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center

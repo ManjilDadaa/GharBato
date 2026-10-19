@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -285,7 +287,7 @@ fun PropertyDetailScreen(
     val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
     val outlineVariantColor = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE0E0E0)
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
     val successColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF4CAF50)
 
     LaunchedEffect(reportUiState.successMessage) {
@@ -541,7 +543,7 @@ fun PropertyImageSection(
                 )
         )
 
-        // Gradient overlay at bottom for price tag
+        // Keep the image counter readable while leaving the property details below the photo.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -589,7 +591,7 @@ fun PropertyImageSection(
                     onClick = onFavoriteClick,
                     modifier = Modifier.size(44.dp),
                     shape = CircleShape,
-                    color = if (isFavorite) Color.Red.copy(alpha = 0.9f) else surfaceColor.copy(alpha = if (isDarkMode) 0.85f else 0.95f),
+                    color = if (isFavorite) MaterialTheme.colorScheme.primary.copy(alpha = 0.9f) else surfaceColor.copy(alpha = if (isDarkMode) 0.85f else 0.95f),
                     shadowElevation = 4.dp
                 ) {
                     Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
@@ -622,106 +624,63 @@ fun PropertyImageSection(
             }
         }
 
-        // Bottom section with price and image indicators
-        Column(
+        // Image position controls only; price and market details are shown below the gallery.
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Price tag overlay
-            Text(
-                text = property.price,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Market type badge
-            Surface(
-                color = when (property.marketType.lowercase()) {
-                    "rent" -> Color(0xFF4CAF50)
-                    "sell" -> Color(0xFF2196F3)
-                    "book" -> Color(0xFFFF9800)
-                    else -> Color.Gray
-                },
-                shape = RoundedCornerShape(6.dp)
-            ) {
-                Text(
-                    text = when (property.marketType.lowercase()) {
-                        "sell" -> "For Sale"
-                        "rent" -> "For Rent"
-                        "book" -> "For Booking"
-                        else -> property.marketType
-                    },
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Enhanced dot indicators with counter
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Dot indicators
-                if (imagesToShow.size > 1) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        repeat(minOf(imagesToShow.size, 7)) { index ->
-                            val isSelected = index == pagerState.currentPage
-                            Box(
-                                modifier = Modifier
-                                    .size(if (isSelected) 10.dp else 7.dp)
-                                    .background(
-                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
-                                        shape = CircleShape
-                                    )
-                            )
-                        }
-                        if (imagesToShow.size > 7) {
-                            Text(
-                                text = "+${imagesToShow.size - 7}",
-                                fontSize = 11.sp,
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+            if (imagesToShow.size > 1) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(minOf(imagesToShow.size, 7)) { index ->
+                        val isSelected = index == pagerState.currentPage
+                        Box(
+                            modifier = Modifier
+                                .size(if (isSelected) 10.dp else 7.dp)
+                                .background(
+                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                        )
+                    }
+                    if (imagesToShow.size > 7) {
+                        Text(
+                            text = "+${imagesToShow.size - 7}",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
+            }
 
-                // Image counter chip
-                Surface(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    shape = RoundedCornerShape(20.dp)
+            Surface(
+                color = Color.Black.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PhotoLibrary,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = "${pagerState.currentPage + 1}/${imagesToShow.size}",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "${pagerState.currentPage + 1}/${imagesToShow.size}",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
@@ -760,12 +719,12 @@ private fun shareProperty(context: Context, property: PropertyModel) {
 
 @Composable
 fun StatusChipsRow(property: PropertyModel, isDarkMode: Boolean) {
-    val featuredBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFECB3)
-    val featuredText = if (isDarkMode) Color(0xFFFFD54F) else Color(0xFFFF6F00)
+    val featuredBg = if (isDarkMode) GharBatoPalette.brandContainerDark else GharBatoPalette.brandContainerLight
+    val featuredText = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val verifiedBg = if (isDarkMode) Color(0xFF1B3221) else Color(0xFFE8F5E9)
     val verifiedText = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
-    val ownerBg = if (isDarkMode) Color(0xFF1A237E) else Color(0xFFE3F2FD)
-    val ownerText = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF2196F3)
+    val ownerBg = if (isDarkMode) GharBatoPalette.brandDeep else GharBatoPalette.brandContainerLight
+    val ownerText = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val soldBg = if (isDarkMode) Color(0xFF2D1B1B) else Color(0xFFFFEBEE)
     val soldText = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
     val onHoldBg = if (isDarkMode) Color(0xFF332900) else Color(0xFFFFF3E0)
@@ -1123,7 +1082,7 @@ fun PropertyDetailsSection(
                 icon = Icons.Default.SquareFoot,
                 value = property.sqft,
                 label = "Area",
-                iconColor = Color(0xFF4CAF50),
+                iconColor = GharBatoPalette.brand,
                 textColor = onBackgroundColor,
                 secondaryColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1141,7 +1100,7 @@ fun PropertyDetailsSection(
                 icon = Icons.Default.SingleBed,
                 value = "${property.bedrooms}",
                 label = "Bedrooms",
-                iconColor = Color(0xFF2196F3),
+                iconColor = GharBatoPalette.brand,
                 textColor = onBackgroundColor,
                 secondaryColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1159,7 +1118,7 @@ fun PropertyDetailsSection(
                 icon = Icons.Default.Bathtub,
                 value = "${property.bathrooms}",
                 label = "Bathrooms",
-                iconColor = Color(0xFF9C27B0),
+                iconColor = GharBatoPalette.brand,
                 textColor = onBackgroundColor,
                 secondaryColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1227,7 +1186,7 @@ fun BuildingInfoSection(
         isLoading = false
     }
 
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Text(
@@ -1342,7 +1301,7 @@ private fun DisplayNearbyPlaces(
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.School,
-                iconTint = Color(0xFFFF9800), // Orange
+                iconTint = GharBatoPalette.brand,
                 onBackgroundColor = onBackgroundColor,
                 onSurfaceVariantColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1355,7 +1314,7 @@ private fun DisplayNearbyPlaces(
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.LocalHospital,
-                iconTint = Color(0xFFF44336), // Red
+                iconTint = GharBatoPalette.brand,
                 onBackgroundColor = onBackgroundColor,
                 onSurfaceVariantColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1368,7 +1327,7 @@ private fun DisplayNearbyPlaces(
                 name = place.name,
                 distance = place.formattedDistance,
                 icon = Icons.Default.Store,
-                iconTint = Color(0xFF4CAF50), // Green
+                iconTint = GharBatoPalette.brand,
                 onBackgroundColor = onBackgroundColor,
                 onSurfaceVariantColor = onSurfaceVariantColor,
                 isDarkMode = isDarkMode
@@ -1517,7 +1476,7 @@ fun ContactOwnerSection(
     successColor: Color
 ) {
     val context = LocalContext.current
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Card(
         modifier = Modifier
@@ -1815,8 +1774,8 @@ fun EnhancedQuickMessageButton(
     onClick: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val backgroundColor = if (isDarkMode) Color(0xFF1E3A5F) else Color(0xFFE3F2FD)
-    val textColor = if (isDarkMode) Color(0xFF90CAF9) else Color(0xFF1976D2)
+    val backgroundColor = if (isDarkMode) GharBatoPalette.brandContainerDark else GharBatoPalette.brandContainerLight
+    val textColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
 
     Surface(
         modifier = modifier.clickable(onClick = onClick),
@@ -1882,7 +1841,7 @@ fun PropertyDetailsInfoSection(
     onSurfaceVariantColor: Color,
     isDarkMode: Boolean = false
 ) {
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
     val surfaceVariant = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FA)
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -2062,7 +2021,7 @@ fun RentalTermsSection(
         return // Don't show section if no rental terms
     }
 
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Color(0xFF2196F3)
+    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
     val surfaceVariant = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF8F9FA)
 
     Column(modifier = Modifier.padding(16.dp)) {
@@ -2466,7 +2425,7 @@ fun SimilarPropertyCard(
         colors = CardDefaults.cardColors(containerColor = surfaceColor)
     ) {
         Column {
-            // Property Image with gradient overlay
+            // Keep all property information in the card below the photograph.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2481,87 +2440,42 @@ fun SimilarPropertyCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-
-                // Gradient overlay at bottom
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(60.dp)
-                        .align(Alignment.BottomCenter)
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color.Black.copy(alpha = 0.6f)
-                                )
-                            )
-                        )
-                )
-
-                // Market type badge
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp),
-                    color = when (property.marketType.lowercase()) {
-                        "rent" -> Color(0xFF4CAF50)
-                        "sell" -> Color(0xFF2196F3)
-                        "book" -> Color(0xFFFF9800)
-                        else -> Color.Gray
-                    },
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = when (property.marketType.lowercase()) {
-                            "sell" -> "Sale"
-                            else -> property.marketType
-                        },
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-
-                // Favorite indicator if property is saved
-                if (property.isFavorite) {
-                    Surface(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(10.dp)
-                            .size(32.dp),
-                        color = Color.White,
-                        shape = CircleShape,
-                        shadowElevation = 2.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                imageVector = Icons.Default.Favorite,
-                                contentDescription = "Favorite",
-                                tint = Color.Red,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-
-                // Price on image
-                Text(
-                    text = property.price,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
-                )
             }
 
             // Property Details
-            Column(modifier = Modifier.padding(14.dp)) {
-                // Title
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = property.price,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = primaryColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Surface(color = primaryColor, shape = RoundedCornerShape(6.dp)) {
+                        Text(
+                            text = when (property.marketType.lowercase()) {
+                                "sell" -> "Sale"
+                                else -> property.marketType
+                            },
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
                 Text(
-                    text = property.developer,
+                    text = property.title.ifBlank { property.developer },
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = onBackgroundColor,
@@ -2570,36 +2484,15 @@ fun SimilarPropertyCard(
                     lineHeight = 20.sp
                 )
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
+                    fontSize = 12.sp,
+                    color = onSurfaceVariantColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                // Property specs with proper icons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Area
-                    SimilarPropertyStat(
-                        icon = Icons.Default.SquareFoot,
-                        value = property.sqft,
-                        color = Color(0xFF4CAF50)
-                    )
-
-                    // Bedrooms
-                    SimilarPropertyStat(
-                        icon = Icons.Default.SingleBed,
-                        value = "${property.bedrooms} BD",
-                        color = Color(0xFF2196F3)
-                    )
-
-                    // Bathrooms
-                    SimilarPropertyStat(
-                        icon = Icons.Default.Bathtub,
-                        value = "${property.bathrooms} BA",
-                        color = Color(0xFF9C27B0)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
+                PropertyCardFacts(property = property, tint = primaryColor, contentColor = onSurfaceVariantColor)
 
                 // Location
                 Row(

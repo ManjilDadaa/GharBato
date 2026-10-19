@@ -5,17 +5,15 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.cloudinary.Cloudinary
-import com.cloudinary.utils.ObjectUtils
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.model.SimilarProperty
 import com.example.gharbato.model.SimilarityWeights
 import com.example.gharbato.repository.PropertyRepo
+import com.example.gharbato.utils.SecureCloudinaryUploader
 import com.google.firebase.database.*
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.io.InputStream
 import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -27,14 +25,6 @@ class PropertyRepoImpl : PropertyRepo {
 
     private val database: FirebaseDatabase = FirebaseDatabase.getInstance()
     private val ref: DatabaseReference = database.getReference("Property")
-
-    private val cloudinary = Cloudinary(
-        mapOf(
-            "cloud_name" to "dwqybrjf2",
-            "api_key" to "929885821451753",
-            "api_secret" to "TLkLKEgA67ZkqcfzIyvxPgGpqHE"
-        )
-    )
 
     // ========== PROPERTY RETRIEVAL ==========
 
@@ -387,19 +377,7 @@ class PropertyRepoImpl : PropertyRepo {
         val executor = Executors.newSingleThreadExecutor()
         executor.execute {
             try {
-                val inputStream: InputStream? = context.contentResolver.openInputStream(imageUri)
-                var fileName = getFileNameFromUri(context, imageUri)
-                fileName = fileName?.substringBeforeLast(".") ?: "uploaded_image"
-
-                val response = cloudinary.uploader().upload(
-                    inputStream, ObjectUtils.asMap(
-                        "public_id", fileName,
-                        "resource_type", "image"
-                    )
-                )
-
-                var imageUrl = response["url"] as String?
-                imageUrl = imageUrl?.replace("http://", "https://")
+                val imageUrl = SecureCloudinaryUploader.uploadImage(context, imageUri, "property")
 
                 Handler(Looper.getMainLooper()).post {
                     callback(imageUrl)
@@ -425,21 +403,7 @@ class PropertyRepoImpl : PropertyRepo {
             try {
                 imageUris.forEach { uri ->
                     try {
-                        val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-                        var fileName = getFileNameFromUri(context, uri)
-                        fileName = fileName?.substringBeforeLast(".")
-                            ?: "image_${System.currentTimeMillis()}_${uploadedUrls.size}"
-
-                        val response = cloudinary.uploader().upload(
-                            inputStream, ObjectUtils.asMap(
-                                "public_id", fileName,
-                                "resource_type", "image",
-                                "folder", "properties"
-                            )
-                        )
-
-                        var imageUrl = response["url"] as String?
-                        imageUrl = imageUrl?.replace("http://", "https://")
+                        val imageUrl = SecureCloudinaryUploader.uploadImage(context, uri, "property")
 
                         if (imageUrl != null) {
                             uploadedUrls.add(imageUrl)

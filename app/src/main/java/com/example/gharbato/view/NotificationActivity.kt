@@ -1,5 +1,7 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoPalette
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -238,7 +240,7 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                             Text(
                                 "${notifications.size} notification${if (notifications.size != 1) "s" else ""}",
                                 fontSize = 12.sp,
-                                color = if (unreadCount > 0) Color(0xFFFF9800) else onSurfaceVariantColor
+                                color = if (unreadCount > 0) MaterialTheme.colorScheme.primary else onSurfaceVariantColor
                             )
                         }
                     }
@@ -314,7 +316,7 @@ fun NotificationScreen(userViewModel: UserViewModel = remember { UserViewModel(U
                     Icon(
                         painter = painterResource(R.drawable.outline_notifications_24),
                         contentDescription = null,
-                        modifier = Modifier.size(80.dp),
+                        modifier = Modifier.size(48.dp),
                         tint = onSurfaceVariantColor.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -430,7 +432,7 @@ fun NotificationItem(
         if (isDarkTheme) {
             Blue.copy(alpha = 0.15f)
         } else {
-            Color(0xFFE3F2FD)
+            GharBatoPalette.brandContainerLight
         }
     }
 
@@ -541,12 +543,12 @@ fun getNotificationIcon(type: String): Int {
 
 fun getNotificationColor(type: String): Color {
     return when (type) {
-        "property" -> Color(0xFF4CAF50)
-        "message" -> Color(0xFF2196F3)
-        "system" -> Color(0xFFFF9800)
-        "update" -> Color(0xFF9C27B0)
-        "listing_approved" -> Color(0xFF4CAF50)
-        else -> Color(0xFF607D8B)
+        "property" -> GharBatoPalette.brand
+        "message" -> GharBatoPalette.brand
+        "system" -> GharBatoPalette.brand
+        "update" -> GharBatoPalette.brand
+        "listing_approved" -> GharBatoPalette.brand
+        else -> GharBatoPalette.brand
     }
 }
 
