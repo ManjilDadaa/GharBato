@@ -1,6 +1,7 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
+import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.utils.formatPropertyPrice
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -54,10 +55,12 @@ class PropertyDetailsActivity : ComponentActivity() {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
             SystemBarUtils.setSystemBarsAppearance(this, isDarkMode)
 
-            PropertyDetailsScreen(
-                propertyId = propertyId,
-                isDarkMode = isDarkMode
-            )
+            GharBatoTheme(darkTheme = isDarkMode) {
+                PropertyDetailsScreen(
+                    propertyId = propertyId,
+                    isDarkMode = isDarkMode
+                )
+            }
         }
     }
 }
@@ -97,22 +100,23 @@ fun PropertyDetailsScreen(
         })
     }
 
-    val backgroundColor = if (isDarkMode) Color(0xFF121212) else Color(0xFFF8F9FB)
-    val surfaceColor = if (isDarkMode) Color(0xFF1E1E1E) else Color.White
-    val onBackgroundColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
-    val onSurfaceColor = if (isDarkMode) Color(0xFFE1E1E1) else Color(0xFF2C2C2C)
-    val onSurfaceVariantColor = if (isDarkMode) Color(0xFFB0B0B0) else Color.Gray
-    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
-    val dividerColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFE0E0E0)
-    val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onBackgroundColor = MaterialTheme.colorScheme.onBackground
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val successColor = MaterialTheme.colorScheme.primary
 
     Scaffold(
+        containerColor = backgroundColor,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Property Details",
-                        fontWeight = FontWeight.Bold,
+                        "Property details",
+                        style = MaterialTheme.typography.titleLarge,
                         color = onSurfaceColor
                     )
                 },
@@ -201,7 +205,9 @@ fun PropertyDetailsContent(
     val scrollState = rememberScrollState()
 
     // Get all images from the property
-    val allImages = property.images.values.flatten()
+    val allImages = (property.images.values.flatten() + property.imageUrl)
+        .filter { it.isNotBlank() }
+        .distinct()
     val pagerState = rememberPagerState(pageCount = { allImages.size })
 
     Column(
@@ -262,7 +268,7 @@ fun PropertyDetailsContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .background(if (isDarkMode) Color(0xFF2C2C2C) else Color.LightGray),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -282,18 +288,16 @@ fun PropertyDetailsContent(
         ) {
             // Title and Price
             Text(
-                text = property.title,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                text = property.title.ifBlank { property.propertyType },
+                style = MaterialTheme.typography.headlineMedium,
                 color = onBackgroundColor
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Rs ${property.price}",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
+                text = formatPropertyPrice(property.price, property.marketType),
+                style = MaterialTheme.typography.headlineSmall,
                 color = primaryColor
             )
 
@@ -321,8 +325,8 @@ fun PropertyDetailsContent(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = surfaceColor),
-                shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(2.dp)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(0.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -394,14 +398,13 @@ fun PropertyDetailsContent(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = surfaceColor),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = CardDefaults.cardElevation(2.dp)
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Text(
                         text = property.description!!,
-                        fontSize = 14.sp,
+                        style = MaterialTheme.typography.bodyLarge,
                         color = onSurfaceVariantColor,
-                        lineHeight = 20.sp,
                         modifier = Modifier.padding(16.dp)
                     )
                 }
@@ -457,28 +460,16 @@ fun PropertyDetailsContent(
 
 @Composable
 fun StatusBadge(status: String, modifier: Modifier = Modifier, isDarkMode: Boolean) {
+    val colors = MaterialTheme.colorScheme
     val (backgroundColor, textColor) = when (status) {
-        PropertyStatus.APPROVED -> {
-            if (isDarkMode) Color(0xFF1B5E20) to Color(0xFFA5D6A7)
-            else GharBatoPalette.brand to Color.White
-        }
-        PropertyStatus.PENDING -> {
-            if (isDarkMode) Color(0xFFE65100) to Color(0xFFFFCC80)
-            else GharBatoPalette.brand to Color.White
-        }
-        PropertyStatus.REJECTED -> {
-            if (isDarkMode) Color(0xFFB71C1C) to Color(0xFFFF8A80)
-            else Color(0xFFD32F2F) to Color.White
-        }
-        else -> {
-            if (isDarkMode) Color(0xFF37474F) to Color(0xFFB0BEC5)
-            else Color.Gray to Color.White
-        }
+        PropertyStatus.APPROVED -> colors.primaryContainer to colors.onPrimaryContainer
+        PropertyStatus.REJECTED -> colors.errorContainer to colors.onErrorContainer
+        else -> colors.surfaceVariant to colors.onSurfaceVariant
     }
 
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(50),
         color = backgroundColor
     ) {
         Text(
@@ -516,7 +507,7 @@ fun QuickStatItem(
         )
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 13.sp,
             color = onSurfaceVariantColor
         )
     }
@@ -526,8 +517,7 @@ fun QuickStatItem(
 fun SectionHeader(title: String, onBackgroundColor: Color) {
     Text(
         text = title,
-        fontSize = 18.sp,
-        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleLarge,
         color = onBackgroundColor,
         modifier = Modifier.padding(bottom = 8.dp)
     )
@@ -543,8 +533,8 @@ fun PropertyDetailCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             DetailRow(
@@ -621,8 +611,8 @@ fun AmenitiesCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             amenities.chunked(2).forEach { rowAmenities ->
@@ -667,8 +657,8 @@ fun OwnerInfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -732,8 +722,8 @@ fun AdditionalInfoCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (!property.utilitiesIncluded.isNullOrEmpty()) {

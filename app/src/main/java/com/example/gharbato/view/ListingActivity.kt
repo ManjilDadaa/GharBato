@@ -5,6 +5,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import com.example.gharbato.utils.ListingDraftStore
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
@@ -42,9 +50,9 @@ import com.example.gharbato.data.repository.PropertyRepoImpl
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.getDefaultImageCategories
-import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.viewmodel.ListingViewModel
 import com.google.firebase.database.FirebaseDatabase
 import com.example.gharbato.utils.SystemBarUtils
@@ -71,6 +79,7 @@ class ListingActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
 
@@ -83,10 +92,26 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val showHeader = step == 1
 
     var listingState by rememberSaveable { mutableStateOf(PropertyListingState()) }
-    var isLoadingProperty by remember { mutableStateOf(isEdit) }
+    var isLoadingProperty by rememberSaveable { mutableStateOf(true) }
+    var initialized by rememberSaveable { mutableStateOf(false) }
+    var isSavingDraft by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
+    val draftStore = remember(userId, propertyId) { ListingDraftStore(context, userId, propertyId) }
 
-    // Load property data if editing
+    // Saved instance state takes precedence on rotation; otherwise resume the local draft.
     LaunchedEffect(propertyId, isEdit) {
+        if (initialized && !isLoadingProperty) return@LaunchedEffect
+        initialized = true
+        val draft = withContext(Dispatchers.IO) { draftStore.load() }
+        if (draft != null) {
+            listingState = draft.state
+            step = draft.step.coerceAtLeast(if (isEdit) 2 else 1)
+            isLoadingProperty = false
+            snackbar.showSnackbar("Draft restored. Continue where you left off.")
+            return@LaunchedEffect
+        }
         if (isEdit && propertyId != null) {
             FirebaseDatabase.getInstance()
                 .getReference("Property")
@@ -135,6 +160,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
         } else if (isEdit) {
             Toast.makeText(context, "Property ID not found", Toast.LENGTH_SHORT).show()
             isLoadingProperty = false
+        } else {
+            isLoadingProperty = false
         }
     }
 
@@ -151,77 +178,49 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
     val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
 
-    // Exit Dialog - Improved UI
+    val saveDraft: (Boolean) -> Unit = { exitAfterSaving ->
+        if (!isSavingDraft && !isUploading) {
+            val snapshot = listingState.copy(
+                imageCategories = listingState.imageCategories.map { it.copy(images = it.images.toMutableList()) }
+            )
+            val savedStep = step
+            isSavingDraft = true
+            scope.launch {
+                val saved = withContext(Dispatchers.IO) { draftStore.save(snapshot, savedStep) }
+                isSavingDraft = false
+                if (saved) {
+                    showExitDialog = false
+                    if (exitAfterSaving) activity.finish() else snackbar.showSnackbar("Draft saved. You can return to it later.")
+                } else {
+                    snackbar.showSnackbar("Couldn't save the draft. Check that your photos are still available and try again.")
+                }
+            }
+        }
+    }
+    BackHandler {
+        if (!isUploading && !isSavingDraft) {
+            if (step > if (isEdit) 2 else 1) step-- else showExitDialog = true
+        }
+    }
+
     if (showExitDialog) {
         AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = {
-                Text(
-                    text = if (isEdit) "Cancel Editing?" else "Exit Listing?",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
-                )
-            },
+            onDismissRequest = { if (!isSavingDraft) showExitDialog = false },
+            title = { Text("Save your progress?") },
             text = {
-                Text(
-                    text = if (isEdit) "Are you sure you want to cancel? Any unsaved changes will be lost."
-                    else "Are you sure you want to go back? Your progress won't be saved.",
-                    fontSize = 16.sp,
-                    lineHeight = 24.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Save a draft to finish your listing later, including your selected photos.")
+                    TextButton(onClick = { activity.finish() }, enabled = !isSavingDraft) { Text("Exit without saving") }
+                }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showExitDialog = false
-                        activity.finish()
-                    },
-                    modifier = Modifier
-                        .height(48.dp)
-                        .padding(horizontal = 4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFDC3545)
-                    ),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = if (isEdit) "Yes, Cancel" else "Yes, Exit",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                Button(onClick = { saveDraft(true) }, enabled = !isSavingDraft, colors = GharBatoButtonDefaults.primaryColors()) {
+                    Text(if (isSavingDraft) "Saving..." else "Save and exit")
                 }
             },
             dismissButton = {
-                OutlinedButton(
-                    onClick = { showExitDialog = false },
-                    modifier = Modifier
-                        .height(48.dp)
-                        .padding(horizontal = 4.dp),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        width = 1.5.dp,
-                        brush = androidx.compose.ui.graphics.SolidColor(
-                            if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.5f)
-                        )
-                    ),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Continue Editing",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
-                    )
-                }
-            },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
-            tonalElevation = 0.dp
+                TextButton(onClick = { showExitDialog = false }, enabled = !isSavingDraft) { Text("Keep editing") }
+            }
         )
     }
 
@@ -234,7 +233,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     text = if (isUploading) "Uploading..." else "Submit Listing?",
                     fontWeight = FontWeight.Bold,
                     fontSize = 20.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             },
             text = {
@@ -251,7 +250,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(48.dp),
                                 strokeWidth = 4.dp,
-                                color = Blue
+                                color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
@@ -259,7 +258,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 fontSize = 15.sp,
                                 lineHeight = 22.sp,
                                 textAlign = TextAlign.Center,
-                                color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
@@ -268,8 +267,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                                    else Color(0xFFF5F5F5),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .padding(16.dp),
@@ -279,7 +277,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 text = "Review your listing:",
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 15.sp,
-                                color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(4.dp))
 
@@ -305,6 +303,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 propertyId = propertyId,
                                 isEdit = isEdit,
                                 onSuccess = {
+                                    scope.launch(Dispatchers.IO) { draftStore.clear() }
                                     showConfirmDialog = false
                                     showSuccessDialog = true
                                     Toast.makeText(context, if (isEdit) "Property updated successfully" else "Listing Added successfully, Admin Approval Required", Toast.LENGTH_LONG).show()
@@ -320,7 +319,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         modifier = Modifier
                             .height(48.dp)
                             .padding(horizontal = 4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                        colors = GharBatoButtonDefaults.primaryColors(),
                         shape = RoundedCornerShape(12.dp),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 0.dp,
@@ -342,25 +341,21 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         modifier = Modifier
                             .height(48.dp)
                             .padding(horizontal = 4.dp),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.5.dp,
-                            brush = androidx.compose.ui.graphics.SolidColor(
-                                if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.5f)
-                            )
-                        ),
+                        colors = GharBatoButtonDefaults.outlinedColors(),
+                        border = GharBatoButtonDefaults.outlinedBorder(),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
                             text = "Cancel",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp
         )
     }
@@ -407,7 +402,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         textAlign = TextAlign.Center,
                         fontSize = 16.sp,
                         lineHeight = 24.sp,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A),
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
                 }
@@ -425,7 +420,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         .fillMaxWidth()
                         .height(50.dp)
                         .padding(horizontal = 4.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    colors = GharBatoButtonDefaults.primaryColors(),
                     shape = RoundedCornerShape(12.dp),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 0.dp,
@@ -440,13 +435,29 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                 }
             },
             shape = RoundedCornerShape(20.dp),
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White,
+            containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 0.dp
         )
     }
 
     Scaffold(
-        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFFAFAFA)
+        containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            TopAppBar(
+                title = { Text(if (isEdit) "Edit property" else "List your property", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = { showExitDialog = true }, enabled = !isUploading && !isSavingDraft) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Exit listing")
+                    }
+                },
+                actions = {
+                    TextButton(onClick = { saveDraft(false) }, enabled = !isLoadingProperty && !isUploading && !isSavingDraft) {
+                        Text(if (isSavingDraft) "Saving..." else "Save draft")
+                    }
+                }
+            )
+        }
     ) { padding ->
         if (isLoadingProperty) {
             Box(
@@ -460,14 +471,14 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     CircularProgressIndicator(
-                        color = Blue,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 4.dp,
                         modifier = Modifier.size(48.dp)
                     )
                     Text(
                         text = "Loading property details...",
                         fontSize = 15.sp,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -505,14 +516,14 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             Box(
                                 modifier = Modifier
                                     .size(56.dp)
-                                    .background(color = Blue, shape = RoundedCornerShape(20.dp)),
+                                    .background(color = LocalGharBatoActionColors.current.container, shape = RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.home),
                                     contentDescription = "Property icon",
                                     modifier = Modifier.size(24.dp),
-                                    tint = Color.White
+                                    tint = LocalGharBatoActionColors.current.onContainer
                                 )
                             }
                         }
@@ -529,7 +540,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 24.sp,
                                     letterSpacing = (-0.5).sp,
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF1A1A1A)
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             )
 
@@ -540,7 +551,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     lineHeight = 22.sp,
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 ),
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -559,6 +570,8 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                 ) {
                     val stepCircleSize = 36.dp
                     val stepColumnWidth = maxWidth / totalSteps.toFloat()
+                    val stepperPrimaryColor = LocalGharBatoActionColors.current.container
+                    val inactiveLine = MaterialTheme.colorScheme.outlineVariant
 
                     Canvas(
                         modifier = Modifier
@@ -570,8 +583,6 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         val circleRadius = stepCircleSize.toPx() / 2f
                         val centerY = circleRadius
                         val strokeWidth = 3.dp.toPx()
-                        val inactiveLine = if (isDarkMode) Color(0xFF51495E) else Color(0xFFE2DCE8)
-
                         for (index in 0 until totalSteps - 1) {
                             val startX = slotWidth * (index + 0.5f) + circleRadius
                             val endX = slotWidth * (index + 1.5f) - circleRadius
@@ -583,7 +594,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             )
                             if (index < step - 1) {
                                 drawLine(
-                                    color = Blue,
+                                    color = stepperPrimaryColor,
                                     start = Offset(startX, centerY),
                                     end = Offset(endX, centerY),
                                     strokeWidth = strokeWidth
@@ -604,7 +615,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             ) {
                                 val isComplete = step >= i
                                 val circleColor by animateColorAsState(
-                                    targetValue = if (isComplete) Blue else if (isDarkMode) Color(0xFF51495E) else Color(0xFFE2DCE8),
+                                    targetValue = if (isComplete) LocalGharBatoActionColors.current.container else MaterialTheme.colorScheme.outlineVariant,
                                     animationSpec = tween(durationMillis = 300),
                                     label = "stepColor"
                                 )
@@ -617,7 +628,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 ) {
                                     Text(
                                         text = "$i",
-                                        color = if (isComplete || isDarkMode) Color.White else Color(0xFF5D5366),
+                                        color = if (isComplete) LocalGharBatoActionColors.current.onContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )
@@ -638,9 +649,9 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                     fontSize = 12.sp,
                                     fontWeight = if (step == i) FontWeight.SemiBold else FontWeight.Normal,
                                     color = if (step >= i) {
-                                        if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                                        MaterialTheme.colorScheme.onSurface
                                     } else {
-                                        if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                                        MaterialTheme.colorScheme.onSurfaceVariant
                                     },
                                     textAlign = TextAlign.Center,
                                     lineHeight = 16.sp
@@ -727,18 +738,14 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             .weight(1f)
                             .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.5.dp,
-                            brush = androidx.compose.ui.graphics.SolidColor(
-                                if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.4f)
-                            )
-                        )
+                        colors = GharBatoButtonDefaults.outlinedColors(),
+                        border = GharBatoButtonDefaults.outlinedBorder()
                     ) {
                         Text(
                             text = "Back",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A)
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -765,7 +772,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             .weight(1f)
                             .height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                        colors = GharBatoButtonDefaults.primaryColors(),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 0.dp,
                             pressedElevation = 0.dp
@@ -794,14 +801,14 @@ private fun ReviewItem(label: String, value: String, isDarkMode: Boolean) {
             text = "$label:",
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(0.35f)
         )
         Text(
             text = value,
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
-            color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF1A1A1A),
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(0.65f),
             textAlign = TextAlign.End
         )

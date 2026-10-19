@@ -28,6 +28,7 @@ import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
 
@@ -188,13 +189,11 @@ fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
                             .fillMaxWidth()
                             .height(56.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Blue
-                        )
+                        colors = GharBatoButtonDefaults.primaryColors()
                     ) {
                         if (isCheckingEmail) {
                             CircularProgressIndicator(
-                                color = Color.White,
+                                color = LocalContentColor.current,
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
@@ -222,7 +221,7 @@ fun EmailVerificationBody(userEmail: String, isDarkMode: Boolean = false) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             if (isResendingEmail) "Sending..." else "Resend",
-                            color = if (isResendingEmail) secondaryTextColor else Blue,
+                            color = if (isResendingEmail) secondaryTextColor else MaterialTheme.colorScheme.primary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             modifier = Modifier.clickable(enabled = !isResendingEmail) {

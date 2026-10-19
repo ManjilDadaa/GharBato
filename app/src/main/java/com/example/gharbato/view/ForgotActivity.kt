@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -43,11 +42,11 @@ import androidx.compose.ui.platform.testTag
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import com.example.gharbato.utils.SystemBarUtils
 
 // Modern Color Palette
 private val PrimaryBlue = GharBatoPalette.brand
-private val LightBlue = GharBatoPalette.brandLight
 private val BackgroundLight = Color(0xFFF8FAFC)
 private val CardWhite = Color(0xFFFFFFFF)
 private val TextPrimary = Color(0xFF1E293B)
@@ -294,24 +293,17 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                                 spotColor = PrimaryBlue.copy(alpha = 0.3f)
                             ),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent
-                        ),
+                        colors = GharBatoButtonDefaults.primaryColors(),
                         contentPadding = PaddingValues(0.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(PrimaryBlue, LightBlue)
-                                    )
-                                ),
+                                .fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
-                                    color = Color.White,
+                                    color = LocalContentColor.current,
                                     modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.dp
                                 )
@@ -320,8 +312,7 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                                     "Send Reset Link",
                                     style = TextStyle(
                                         fontSize = 16.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White
+                                        fontWeight = FontWeight.SemiBold
                                     )
                                 )
                             }
@@ -368,7 +359,7 @@ fun ForgotBody(isDarkMode: Boolean = false) {
                         "Back to Sign In",
                         style = TextStyle(
                             fontSize = 16.sp,
-                            color = PrimaryBlue,
+                            color = primaryColor,
                             fontWeight = FontWeight.Bold
                         ),
                         modifier = Modifier

@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -55,12 +54,12 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
     var isLoading by remember { mutableStateOf(true) }
 
     // Colors based on theme
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
-    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C)
-    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
-    val appBlue = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
-    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val cardBackgroundColor = MaterialTheme.colorScheme.surface
+    val textColorPrimary = MaterialTheme.colorScheme.onBackground
+    val textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val brandColor = MaterialTheme.colorScheme.primary
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
 
     LaunchedEffect(Unit) {
         userViewModel.loadUserProfile()
@@ -77,13 +76,12 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
             title = {
                 Text(
                     "Profile",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineMedium,
                     color = textColorPrimary
                 )
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+                containerColor = backgroundColor
             ),
             actions = {
                 Box(modifier = Modifier.padding(end = 8.dp)) {
@@ -94,7 +92,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                         Icon(
                             painter = painterResource(R.drawable.baseline_add_24),
                             contentDescription = "Add Listing",
-                            tint = appBlue,
+                            tint = brandColor,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -104,7 +102,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
 
         if (isLoading || userData == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = appBlue)
+                CircularProgressIndicator(color = brandColor)
             }
         } else {
             Column(
@@ -130,25 +128,26 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                             modifier = Modifier
                                 .size(64.dp)
                                 .clip(CircleShape)
-                                .background(appBlue),
+                                .background(brandColor),
                             contentScale = ContentScale.Crop
                         )
                         Box(
                             modifier = Modifier
-                                .size(22.dp)
-                                .clip(CircleShape)
-                                .background(appBlue)
-                                .border(2.dp, cardBackgroundColor, CircleShape)
+                                .size(48.dp)
                                 .clickable {
                                     context.startActivity(Intent(context, EditProfileActivity::class.java))
                                 },
-                            contentAlignment = Alignment.Center
+                            contentAlignment = Alignment.BottomEnd
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
                                 contentDescription = "Edit Profile",
-                                tint = Color.White,
-                                modifier = Modifier.size(12.dp)
+                                tint = LocalGharBatoActionColors.current.onContainer,
+                                modifier = Modifier.size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(LocalGharBatoActionColors.current.container)
+                                    .border(2.dp, cardBackgroundColor, CircleShape)
+                                    .padding(6.dp)
                             )
                         }
                     }
@@ -156,15 +155,14 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             userData?.fullName ?: "User",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.headlineSmall,
                             color = textColorPrimary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             if (showContactInfo) "Hide contact info" else "Show contact info",
                             fontSize = 13.sp,
-                            color = appBlue,
+                            color = brandColor,
                             modifier = Modifier.clickable { showContactInfo = !showContactInfo }
                         )
                     }
@@ -176,12 +174,12 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp, vertical = 16.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(cardBackgroundColor)
                             .border(
                                 1.dp,
-                                if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFF0F0F0),
-                                RoundedCornerShape(12.dp)
+                                MaterialTheme.colorScheme.outlineVariant,
+                                RoundedCornerShape(20.dp)
                             )
                             .padding(16.dp)
                     ) {
@@ -216,7 +214,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.baseline_watch_24,
                     "My Activities",
                     "View your account activities",
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -228,7 +226,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.baseline_verified_user_24,
                     "Trust and Verification",
                     "Manage your account security",
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -240,7 +238,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.baseline_settings_24,
                     "Application Settings",
                     "Configure your app settings",
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -257,7 +255,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.outline_adb_24,
                     "Help Center",
                     null,
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -269,7 +267,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.baseline_description_24,
                     "Terms & Policies",
                     null,
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -281,7 +279,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     R.drawable.baseline_email_24,
                     "Contact Us",
                     null,
-                    appBlue,
+                    brandColor,
                     isDarkMode,
                     cardBackgroundColor,
                     textColorPrimary,
@@ -297,12 +295,12 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(20.dp))
                         .background(cardBackgroundColor)
                         .border(
                             1.dp,
-                            if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFF0F0F0),
-                            RoundedCornerShape(12.dp)
+                            MaterialTheme.colorScheme.outlineVariant,
+                            RoundedCornerShape(20.dp)
                         )
                         .clickable {
                             userViewModel.stopObservingNotifications()
@@ -319,7 +317,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                         Icon(
                             painterResource(R.drawable.baseline_logout_24),
                             null,
-                            tint = Color(0xFFE53935),
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -327,7 +325,7 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
                             "Logout",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFE53935)
+                            color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
@@ -340,9 +338,9 @@ fun ProfileScreenContent(isDarkMode: Boolean) {
 
 @Composable
 fun ContactInfoRow(icon: Int, label: String, value: String, isDarkMode: Boolean) {
-    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF999999)
-    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color(0xFF2C2C2C)
-    val iconColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
+    val textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val textColorPrimary = MaterialTheme.colorScheme.onSurface
+    val iconColor = MaterialTheme.colorScheme.primary
 
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
@@ -355,7 +353,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String, isDarkMode: Boolean)
         Column {
             Text(
                 label,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = textColorSecondary
             )
             Text(
@@ -370,7 +368,7 @@ fun ContactInfoRow(icon: Int, label: String, value: String, isDarkMode: Boolean)
 
 @Composable
 fun ProfileSectionHeader(title: String, isDarkMode: Boolean) {
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color(0xFF2C2C2C)
+    val textColor = MaterialTheme.colorScheme.onBackground
 
     Text(
         title,
@@ -398,16 +396,16 @@ fun CleanMenuItem(
     textColorSecondary: Color,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFF0F0F0)
-    val arrowColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFCCCCCC)
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val arrowColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(cardBackgroundColor)
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
             .clickable { onClick() }
             .padding(16.dp)
     ) {
@@ -417,15 +415,15 @@ fun CleanMenuItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(iconColor),
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     painterResource(icon),
                     null,
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -433,7 +431,7 @@ fun CleanMenuItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     title,
-                    fontSize = 15.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     color = textColorPrimary
                 )
@@ -441,7 +439,7 @@ fun CleanMenuItem(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         subtitle,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = textColorSecondary
                     )
                 }

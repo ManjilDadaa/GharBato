@@ -67,7 +67,7 @@ data class PropertyModel(
 
     @get:Exclude
     val hasValidCoordinates: Boolean
-        get() = !(latitude == 27.7172 && longitude == 85.3240)
+        get() = com.example.gharbato.utils.hasPropertyCoordinates(latitude, longitude)
 
     @get:Exclude
     val isDefaultLocation: Boolean

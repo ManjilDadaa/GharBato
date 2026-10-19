@@ -47,6 +47,8 @@ import com.example.gharbato.viewmodel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 
 class EditProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -290,7 +292,7 @@ fun EditProfileScreen() {
                                         .size(44.dp)
                                         .shadow(4.dp, CircleShape)
                                         .clip(CircleShape)
-                                        .background(appBlue)
+                                        .background(LocalGharBatoActionColors.current.container)
                                         .border(3.dp, backgroundColor, CircleShape)
                                         .clickable {
                                             imagePickerLauncher.launch("image/*")
@@ -307,7 +309,7 @@ fun EditProfileScreen() {
                                         Icon(
                                             imageVector = Icons.Default.CameraAlt,
                                             contentDescription = "Change Photo",
-                                            tint = Color.White,
+                                            tint = LocalGharBatoActionColors.current.onContainer,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -470,10 +472,7 @@ fun EditProfileScreen() {
                             shape = RoundedCornerShape(28.dp)
                         ),
                     shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = appBlue,
-                        disabledContainerColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
-                    ),
+                    colors = GharBatoButtonDefaults.primaryColors(),
                     enabled = !isSaving && !isUploadingImage
                 ) {
                     if (isSaving) {
@@ -482,7 +481,7 @@ fun EditProfileScreen() {
                             horizontalArrangement = Arrangement.Center
                         ) {
                             CircularProgressIndicator(
-                                color = Color.White,
+                                color = LocalContentColor.current,
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.5.dp
                             )
@@ -490,8 +489,7 @@ fun EditProfileScreen() {
                             Text(
                                 "Saving...",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color.White
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     } else {
@@ -499,7 +497,6 @@ fun EditProfileScreen() {
                             "Save Changes",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
                             letterSpacing = 0.5.sp
                         )
                     }

@@ -1,7 +1,5 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -48,6 +46,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -64,8 +63,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -86,29 +83,15 @@ import androidx.credentials.GetCredentialResponse
 import androidx.credentials.exceptions.GetCredentialException
 import com.example.gharbato.R
 import com.example.gharbato.repository.UserRepoImpl
-import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import kotlinx.coroutines.launch
-
-// Modern color palette
-private val PrimaryBlue = GharBatoPalette.brand
-private val DarkBlue = GharBatoPalette.brandDeep
-private val LightBlue = GharBatoPalette.brandLight
-private val AccentBlue = GharBatoPalette.brandLight
-private val BackgroundLight = Color(0xFFF8FAFC)
-private val CardWhite = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF1E293B)
-private val TextSecondary = Color(0xFF64748B)
-private val InputBackground = Color(0xFFF1F5F9)
-private val InputFocusedBackground = GharBatoPalette.brandContainerLight
-private val ErrorRed = Color(0xFFEF4444)
-private val ErrorBackground = Color(0xFFFEF2F2)
-private val DividerColor = Color(0xFFE2E8F0)
 
 class LoginActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -150,13 +133,13 @@ fun LoginBody(isDarkMode: Boolean = false) {
     var passwordFocused by remember { mutableStateOf(false) }
 
     // Theme-aware colors
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else BackgroundLight
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else TextPrimary
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary
-    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else CardWhite
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else PrimaryBlue
-    val inputBgColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else InputBackground
-    val inputFocusBgColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else InputFocusedBackground
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val inputBgColor = MaterialTheme.colorScheme.surfaceVariant
+    val inputFocusBgColor = MaterialTheme.colorScheme.surfaceVariant
 
     // Button animation
     val loginInteractionSource = remember { MutableInteractionSource() }
@@ -232,13 +215,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                 Card(
                     modifier = Modifier
                         .padding(horizontal = 20.dp)
-                        .fillMaxWidth()
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(24.dp),
-                            ambientColor = Color.Black.copy(alpha = 0.08f),
-                            spotColor = Color.Black.copy(alpha = 0.08f)
-                        ),
+                        .fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = surfaceColor)
                 ) {
@@ -271,7 +248,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             placeholder = {
                                 Text(
                                     "Enter your email",
-                                    color = TextSecondary.copy(alpha = 0.6f)
+                                    color = secondaryTextColor.copy(alpha = 0.6f)
                                 )
                             },
                             colors = OutlinedTextFieldDefaults.colors(
@@ -279,8 +256,8 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                 focusedContainerColor = inputFocusBgColor,
                                 focusedBorderColor = primaryColor,
                                 unfocusedBorderColor = Color.Transparent,
-                                errorContainerColor = if (isDarkMode) Color(0xFF3D1414) else ErrorBackground,
-                                errorBorderColor = ErrorRed,
+                                errorContainerColor = MaterialTheme.colorScheme.errorContainer,
+                                errorBorderColor = MaterialTheme.colorScheme.error,
                                 focusedLeadingIconColor = primaryColor,
                                 unfocusedLeadingIconColor = secondaryTextColor,
                                 unfocusedTextColor = textColor,
@@ -327,7 +304,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                             placeholder = {
                                 Text(
                                     "Enter your password",
-                                    color = TextSecondary.copy(alpha = 0.6f)
+                                    color = secondaryTextColor.copy(alpha = 0.6f)
                                 )
                             },
                             singleLine = true,
@@ -336,8 +313,8 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                 focusedContainerColor = inputFocusBgColor,
                                 focusedBorderColor = primaryColor,
                                 unfocusedBorderColor = Color.Transparent,
-                                errorContainerColor = if (isDarkMode) Color(0xFF3D1414) else ErrorBackground,
-                                errorBorderColor = ErrorRed,
+                                errorContainerColor = MaterialTheme.colorScheme.errorContainer,
+                                errorBorderColor = MaterialTheme.colorScheme.error,
                                 focusedLeadingIconColor = primaryColor,
                                 unfocusedLeadingIconColor = secondaryTextColor,
                                 unfocusedTextColor = textColor,
@@ -358,7 +335,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                     Icon(
                                         if (visibility) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                                         contentDescription = if (visibility) "Hide password" else "Show password",
-                                        tint = TextSecondary,
+                                        tint = secondaryTextColor,
                                         modifier = Modifier.size(22.dp)
                                     )
                                 }
@@ -400,7 +377,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                         .size(22.dp)
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(
-                                            if (rememberMe) primaryColor else inputBgColor
+                                            if (rememberMe) LocalGharBatoActionColors.current.container else inputBgColor
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -408,7 +385,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                         Icon(
                                             Icons.Default.Check,
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = LocalGharBatoActionColors.current.onContainer,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -529,18 +506,15 @@ fun LoginBody(isDarkMode: Boolean = false) {
                                 .height(56.dp)
                                 .scale(loginScale),
                             shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = primaryColor,
-                                disabledContainerColor = primaryColor.copy(alpha = 0.6f)
-                            ),
+                            colors = GharBatoButtonDefaults.primaryColors(),
                             elevation = ButtonDefaults.buttonElevation(
-                                defaultElevation = 4.dp,
-                                pressedElevation = 2.dp
+                                defaultElevation = 0.dp,
+                                pressedElevation = 0.dp
                             )
                         ) {
                             if (isLoading) {
                                 CircularProgressIndicator(
-                                    color = Color.White,
+                                    color = LocalContentColor.current,
                                     modifier = Modifier.size(24.dp),
                                     strokeWidth = 2.5.dp
                                 )
@@ -568,7 +542,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                 ) {
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else DividerColor,
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.weight(1f)
                     )
 
@@ -576,7 +550,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF1F5F9))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -591,7 +565,7 @@ fun LoginBody(isDarkMode: Boolean = false) {
 
                     HorizontalDivider(
                         thickness = 1.dp,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else DividerColor,
+                        color = MaterialTheme.colorScheme.outlineVariant,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -607,15 +581,8 @@ fun LoginBody(isDarkMode: Boolean = false) {
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = surfaceColor
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        width = 1.5.dp,
-                        brush = androidx.compose.ui.graphics.SolidColor(
-                            if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFE2E8F0)
-                        )
-                    )
+                    colors = GharBatoButtonDefaults.outlinedColors(),
+                    border = GharBatoButtonDefaults.outlinedBorder(!isGoogleLoading && !isLoading)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

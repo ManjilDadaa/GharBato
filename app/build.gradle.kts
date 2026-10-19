@@ -64,6 +64,14 @@ android {
     }
 }
 
+// Keep local builds on the existing development app and its registered Firebase
+// client so Run updates that installation instead of creating a second app.
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.applicationId.set("com.example.gharbato")
+    }
+}
+
 dependencies {
     // ========== FIREBASE - USE SINGLE BOM VERSION ==========
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))

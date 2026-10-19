@@ -38,6 +38,7 @@ import com.google.maps.android.compose.*
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import com.example.gharbato.utils.SystemBarUtils
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -311,9 +312,7 @@ fun MapLocationPickerScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GharBatoPalette.brand
-                        ),
+                        colors = GharBatoButtonDefaults.primaryColors(),
                         shape = RoundedCornerShape(12.dp),
                         enabled = !isLoading
                     ) {

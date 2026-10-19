@@ -13,8 +13,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -22,8 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
-import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.utils.SystemBarUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,11 +57,11 @@ fun ApplicationSettingsScreen() {
         appVersion = getAppVersion(context)
     }
 
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FB)
-    val cardColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val subtitleColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF666666)
-    val dividerColor = if (isDarkMode) Color(0xFF333333) else Color(0xFFEEEEEE)
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val cardColor = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val subtitleColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
 
     Scaffold(
         containerColor = backgroundColor,
@@ -75,10 +73,7 @@ fun ApplicationSettingsScreen() {
                         style = TextStyle(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
-                            color = if (isDarkMode)
-                                MaterialTheme.colorScheme.onBackground
-                            else
-                                Color.DarkGray
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     )
                 },
@@ -91,20 +86,13 @@ fun ApplicationSettingsScreen() {
                         Icon(
                             painter = painterResource(R.drawable.baseline_arrow_back_ios_24),
                             contentDescription = "Back",
-                            tint = if (isDarkMode)
-                                MaterialTheme.colorScheme.onBackground
-                            else
-                                Color.DarkGray,
+                            tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(24.dp)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = backgroundColor
-                ),
-                modifier = Modifier.shadow(
-                    elevation = 1.dp,
-                    spotColor = if (isDarkMode) Color.Transparent else Color.LightGray
                 )
             )
         }
@@ -124,7 +112,7 @@ fun ApplicationSettingsScreen() {
                     containerColor = cardColor
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -155,7 +143,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2B193D),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -163,7 +151,7 @@ fun ApplicationSettingsScreen() {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_dark_mode_24),
                                 contentDescription = "Dark Mode",
-                                tint = Blue,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -195,10 +183,11 @@ fun ApplicationSettingsScreen() {
                             checked = isDarkMode,
                             onCheckedChange = { ThemePreference.setDarkMode(context, it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Blue,
-                                uncheckedThumbColor = if (isDarkMode) Color(0xFF444444) else Color(0xFFF1F1F1),
-                                uncheckedTrackColor = if (isDarkMode) Color(0xFF666666) else Color(0xFFCCCCCC)
+                                checkedThumbColor = LocalGharBatoActionColors.current.onContainer,
+                                checkedTrackColor = LocalGharBatoActionColors.current.container,
+                                checkedBorderColor = LocalGharBatoActionColors.current.outline,
+                                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         )
                     }
@@ -223,7 +212,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2B193D),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -231,7 +220,7 @@ fun ApplicationSettingsScreen() {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_language_24),
                                 contentDescription = "Language",
-                                tint = Blue,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -262,7 +251,7 @@ fun ApplicationSettingsScreen() {
                         Icon(
                             painter = painterResource(R.drawable.outline_arrow_forward_ios_24),
                             contentDescription = "Arrow",
-                            tint = if (isDarkMode) Color(0xFF888888) else Color(0xFFCCCCCC),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -278,7 +267,7 @@ fun ApplicationSettingsScreen() {
                     containerColor = cardColor
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -308,7 +297,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2B193D),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -316,7 +305,7 @@ fun ApplicationSettingsScreen() {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_info_24),
                                 contentDescription = "App Name",
-                                tint = Blue,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -362,7 +351,7 @@ fun ApplicationSettingsScreen() {
                             modifier = Modifier
                                 .size(44.dp)
                                 .background(
-                                    color = if (isDarkMode) Blue.copy(alpha = 0.2f) else Color(0x1A2B193D),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             contentAlignment = Alignment.Center
@@ -370,7 +359,7 @@ fun ApplicationSettingsScreen() {
                             Icon(
                                 painter = painterResource(R.drawable.baseline_info_24),
                                 contentDescription = "Version",
-                                tint = Blue,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -409,7 +398,7 @@ fun ApplicationSettingsScreen() {
                 style = TextStyle(
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
-                    color = if (isDarkMode) Color(0xFFAAAAAA) else Color(0xFF999999)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 ),
                 modifier = Modifier
                     .fillMaxWidth()

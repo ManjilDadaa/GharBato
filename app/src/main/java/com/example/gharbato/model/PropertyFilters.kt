@@ -4,6 +4,7 @@ data class PropertyFilters(
     val marketType: String = "",
     val rentalPeriod: String = "Long-term",
     val propertyTypes: Set<String> = emptySet(),
+    // Whole Nepalese rupees, as entered in the filter form.
     val minPrice: Int = 0,
     val maxPrice: Int = 0,
     val minArea: Int = 0,

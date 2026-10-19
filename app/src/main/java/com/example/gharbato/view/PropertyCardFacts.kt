@@ -1,6 +1,8 @@
 package com.example.gharbato.view
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,26 +22,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.gharbato.model.PropertyModel
-import com.example.gharbato.ui.theme.GharBatoPalette
 
 /** A compact, photo-free facts row shared by property cards across the app. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PropertyCardFacts(
     property: PropertyModel,
     modifier: Modifier = Modifier,
-    tint: Color = GharBatoPalette.brand,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
-    Row(
+    FlowRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        PropertyCardFact(Icons.Default.SquareFoot, property.sqft.ifBlank { "—" }, tint, contentColor, Modifier.weight(1f))
-        PropertyCardFact(Icons.Default.SingleBed, "${property.bedrooms} beds", tint, contentColor, Modifier.weight(1f))
-        PropertyCardFact(Icons.Default.Bathtub, "${property.bathrooms} baths", tint, contentColor, Modifier.weight(1f))
+        PropertyCardFact(Icons.Default.SingleBed, if (property.bedrooms == 0) "Studio" else "${property.bedrooms} ${if (property.bedrooms == 1) "bed" else "beds"}", tint, contentColor)
+        PropertyCardFact(Icons.Default.Bathtub, "${property.bathrooms} ${if (property.bathrooms == 1) "bath" else "baths"}", tint, contentColor)
+        if (property.sqft.isNotBlank()) PropertyCardFact(Icons.Default.SquareFoot, property.sqft, tint, contentColor)
     }
 }
 
@@ -59,13 +60,13 @@ private fun PropertyCardFact(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(14.dp)
+            modifier = Modifier.size(16.dp)
         )
         Spacer(Modifier.width(4.dp))
         Text(
             text = value,
             color = contentColor,
-            fontSize = 11.sp,
+            style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

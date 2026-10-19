@@ -80,10 +80,7 @@ class SearchFilterRepoImpl : SearchFilterRepo {
         // Price Range
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
             filtered = filtered.filter { property ->
-                val priceValue = extractPriceValue(property.price)
-                val minPriceValue = filters.minPrice * 1000
-                val maxPriceValue = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
-                priceValue in minPriceValue..maxPriceValue
+                com.example.gharbato.utils.isWithinPriceRange(property.price, filters.minPrice, filters.maxPrice)
             }
             Log.d(TAG, "After price range: ${filtered.size}")
         }

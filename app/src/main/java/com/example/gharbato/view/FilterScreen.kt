@@ -1,5 +1,6 @@
 package com.example.gharbato.view
 
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,12 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -40,34 +41,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.model.PropertyFilters
-import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.utils.formatNprAmount
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FilterBottomSheet(
     currentFilters: PropertyFilters,
     onFiltersApply: (PropertyFilters) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    previewResultsCount: ((PropertyFilters) -> Int)? = null
 ) {
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     var filters by remember { mutableStateOf(currentFilters) }
+    val invalidPriceRange = filters.maxPrice > 0 && filters.minPrice > filters.maxPrice
+    val invalidAreaRange = filters.maxArea > 0 && filters.minArea > filters.maxArea
 
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val dividerColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Gray.copy(0.3f)
-    val chipContainerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Blue.copy(0.15f)
-    val chipLabelColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Blue
-    val selectedChipContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primaryContainer else Blue
-    val selectedChipLabelColor = if (isDarkMode) MaterialTheme.colorScheme.onPrimaryContainer else Color.White
-    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
-    val placeholderColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+    val backgroundColor = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val dividerColor = MaterialTheme.colorScheme.outlineVariant
+    val chipContainerColor = MaterialTheme.colorScheme.surface
+    val chipLabelColor = MaterialTheme.colorScheme.onSurface
+    val selectedChipContainerColor = MaterialTheme.colorScheme.primaryContainer
+    val selectedChipLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+    val borderColor = MaterialTheme.colorScheme.outlineVariant
+    val placeholderColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -89,8 +92,7 @@ fun FilterBottomSheet(
             ) {
                 Text(
                     "Filters",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = textColor
                 )
 
@@ -99,12 +101,11 @@ fun FilterBottomSheet(
                         onClick = {
                             val emptyFilters = PropertyFilters()
                             filters = emptyFilters
-                            onFiltersApply(emptyFilters)
                         }
                     ) {
                         Text(
                             "Reset All",
-                            color = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                            color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -119,7 +120,7 @@ fun FilterBottomSheet(
                 }
             }
 
-            Divider(color = dividerColor)
+            HorizontalDivider(color = dividerColor)
 
             // Scrollable content
             Column(
@@ -202,12 +203,12 @@ fun FilterBottomSheet(
                                         Text(
                                             period,
                                             fontWeight = FontWeight.Medium,
-                                            color = if (filters.rentalPeriod == period) chipLabelColor else chipLabelColor
+                                            color = if (filters.rentalPeriod == period) selectedChipLabelColor else chipLabelColor
                                         )
                                     },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = chipContainerColor,
-                                        selectedLabelColor = chipLabelColor,
+                                        selectedContainerColor = selectedChipContainerColor,
+                                        selectedLabelColor = selectedChipLabelColor,
                                         containerColor = chipContainerColor,
                                         labelColor = chipLabelColor
                                     ),
@@ -238,12 +239,12 @@ fun FilterBottomSheet(
                                 label = {
                                     Text(
                                         type,
-                                        color = if (filters.propertyTypes.contains(type)) chipLabelColor else chipLabelColor
+                                        color = if (filters.propertyTypes.contains(type)) selectedChipLabelColor else chipLabelColor
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = chipContainerColor,
-                                    selectedLabelColor = chipLabelColor,
+                                    selectedContainerColor = selectedChipContainerColor,
+                                    selectedLabelColor = selectedChipLabelColor,
                                     containerColor = chipContainerColor,
                                     labelColor = chipLabelColor
                                 )
@@ -260,12 +261,12 @@ fun FilterBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                if (filters.minPrice > 0) "Min: रु ${filters.minPrice * 1000}" else "No minimum",
+                                if (filters.minPrice > 0) formatNprAmount(filters.minPrice) else "No minimum",
                                 fontSize = 14.sp,
                                 color = secondaryTextColor
                             )
                             Text(
-                                if (filters.maxPrice > 0) "Max: रु ${filters.maxPrice * 1000}" else "No maximum",
+                                if (filters.maxPrice > 0) formatNprAmount(filters.maxPrice) else "No maximum",
                                 fontSize = 14.sp,
                                 color = secondaryTextColor
                             )
@@ -280,15 +281,20 @@ fun FilterBottomSheet(
                             OutlinedTextField(
                                 value = if (filters.minPrice > 0) filters.minPrice.toString() else "",
                                 onValueChange = {
-                                    filters = filters.copy(minPrice = it.toIntOrNull() ?: 0)
+                                    val amount = it.filter(Char::isDigit)
+                                    if (amount.isEmpty() || amount.toIntOrNull() != null) {
+                                        filters = filters.copy(minPrice = amount.toIntOrNull() ?: 0)
+                                    }
                                 },
-                                label = { Text("Min (thousands)", color = secondaryTextColor) },
-                                placeholder = { Text("0", color = placeholderColor) },
+                                label = { Text("Minimum (NPR)", color = secondaryTextColor) },
+                                placeholder = { Text("25000", color = placeholderColor) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                isError = invalidPriceRange,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = borderColor,
                                     focusedTextColor = textColor,
                                     unfocusedTextColor = textColor,
@@ -296,22 +302,27 @@ fun FilterBottomSheet(
                                     unfocusedLabelColor = secondaryTextColor,
                                     focusedPlaceholderColor = placeholderColor,
                                     unfocusedPlaceholderColor = placeholderColor,
-                                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 )
                             )
 
                             OutlinedTextField(
                                 value = if (filters.maxPrice > 0) filters.maxPrice.toString() else "",
                                 onValueChange = {
-                                    filters = filters.copy(maxPrice = it.toIntOrNull() ?: 0)
+                                    val amount = it.filter(Char::isDigit)
+                                    if (amount.isEmpty() || amount.toIntOrNull() != null) {
+                                        filters = filters.copy(maxPrice = amount.toIntOrNull() ?: 0)
+                                    }
                                 },
-                                label = { Text("Max (thousands)", color = secondaryTextColor) },
+                                label = { Text("Maximum (NPR)", color = secondaryTextColor) },
                                 placeholder = { Text("Any", color = placeholderColor) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                isError = invalidPriceRange,
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = borderColor,
                                     focusedTextColor = textColor,
                                     unfocusedTextColor = textColor,
@@ -319,12 +330,22 @@ fun FilterBottomSheet(
                                     unfocusedLabelColor = secondaryTextColor,
                                     focusedPlaceholderColor = placeholderColor,
                                     unfocusedPlaceholderColor = placeholderColor,
-                                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
                     }
                 }
+
+                Text(
+                    if (invalidPriceRange) "Maximum price must be at least the minimum." else when (filters.marketType) {
+                        "Rent" -> "Enter the full monthly rent in NPR, e.g. 25000 for Rs 25,000/month."
+                        "Book" -> "Enter the full nightly price in NPR."
+                        else -> "Enter the full amount in NPR, e.g. 25000 for Rs 25,000."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (invalidPriceRange) MaterialTheme.colorScheme.error else secondaryTextColor
+                )
 
                 // Area Range
                 FilterSection(title = "Area Range (sq.ft)", isDarkMode = isDarkMode) {
@@ -357,12 +378,14 @@ fun FilterBottomSheet(
                                     filters = filters.copy(minArea = it.toIntOrNull() ?: 0)
                                 },
                                 label = { Text("Min Area", color = secondaryTextColor) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                isError = invalidAreaRange,
                                 placeholder = { Text("0", color = placeholderColor) },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = borderColor,
                                     focusedTextColor = textColor,
                                     unfocusedTextColor = textColor,
@@ -370,7 +393,7 @@ fun FilterBottomSheet(
                                     unfocusedLabelColor = secondaryTextColor,
                                     focusedPlaceholderColor = placeholderColor,
                                     unfocusedPlaceholderColor = placeholderColor,
-                                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 )
                             )
 
@@ -380,12 +403,14 @@ fun FilterBottomSheet(
                                     filters = filters.copy(maxArea = it.toIntOrNull() ?: 0)
                                 },
                                 label = { Text("Max Area", color = secondaryTextColor) },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                isError = invalidAreaRange,
                                 placeholder = { Text("Any", color = placeholderColor) },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp),
                                 singleLine = true,
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                                     unfocusedBorderColor = borderColor,
                                     focusedTextColor = textColor,
                                     unfocusedTextColor = textColor,
@@ -393,18 +418,23 @@ fun FilterBottomSheet(
                                     unfocusedLabelColor = secondaryTextColor,
                                     focusedPlaceholderColor = placeholderColor,
                                     unfocusedPlaceholderColor = placeholderColor,
-                                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+                                    cursorColor = MaterialTheme.colorScheme.primary
                                 )
                             )
                         }
                     }
                 }
 
+                if (invalidAreaRange) {
+                    Text("Maximum area must be at least the minimum.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+
                 // Bedrooms
                 FilterSection(title = "Bedrooms", isDarkMode = isDarkMode) {
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         listOf("Studio", "1", "2", "3", "4", "5", "6+").forEach { bed ->
                             FilterChip(
@@ -415,12 +445,12 @@ fun FilterBottomSheet(
                                 label = {
                                     Text(
                                         bed,
-                                        color = if (filters.bedrooms == bed) chipLabelColor else chipLabelColor
+                                        color = if (filters.bedrooms == bed) selectedChipLabelColor else chipLabelColor
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = chipContainerColor,
-                                    selectedLabelColor = chipLabelColor,
+                                    selectedContainerColor = selectedChipContainerColor,
+                                    selectedLabelColor = selectedChipLabelColor,
                                     containerColor = chipContainerColor,
                                     labelColor = chipLabelColor
                                 )
@@ -444,12 +474,12 @@ fun FilterBottomSheet(
                                 label = {
                                     Text(
                                         furn,
-                                        color = if (filters.furnishing == furn) chipLabelColor else chipLabelColor
+                                        color = if (filters.furnishing == furn) selectedChipLabelColor else chipLabelColor
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = chipContainerColor,
-                                    selectedLabelColor = chipLabelColor,
+                                    selectedContainerColor = selectedChipContainerColor,
+                                    selectedLabelColor = selectedChipLabelColor,
                                     containerColor = chipContainerColor,
                                     labelColor = chipLabelColor
                                 )
@@ -494,9 +524,9 @@ fun FilterBottomSheet(
                                     )
                                 },
                                 colors = CheckboxDefaults.colors(
-                                    checkedColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                    checkedColor = MaterialTheme.colorScheme.primary,
                                     uncheckedColor = secondaryTextColor,
-                                    checkmarkColor = if (isDarkMode) MaterialTheme.colorScheme.onPrimary else Color.White
+                                    checkmarkColor = MaterialTheme.colorScheme.onPrimary
                                 )
                             )
                         }
@@ -535,9 +565,9 @@ fun FilterBottomSheet(
                                         )
                                     },
                                     colors = CheckboxDefaults.colors(
-                                        checkedColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue,
+                                        checkedColor = MaterialTheme.colorScheme.primary,
                                         uncheckedColor = secondaryTextColor,
-                                        checkmarkColor = if (isDarkMode) MaterialTheme.colorScheme.onPrimary else Color.White
+                                        checkmarkColor = MaterialTheme.colorScheme.onPrimary
                                     )
                                 )
                             }
@@ -575,12 +605,12 @@ fun FilterBottomSheet(
                                     Text(
                                         amenity,
                                         fontSize = 13.sp,
-                                        color = if (filters.amenities.contains(amenity)) chipLabelColor else chipLabelColor
+                                        color = if (filters.amenities.contains(amenity)) selectedChipLabelColor else chipLabelColor
                                     )
                                 },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = chipContainerColor,
-                                    selectedLabelColor = chipLabelColor,
+                                    selectedContainerColor = selectedChipContainerColor,
+                                    selectedLabelColor = selectedChipLabelColor,
                                     containerColor = chipContainerColor,
                                     labelColor = chipLabelColor
                                 )
@@ -596,7 +626,7 @@ fun FilterBottomSheet(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 color = backgroundColor,
-                shadowElevation = 8.dp
+                shadowElevation = 0.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -604,27 +634,22 @@ fun FilterBottomSheet(
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    val activeFilterCount = countActiveFilters(filters)
-                    val buttonColor = if (isDarkMode) MaterialTheme.colorScheme.primary else Blue
+                    val matchingCount = previewResultsCount?.invoke(filters)
 
                     Button(
                         onClick = {
                             onFiltersApply(filters)
                             onDismiss()
                         },
+                        enabled = !invalidPriceRange && !invalidAreaRange,
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = buttonColor
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                        colors = GharBatoButtonDefaults.primaryColors(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         Text(
-                            if (activeFilterCount > 0)
-                                "Apply $activeFilterCount Filter${if (activeFilterCount > 1) "s" else ""}"
-                            else
-                                "Apply Filters",
+                            matchingCount?.let { "Show $it ${if (it == 1) "property" else "properties"}" } ?: "Apply filters",
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )
@@ -635,7 +660,7 @@ fun FilterBottomSheet(
     }
 }
 
-private fun countActiveFilters(filters: PropertyFilters): Int {
+internal fun countActiveFilters(filters: PropertyFilters): Int {
     var count = 0
     if (filters.marketType.isNotEmpty()) count++
     if (filters.propertyTypes.isNotEmpty()) count++
@@ -647,6 +672,7 @@ private fun countActiveFilters(filters: PropertyFilters): Int {
     if (filters.petsAllowed != null) count++
     if (filters.amenities.isNotEmpty()) count++
     if (filters.floor.isNotEmpty()) count++
+    if (filters.rentalPeriod != "Long-term") count++
     return count
 }
 
@@ -656,7 +682,7 @@ fun FilterSection(
     isDarkMode: Boolean,
     content: @Composable () -> Unit
 ) {
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+    val textColor = MaterialTheme.colorScheme.onSurface
 
     Column(
         modifier = Modifier

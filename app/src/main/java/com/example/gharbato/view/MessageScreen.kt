@@ -52,8 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.viewmodel.MessageViewModel
 
 class MessageScreenActivity : ComponentActivity() {
@@ -113,7 +113,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Column(
             modifier = Modifier
@@ -124,7 +124,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
             // Header Title
             Text(
                 text = "Messages",
-                color = Blue,
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.W500,
                 fontFamily = FontFamily.SansSerif,
@@ -139,20 +139,20 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     .fillMaxWidth()
                     .height(56.dp)
                     .background(
-                        if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                        MaterialTheme.colorScheme.surfaceVariant,
                         RoundedCornerShape(28.dp)
                     ),
                 placeholder = {
                     Text(
                         "Search property owners",
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                 },
@@ -161,9 +161,9 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     unfocusedBorderColor = Color.Transparent,
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
-                    cursorColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
-                    focusedTextColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black,
-                    unfocusedTextColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                    cursorColor = MaterialTheme.colorScheme.onBackground,
+                    focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onBackground
                 ),
                 shape = RoundedCornerShape(28.dp),
                 singleLine = true
@@ -176,7 +176,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = Blue)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (errorMessage.isNotEmpty() && users.isEmpty()) {
                 Box(
@@ -185,7 +185,7 @@ fun MessageScreen(messageViewModel: MessageViewModel = viewModel()) {
                 ) {
                     Text(
                         text = errorMessage,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
@@ -264,7 +264,7 @@ fun ChatListItem(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(CircleShape)
-                    .background(if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF0F0F0)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
                 if (imageUrl.isNotEmpty()) {
@@ -279,7 +279,7 @@ fun ChatListItem(
                         text = name.take(1).uppercase(),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -289,12 +289,12 @@ fun ChatListItem(
                         .align(Alignment.TopEnd)
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(Blue),
+                        .background(LocalGharBatoActionColors.current.container),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = if (unreadCount > 99) "99+" else unreadCount.toString(),
-                        color = Color.White,
+                        color = LocalGharBatoActionColors.current.onContainer,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -312,14 +312,14 @@ fun ChatListItem(
                 text = name,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
+                color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(modifier = Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = message,
                     fontSize = 14.sp,
-                    color = Blue,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
@@ -330,7 +330,7 @@ fun ChatListItem(
         Text(
             text = time,
             fontSize = 12.sp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.align(Alignment.Top)
         )
     }
@@ -376,9 +376,9 @@ fun AIAssistantItem(isDarkMode: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
         Row(
@@ -389,13 +389,13 @@ fun AIAssistantItem(isDarkMode: Boolean, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(Blue),
+                    .background(LocalGharBatoActionColors.current.container),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.SmartToy,
                     contentDescription = "AI",
-                    tint = Color.White,
+                    tint = LocalGharBatoActionColors.current.onContainer,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -408,16 +408,16 @@ fun AIAssistantItem(isDarkMode: Boolean, onClick: () -> Unit) {
                         text = "AI Assistant",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Surface(
-                        color = Blue,
+                        color = LocalGharBatoActionColors.current.container,
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
                             text = "AI",
-                            color = Color.White,
+                            color = LocalGharBatoActionColors.current.onContainer,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
@@ -430,7 +430,7 @@ fun AIAssistantItem(isDarkMode: Boolean, onClick: () -> Unit) {
                 Text(
                     text = "Start a conversation with AI",
                     fontSize = 14.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.gharbato.model.ReportReasons
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +30,7 @@ fun ReportListingDialog(
     onDismiss: () -> Unit,
     onSubmit: (reason: String, details: String) -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
     var selectedReason by remember { mutableStateOf("") }
     var additionalDetails by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
@@ -46,16 +48,16 @@ fun ReportListingDialog(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.85f),
             shape = RoundedCornerShape(20.dp),
-            color = Color.White,
+            color = colors.surface,
             tonalElevation = 8.dp
         ) {
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Header with gradient-like background
+                // Header
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFFFEBEE),
+                    color = colors.surfaceContainerHigh,
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                 ) {
                     Row(
@@ -71,7 +73,7 @@ fun ReportListingDialog(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFD32F2F).copy(alpha = 0.15f),
+                                color = colors.errorContainer,
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Box(
@@ -81,7 +83,7 @@ fun ReportListingDialog(
                                     Icon(
                                         imageVector = Icons.Default.Report,
                                         contentDescription = "Report",
-                                        tint = Color(0xFFD32F2F),
+                                        tint = colors.onErrorContainer,
                                         modifier = Modifier.size(28.dp)
                                     )
                                 }
@@ -92,12 +94,12 @@ fun ReportListingDialog(
                                     text = "Report Listing",
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1A1A1A)
+                                    color = colors.onSurface
                                 )
                                 Text(
                                     text = "Help us maintain quality",
                                     fontSize = 13.sp,
-                                    color = Color(0xFF666666)
+                                    color = colors.onSurfaceVariant
                                 )
                             }
                         }
@@ -109,7 +111,7 @@ fun ReportListingDialog(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Close",
-                                tint = Color(0xFF666666),
+                                tint = colors.onSurfaceVariant,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -126,8 +128,8 @@ fun ReportListingDialog(
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFFFFF3E0),
-                        border = BorderStroke(1.dp, Color(0xFFFFB74D).copy(alpha = 0.3f))
+                        color = colors.surfaceVariant,
+                        border = BorderStroke(1.dp, colors.outlineVariant)
                     ) {
                         Row(
                             modifier = Modifier.padding(12.dp),
@@ -136,14 +138,14 @@ fun ReportListingDialog(
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = Color(0xFFFF6F00),
+                                tint = colors.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "Select the reason that best describes the issue",
                                 fontSize = 13.sp,
-                                color = Color(0xFF5D4037),
+                                color = colors.onSurfaceVariant,
                                 lineHeight = 18.sp
                             )
                         }
@@ -155,7 +157,7 @@ fun ReportListingDialog(
                         text = "Report Reason *",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A1A1A)
+                        color = colors.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -186,7 +188,7 @@ fun ReportListingDialog(
                         text = "Additional Information",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A1A1A)
+                        color = colors.onSurface
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -202,15 +204,15 @@ fun ReportListingDialog(
                             Text(
                                 "Describe the issue in more detail...",
                                 fontSize = 13.sp,
-                                color = Color.Gray.copy(alpha = 0.6f)
+                                color = colors.onSurfaceVariant
                             )
                         },
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFD32F2F),
-                            unfocusedBorderColor = Color(0xFFE0E0E0),
-                            focusedLabelColor = Color(0xFFD32F2F),
-                            cursorColor = Color(0xFFD32F2F)
+                            focusedBorderColor = colors.primary,
+                            unfocusedBorderColor = colors.outline,
+                            focusedLabelColor = colors.primary,
+                            cursorColor = colors.primary
                         ),
                         maxLines = 4
                     )
@@ -223,13 +225,13 @@ fun ReportListingDialog(
                             Icon(
                                 imageVector = Icons.Default.Warning,
                                 contentDescription = null,
-                                tint = Color(0xFFD32F2F),
+                                tint = colors.error,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
                                 text = "Please select a reason to continue",
-                                color = Color(0xFFD32F2F),
+                                color = colors.error,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -240,7 +242,7 @@ fun ReportListingDialog(
                 // Bottom Action Bar
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFFAFAFA),
+                    color = colors.surfaceContainerLow,
                     shape = RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
                 ) {
                     Row(
@@ -255,10 +257,8 @@ fun ReportListingDialog(
                                 .weight(1f)
                                 .height(52.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.5.dp, Color(0xFFE0E0E0)),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = Color(0xFF666666)
-                            )
+                            border = GharBatoButtonDefaults.outlinedBorder(),
+                            colors = GharBatoButtonDefaults.outlinedColors()
                         ) {
                             Text(
                                 text = "Cancel",
@@ -313,6 +313,7 @@ fun ReasonOption(
     isSelected: Boolean,
     onSelect: () -> Unit
 ) {
+    val colors = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -321,10 +322,10 @@ fun ReasonOption(
                 onClick = onSelect
             ),
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFFFFEBEE) else Color.White,
+        color = if (isSelected) colors.primaryContainer else colors.surface,
         border = BorderStroke(
             width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) Color(0xFFD32F2F) else Color(0xFFE0E0E0)
+            color = if (isSelected) colors.primary else colors.outlineVariant
         ),
         shadowElevation = if (isSelected) 2.dp else 0.dp
     ) {
@@ -336,8 +337,8 @@ fun ReasonOption(
                 selected = isSelected,
                 onClick = onSelect,
                 colors = RadioButtonDefaults.colors(
-                    selectedColor = Color(0xFFD32F2F),
-                    unselectedColor = Color(0xFFBDBDBD)
+                    selectedColor = colors.primary,
+                    unselectedColor = colors.onSurfaceVariant
                 ),
                 modifier = Modifier.size(24.dp)
             )
@@ -345,7 +346,7 @@ fun ReasonOption(
             Text(
                 text = reason,
                 fontSize = 15.sp,
-                color = if (isSelected) Color(0xFF1A1A1A) else Color(0xFF424242),
+                color = if (isSelected) colors.onPrimaryContainer else colors.onSurface,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 lineHeight = 20.sp
             )

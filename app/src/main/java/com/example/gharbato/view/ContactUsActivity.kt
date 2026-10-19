@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import com.example.gharbato.utils.SystemBarUtils
 
 
@@ -262,10 +263,7 @@ fun ContactUsScreen() {
                             clip = true
                         ),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Blue,
-                        contentColor = Color.White
-                    )
+                    colors = GharBatoButtonDefaults.primaryColors()
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_email_24),
@@ -292,20 +290,13 @@ fun ContactUsScreen() {
                         .fillMaxWidth()
                         .height(56.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Blue,
-                        containerColor = if (isDarkMode) Blue.copy(alpha = 0.1f) else Color.Transparent
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        width = 2.dp,
-                        color = Blue
-                    )
+                    colors = GharBatoButtonDefaults.outlinedColors(),
+                    border = GharBatoButtonDefaults.outlinedBorder()
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.baseline_support_agent_24),
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = Blue
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(

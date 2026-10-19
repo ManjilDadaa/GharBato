@@ -1,7 +1,5 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
@@ -25,8 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,24 +44,12 @@ import com.arpitkatiyarprojects.countrypicker.enums.CountryListDisplayType
 import com.example.gharbato.R
 import com.example.gharbato.model.UserModel
 import com.example.gharbato.repository.UserRepoImpl
-import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.viewmodel.UserViewModel
 import kotlinx.coroutines.launch
-
-// Modern Color Palette
-private val PrimaryBlue = GharBatoPalette.brand
-private val DarkBlue = GharBatoPalette.brandDeep
-private val LightBlue = GharBatoPalette.brandLight
-private val BackgroundLight = Color(0xFFF8FAFC)
-private val CardWhite = Color(0xFFFFFFFF)
-private val TextPrimary = Color(0xFF1E293B)
-private val TextSecondary = Color(0xFF64748B)
-private val InputBackground = Color(0xFFF1F5F9)
-private val InputFocusedBackground = GharBatoPalette.brandContainerLight
-private val SuccessGreen = Color(0xFF22C55E)
-private val SuccessGreenLight = Color(0xFFDCFCE7)
 
 class SignUpActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -125,13 +109,13 @@ fun PasswordRequirementItem(text: String, isMet: Boolean) {
                 if (isMet) R.drawable.baseline_check_24 else R.drawable.baseline_close_24
             ),
             contentDescription = null,
-            tint = if (isMet) Color(0xFF4CAF50) else Color(0xFFAAAAAA),
+            tint = if (isMet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = text,
-            style = TextStyle(fontSize = 12.sp, color = if (isMet) Color(0xFF4CAF50) else Color(0xFFAAAAAA))
+            style = TextStyle(fontSize = 12.sp, color = if (isMet) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
         )
     }
 }
@@ -143,13 +127,13 @@ fun SignUpBody(isDarkMode: Boolean = false) {
     val context = LocalContext.current
     val activity = context as Activity
 
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else BackgroundLight
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else TextPrimary
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else TextSecondary
-    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else CardWhite
-    val primaryColor = if (isDarkMode) MaterialTheme.colorScheme.primary else PrimaryBlue
-    val inputBgColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else InputBackground
-    val inputFocusedBgColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else InputFocusedBackground
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val textColor = MaterialTheme.colorScheme.onBackground
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val inputBgColor = MaterialTheme.colorScheme.surfaceVariant
+    val inputFocusedBgColor = MaterialTheme.colorScheme.surfaceVariant
 
     // Basic fields
     var fullname by remember { mutableStateOf("") }
@@ -246,13 +230,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(24.dp),
-                            ambientColor = PrimaryBlue.copy(alpha = 0.08f),
-                            spotColor = PrimaryBlue.copy(alpha = 0.12f)
-                        ),
+                        .padding(horizontal = 20.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = surfaceColor)
                 ) {
@@ -268,7 +246,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             value = fullname,
                             onValueChange = { fullname = it },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-                            placeholder = { Text("Full name", color = TextSecondary.copy(alpha = 0.6f)) },
+                            placeholder = { Text("Full name", color = secondaryTextColor.copy(alpha = 0.6f)) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = inputBgColor,
                                 focusedContainerColor = inputFocusedBgColor,
@@ -293,7 +271,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                             value = email,
                             onValueChange = { email = it },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                            placeholder = { Text("Email address", color = TextSecondary.copy(alpha = 0.6f)) },
+                            placeholder = { Text("Email address", color = secondaryTextColor.copy(alpha = 0.6f)) },
                             colors = OutlinedTextFieldDefaults.colors(
                                 unfocusedContainerColor = inputBgColor,
                                 focusedContainerColor = inputFocusedBgColor,
@@ -340,7 +318,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 unfocusedTextColor = textColor,
                                 focusedTextColor = textColor
                             ),
-                            placeholder = { Text("Phone number", color = TextSecondary.copy(alpha = 0.6f)) },
+                            placeholder = { Text("Phone number", color = secondaryTextColor.copy(alpha = 0.6f)) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             shape = RoundedCornerShape(14.dp)
@@ -383,33 +361,20 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(54.dp)
-                                        .scale(sendOtpScale)
-                                        .shadow(
-                                            elevation = 8.dp,
-                                            shape = RoundedCornerShape(14.dp),
-                                            ambientColor = PrimaryBlue.copy(alpha = 0.2f),
-                                            spotColor = PrimaryBlue.copy(alpha = 0.3f)
-                                        ),
+                                        .scale(sendOtpScale),
                                     shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Transparent
-                                    ),
+                                    colors = GharBatoButtonDefaults.primaryColors(),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                brush = Brush.horizontalGradient(
-                                                    colors = listOf(PrimaryBlue, LightBlue)
-                                                )
-                                            ),
+                                            .fillMaxSize(),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (isLoading) {
-                                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                            CircularProgressIndicator(color = LocalContentColor.current, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                                         } else {
-                                            Text("Send OTP", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                                            Text("Send OTP", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                 }
@@ -418,7 +383,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 OutlinedTextField(
                                     value = otp,
                                     onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) otp = it },
-                                    placeholder = { Text("Enter 6-digit OTP", color = TextSecondary.copy(alpha = 0.6f)) },
+                                    placeholder = { Text("Enter 6-digit OTP", color = secondaryTextColor.copy(alpha = 0.6f)) },
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         unfocusedContainerColor = inputBgColor,
@@ -467,33 +432,20 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(54.dp)
-                                        .scale(verifyOtpScale)
-                                        .shadow(
-                                            elevation = 8.dp,
-                                            shape = RoundedCornerShape(14.dp),
-                                            ambientColor = PrimaryBlue.copy(alpha = 0.2f),
-                                            spotColor = PrimaryBlue.copy(alpha = 0.3f)
-                                        ),
+                                        .scale(verifyOtpScale),
                                     shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.Transparent
-                                    ),
+                                    colors = GharBatoButtonDefaults.primaryColors(),
                                     contentPadding = PaddingValues(0.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(
-                                                brush = Brush.horizontalGradient(
-                                                    colors = listOf(PrimaryBlue, LightBlue)
-                                                )
-                                            ),
+                                            .fillMaxSize(),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         if (isLoading) {
-                                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                            CircularProgressIndicator(color = LocalContentColor.current, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                                         } else {
-                                            Text("Verify OTP", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                                            Text("Verify OTP", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                                         }
                                     }
                                 }
@@ -508,7 +460,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         "Resend",
-                                        color = PrimaryBlue,
+                                        color = primaryColor,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.clickable {
@@ -532,7 +484,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(SuccessGreenLight)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
                                     .padding(10.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -543,13 +495,13 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     Icon(
                                         painterResource(R.drawable.baseline_check_24),
                                         null,
-                                        tint = SuccessGreen,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         "Phone Verified",
-                                        color = SuccessGreen,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 14.sp
                                     )
@@ -569,14 +521,14 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     showPasswordRequirements = it.isNotEmpty()
                                 },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                placeholder = { Text("Password", color = TextSecondary.copy(alpha = 0.6f)) },
+                                placeholder = { Text("Password", color = secondaryTextColor.copy(alpha = 0.6f)) },
                                 colors = OutlinedTextFieldDefaults.colors(
                                     unfocusedContainerColor = inputBgColor,
                                     focusedContainerColor = inputFocusedBgColor,
                                     focusedBorderColor = when {
                                         password.isEmpty() -> primaryColor
-                                        passwordValidation.isValid -> SuccessGreen
-                                        else -> Color(0xFFEF4444)
+                                        passwordValidation.isValid -> primaryColor
+                                        else -> MaterialTheme.colorScheme.error
                                     },
                                     unfocusedBorderColor = Color.Transparent,
                                     focusedLeadingIconColor = primaryColor,
@@ -593,7 +545,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                         Icon(
                                             painterResource(if (passVisibility) R.drawable.baseline_visibility_off_24 else R.drawable.baseline_visibility_24),
                                             null,
-                                            tint = TextSecondary
+                                            tint = secondaryTextColor
                                         )
                                     }
                                 },
@@ -622,7 +574,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 colors = OutlinedTextFieldDefaults.colors(
                                     unfocusedContainerColor = inputBgColor,
                                     focusedContainerColor = inputFocusedBgColor,
-                                    focusedBorderColor = if (password == confirmPassword && confirmPassword.isNotEmpty()) SuccessGreen else primaryColor,
+                                    focusedBorderColor = primaryColor,
                                     unfocusedBorderColor = Color.Transparent,
                                     focusedLeadingIconColor = primaryColor,
                                     unfocusedLeadingIconColor = secondaryTextColor,
@@ -630,7 +582,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     focusedTextColor = textColor,
                                     cursorColor = primaryColor
                                 ),
-                                placeholder = { Text("Confirm password", color = TextSecondary.copy(alpha = 0.6f)) },
+                                placeholder = { Text("Confirm password", color = secondaryTextColor.copy(alpha = 0.6f)) },
                                 visualTransformation = if (!passVisibility) PasswordVisualTransformation() else VisualTransformation.None,
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
@@ -649,9 +601,9 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                     checked = terms,
                                     onCheckedChange = { terms = it },
                                     colors = CheckboxDefaults.colors(
-                                        checkedColor = PrimaryBlue,
-                                        uncheckedColor = TextSecondary.copy(alpha = 0.5f),
-                                        checkmarkColor = Color.White
+                                        checkedColor = LocalGharBatoActionColors.current.container,
+                                        uncheckedColor = secondaryTextColor.copy(alpha = 0.5f),
+                                        checkmarkColor = LocalGharBatoActionColors.current.onContainer
                                     ),
                                     modifier = Modifier.size(24.dp)
                                 )
@@ -661,7 +613,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                         append("I agree to the ")
                                         withStyle(
                                             SpanStyle(
-                                                color = PrimaryBlue,
+                                                color = primaryColor,
                                                 fontWeight = FontWeight.SemiBold,
                                                 textDecoration = TextDecoration.Underline
                                             )
@@ -751,40 +703,23 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(54.dp)
-                                    .scale(createAccountScale)
-                                    .shadow(
-                                        elevation = 8.dp,
-                                        shape = RoundedCornerShape(14.dp),
-                                        ambientColor = PrimaryBlue.copy(alpha = 0.2f),
-                                        spotColor = PrimaryBlue.copy(alpha = 0.3f)
-                                    ),
+                                    .scale(createAccountScale),
                                 shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Transparent,
-                                    disabledContainerColor = Color(0xFFE2E8F0)
-                                ),
+                                colors = GharBatoButtonDefaults.primaryColors(),
                                 contentPadding = PaddingValues(0.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            brush = if (terms && !isLoading) {
-                                                Brush.horizontalGradient(colors = listOf(PrimaryBlue, LightBlue))
-                                            } else {
-                                                Brush.horizontalGradient(colors = listOf(Color(0xFFE2E8F0), Color(0xFFE2E8F0)))
-                                            }
-                                        ),
+                                        .fillMaxSize(),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     if (isLoading) {
-                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                        CircularProgressIndicator(color = LocalContentColor.current, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
                                     } else {
                                         Text(
                                             "Create Account",
                                             fontSize = 16.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (terms) Color.White else TextSecondary
+                                            fontWeight = FontWeight.SemiBold
                                         )
                                     }
                                 }
@@ -809,7 +744,7 @@ fun SignUpBody(isDarkMode: Boolean = false) {
                                 "Sign in",
                                 style = TextStyle(
                                     fontSize = 16.sp,
-                                    color = PrimaryBlue,
+                                    color = primaryColor,
                                     fontWeight = FontWeight.Bold
                                 ),
                                 modifier = Modifier

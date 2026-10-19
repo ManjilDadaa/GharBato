@@ -1,7 +1,6 @@
 package com.example.gharbato.ui.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,7 +17,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,6 +32,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import com.example.gharbato.utils.SystemBarUtils
+import com.example.gharbato.utils.hasPropertyCoordinates
 import com.example.gharbato.view.ThemePreference
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.R
@@ -51,12 +50,14 @@ class FullMapActivity : ComponentActivity() {
         ThemePreference.init(this)
 
         // Get property location from intent
-        val latitude = intent.getDoubleExtra("latitude", 27.7172)
-        val longitude = intent.getDoubleExtra("longitude", 85.3240)
+        val latitude = intent.getDoubleExtra("latitude", Double.NaN)
+        val longitude = intent.getDoubleExtra("longitude", Double.NaN)
         val propertyName = intent.getStringExtra("propertyName") ?: "Property"
 
         // Initialize ViewModel
-        viewModel.initialize(LatLng(latitude, longitude), propertyName)
+        if (hasPropertyCoordinates(latitude, longitude)) {
+            viewModel.initialize(LatLng(latitude, longitude), propertyName)
+        }
 
         setContent {
             val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
@@ -81,6 +82,18 @@ fun FullMapScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val hasPropertyLocation = hasPropertyCoordinates(
+        uiState.propertyLocation.latitude,
+        uiState.propertyLocation.longitude
+    )
+    val availablePlaces = remember(uiState.nearbyPlaces) {
+        uiState.nearbyPlaces.mapValues { (_, places) ->
+            places.filter { place ->
+                !place.id.startsWith("fallback_") &&
+                    hasPropertyCoordinates(place.location.latitude, place.location.longitude)
+            }
+        }.filterValues { it.isNotEmpty() }
+    }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(uiState.propertyLocation, 14f)
@@ -94,9 +107,9 @@ fun FullMapScreen(
         )
     }
 
-    val surfaceColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val onSurfaceColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val onSurfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVariantColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     Scaffold(
         topBar = {
@@ -104,8 +117,7 @@ fun FullMapScreen(
                 title = {
                     Text(
                         text = "Nearby Places",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
@@ -127,6 +139,29 @@ fun FullMapScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            if (!hasPropertyLocation) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.LocationOff,
+                        contentDescription = null,
+                        tint = onSurfaceVariantColor,
+                        modifier = Modifier.size(40.dp)
+                    )
+                    Text("Location unavailable", style = MaterialTheme.typography.titleLarge)
+                    Text(
+                        "The owner has not added a map location for this property.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = onSurfaceVariantColor,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+                return@Box
+            }
+
             // Google Map
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
@@ -138,16 +173,16 @@ fun FullMapScreen(
                     mapToolbarEnabled = false
                 )
             ) {
-                // Property Location Marker (Red)
+                // The property marker stays distinct from nearby places.
                 Marker(
                     state = MarkerState(position = uiState.propertyLocation),
                     title = uiState.propertyName,
                     snippet = "Property Location",
-                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)
+                    icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_VIOLET)
                 )
 
                 // Show filtered nearby places
-                viewModel.getFilteredPlaces().forEach { (placeType, places) ->
+                availablePlaces.filterKeys { it in uiState.selectedFilters }.forEach { (placeType, places) ->
                     places.forEach { place ->
                         val markerColor = when (placeType) {
                             PlaceType.SCHOOL -> BitmapDescriptorFactory.HUE_BLUE
@@ -175,31 +210,36 @@ fun FullMapScreen(
                     .align(Alignment.BottomCenter)
                     .zIndex(1f),
                 color = surfaceColor,
-                shadowElevation = 8.dp,
+                shadowElevation = 0.dp,
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Show nearby",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = if (availablePlaces.isEmpty()) "Nearby places" else "Show nearby",
+                        style = MaterialTheme.typography.titleMedium,
                         color = onSurfaceColor
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        PlaceType.values().forEach { placeType ->
-                            item {
-                                LocationFilterChip(
-                                    text = placeType.getDisplayName(),
-                                    icon = getIconForPlaceType(placeType),
-                                    isSelected = uiState.selectedFilters.contains(placeType),
-                                    count = viewModel.getPlaceCount(placeType),
-                                    onClick = { viewModel.toggleFilter(placeType) }
-                                )
+                    if (availablePlaces.isEmpty()) {
+                        Text(
+                            text = if (uiState.isLoading) "Finding nearby places?" else "Nearby place information is unavailable.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = onSurfaceVariantColor
+                        )
+                    } else {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            availablePlaces.forEach { (placeType, places) ->
+                                item {
+                                    LocationFilterChip(
+                                        text = placeType.getDisplayName(),
+                                        icon = getIconForPlaceType(placeType),
+                                        isSelected = uiState.selectedFilters.contains(placeType),
+                                        count = places.size,
+                                        onClick = { viewModel.toggleFilter(placeType) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -265,7 +305,7 @@ fun FullMapScreen(
                     Icon(
                         imageVector = Icons.Default.MyLocation,
                         contentDescription = "Center on Property",
-                        tint = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -299,9 +339,9 @@ fun LocationFilterChip(
     count: Int = 0,
     onClick: () -> Unit
 ) {
-    val selectedColor = MaterialTheme.colorScheme.primary
+    val selectedColor = LocalGharBatoActionColors.current.container
     val unselectedColor = MaterialTheme.colorScheme.surfaceVariant
-    val selectedTextColor = MaterialTheme.colorScheme.onPrimary
+    val selectedTextColor = LocalGharBatoActionColors.current.onContainer
     val unselectedTextColor = MaterialTheme.colorScheme.onSurface
     val unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
     val borderColor = MaterialTheme.colorScheme.outlineVariant

@@ -7,8 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.Interaction
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -32,8 +30,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -43,8 +41,7 @@ import androidx.compose.ui.unit.sp
 import com.example.gharbato.R
 import com.example.gharbato.ui.theme.GharBatoDimensions
 import com.example.gharbato.ui.theme.GharBatoTheme
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.runtime.collectAsState
@@ -76,12 +73,6 @@ class DashboardActivity : ComponentActivity() {
     }
 }
 
-class NoRippleInteractionSource : MutableInteractionSource {
-    override val interactions: Flow<Interaction> = emptyFlow()
-    override suspend fun emit(interaction: Interaction) {}
-    override fun tryEmit(interaction: Interaction) = true
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardBody() {
@@ -99,7 +90,7 @@ fun DashboardBody() {
 
     // Bottom NavigationBar data class and its requirements
     data class NavItem(val label: String, val icon: Int)
-    var selectedIndex by remember { mutableStateOf(0) }
+    var selectedIndex by rememberSaveable { mutableStateOf(0) }
 
     val listNav = listOf(
         NavItem("Home", R.drawable.baseline_home_24),
@@ -171,18 +162,13 @@ fun DashboardBody() {
                         },
                         onClick = {
                             selectedIndex = index
-                            // Refresh properties when navigating to Home or Search
-                            if (index == 0 || index == 1) {
-                                propertyViewModel.refreshProperties()
-                            }
                         },
                         selected = selectedIndex == index,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.primary,
                             selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = Color.Transparent,
-                        ),
-                        interactionSource = remember { NoRippleInteractionSource() }
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        )
                     )
                 }
             }
@@ -370,7 +356,7 @@ fun FloatingIncomingCallOverlay(
                             .weight(1f)
                             .clickable { onAccept() },
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.primary
+                        color = LocalGharBatoActionColors.current.container
                     ) {
                         Box(
                             modifier = Modifier
@@ -379,7 +365,7 @@ fun FloatingIncomingCallOverlay(
                         ) {
                             Text(
                                 text = "Accept",
-                                color = MaterialTheme.colorScheme.onPrimary,
+                                color = LocalGharBatoActionColors.current.onContainer,
                                 fontSize = 14.sp
                             )
                         }

@@ -35,7 +35,7 @@ data class PropertyUiState(
     val selectedMarketType: String = "",
     val selectedPropertyType: String = "All",
     val minPrice: Int = 0,
-    val showMap: Boolean = true,
+    val showMap: Boolean = false,
     val searchLocation: SearchLocation? = null,
     val currentFilters: PropertyFilters = PropertyFilters(),
     val currentSort: SortOption = SortOption.DATE_NEWEST,
@@ -243,23 +243,7 @@ class PropertyViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             try {
-                var result = _uiState.value.allLoadedProperties
-
-                // Apply text search if query is not empty
-                if (query.isNotEmpty()) {
-                    val searchLower = query.lowercase().trim()
-                    result = result.filter { property ->
-                        // Map "Sell" -> "Buy" for user-facing text search
-                        val displayMarketType = if (property.marketType.equals("Sell", ignoreCase = true)) "buy" else property.marketType.lowercase()
-                        property.title.lowercase().contains(searchLower) ||
-                                property.location.lowercase().contains(searchLower) ||
-                                property.developer.lowercase().contains(searchLower) ||
-                                property.propertyType.lowercase().contains(searchLower) ||
-                                displayMarketType.contains(searchLower) ||
-                                (property.description?.lowercase()?.contains(searchLower) == true)
-                    }
-                    Log.d(TAG, "Text search found ${result.size} matches")
-                }
+                var result = searchCandidates()
 
                 // Apply filters to search results
                 result = applyFiltersToList(result)
@@ -411,7 +395,7 @@ class PropertyViewModel(
     private fun applyCurrentFiltersAndSort() {
         Log.d(TAG, "Applying current filters and sort")
 
-        var result = _uiState.value.allLoadedProperties
+        var result = searchCandidates()
         Log.d(TAG, "Starting with ${result.size} properties")
 
         // Apply filters
@@ -432,8 +416,10 @@ class PropertyViewModel(
     }
 
 
-    private fun applyFiltersToList(properties: List<PropertyModel>): List<PropertyModel> {
-        val filters = _uiState.value.currentFilters
+    private fun applyFiltersToList(
+        properties: List<PropertyModel>,
+        filters: PropertyFilters = _uiState.value.currentFilters
+    ): List<PropertyModel> {
         var filtered = properties
 
         // FIXED: Market Type Filter (only apply if explicitly set and not empty)
@@ -455,10 +441,7 @@ class PropertyViewModel(
         // Price Range Filter
         if (filters.minPrice > 0 || filters.maxPrice > 0) {
             filtered = filtered.filter { property ->
-                val price = extractPriceValue(property.price)
-                val min = filters.minPrice * 1000
-                val max = if (filters.maxPrice > 0) filters.maxPrice * 1000 else Int.MAX_VALUE
-                price in min..max
+                com.example.gharbato.utils.isWithinPriceRange(property.price, filters.minPrice, filters.maxPrice)
             }
         }
 
@@ -520,6 +503,30 @@ class PropertyViewModel(
 
     fun getAllPropertiesWithoutFilters(): List<PropertyModel> {
         return _uiState.value.allLoadedProperties
+    }
+
+    /** Preview the draft filters without applying them or changing the visible results. */
+    fun countMatchingProperties(filters: PropertyFilters): Int =
+        applyFiltersToList(searchCandidates(), filters).size
+
+    private fun searchCandidates(): List<PropertyModel> {
+        val state = _uiState.value
+        state.searchLocation?.let { location ->
+            return state.allLoadedProperties.filter {
+                calculateDistance(location.latitude, location.longitude, it.latitude, it.longitude) <= location.radiusKm
+            }
+        }
+        val query = state.searchQuery.trim().lowercase()
+        if (query.isBlank()) return state.allLoadedProperties
+        return state.allLoadedProperties.filter { property ->
+            val purpose = when (property.marketType.lowercase()) {
+                "sell" -> "buy"
+                "book" -> "stay"
+                else -> property.marketType.lowercase()
+            }
+            listOf(property.title, property.location, property.developer, property.propertyType, purpose, property.description.orEmpty())
+                .any { it.lowercase().contains(query) }
+        }
     }
 
     fun resetFilters() {

@@ -1,35 +1,25 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.MyLocation
+import com.example.gharbato.model.PropertyFilters
+import com.example.gharbato.utils.formatNprAmount
+import com.example.gharbato.utils.formatPropertyPrice
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -38,15 +28,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Remove
@@ -54,49 +40,21 @@ import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.SingleBed
-import androidx.compose.material.icons.filled.SquareFoot
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Bathtub
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -108,7 +66,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.SubcomposeAsyncImage
 import android.widget.Toast
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.ReportedProperty
@@ -138,7 +96,6 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.R
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 
 /**
  * Helper function to navigate to message screen with fetched user fullName from Firebase
@@ -221,7 +178,6 @@ fun SearchScreen(
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
 
     val listState = rememberLazyListState()
-    val scrollScope = rememberCoroutineScope()
     val locationPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -246,36 +202,13 @@ fun SearchScreen(
     }
 
     Scaffold(
-        containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
-                SortBar(
-                    propertiesCount = uiState.properties.size.takeIf { hasSearchCriteria },
-                    currentSort = uiState.currentSort,
-                    onSortClick = { showSortSheet = true },
-                    onFilterClick = { showFilterSheet = true },
-                    isDarkMode = isDarkMode
-                )
-                HorizontalDivider(
-                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF0F0F0)
-                )
-            }
-        },
-        contentWindowInsets = WindowInsets(0, 0, 0, 0)
-    ) { paddingValues ->
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA))
-        ) {
-            item {
+            Column(Modifier.fillMaxWidth().statusBarsPadding().background(MaterialTheme.colorScheme.surface)) {
                 SearchTopBar(
                     searchQuery = uiState.searchQuery,
                     onSearchQueryChange = { query ->
                         viewModel.updateSearchQuery(query)
-                        isSearchBarFocused = query.isNotEmpty()
                     },
                     onLocationClick = {
                         val intent = Intent(context, LocationPickerActivity::class.java)
@@ -302,10 +235,33 @@ fun SearchScreen(
                     hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null,
                     isDarkMode = isDarkMode
                 )
+                ActivePropertyFilters(
+                    filters = filters,
+                    locationLabel = uiState.searchLocation?.address,
+                    onFiltersChange = viewModel::applyFilters,
+                    onClearLocation = viewModel::clearSearch
+                )
+                SortBar(
+                    propertiesCount = if (uiState.isLoading) null else uiState.properties.size,
+                    currentSort = uiState.currentSort,
+                    onSortClick = { showSortSheet = true },
+                    onFilterClick = { showFilterSheet = true },
+                    isDarkMode = isDarkMode,
+                    showMap = uiState.showMap,
+                    onMapToggle = {
+                        viewModel.clearSelectedProperty()
+                        viewModel.toggleMapVisibility()
+                    },
+                    activeFilterCount = countActiveFilters(filters)
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
-
-            if (isSearchBarFocused && uiState.properties.isEmpty() && !uiState.isLoading) {
-                item {
+        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { paddingValues ->
+        Box(Modifier.fillMaxSize().padding(paddingValues)) {
+            when {
+                isSearchBarFocused && uiState.searchQuery.isBlank() && historyUiState.searchHistory.isNotEmpty() -> {
                     SearchHistorySection(
                         searchHistory = historyUiState.searchHistory,
                         isLoading = historyUiState.isLoading,
@@ -314,207 +270,65 @@ fun SearchScreen(
                                 viewModel.updateSearchQuery(history.searchQuery)
                                 viewModel.performSearch()
                             } else if (history.isLocationSearch()) {
-                                viewModel.searchByLocation(
-                                    latitude = history.locationLat,
-                                    longitude = history.locationLng,
-                                    address = history.locationAddress,
-                                    radiusKm = history.locationRadius
-                                )
+                                viewModel.searchByLocation(history.locationLat, history.locationLng, history.locationAddress, history.locationRadius)
                             }
                             isSearchBarFocused = false
                         },
-                        onHistoryItemDelete = { history ->
-                            searchHistoryViewModel.deleteSearchHistory(history.id)
-                        },
+                        onHistoryItemDelete = { searchHistoryViewModel.deleteSearchHistory(it.id) },
                         onClearAllClick = { searchHistoryViewModel.showClearAllDialog() },
-                        modifier = Modifier.fillMaxWidth().fillParentMaxHeight()
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
-            } else {
-                if (uiState.properties.isNotEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(300.dp)
-                                .pointerInput(listState) {
-                                    awaitEachGesture {
-                                        val down = awaitFirstDown(
-                                            requireUnconsumed = false,
-                                            pass = PointerEventPass.Initial
-                                        )
-                                        var previousPosition = down.position
-                                        var totalX = 0f
-                                        var totalY = 0f
-                                        var isVerticalScroll = false
-
-                                        do {
-                                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                                            val change = event.changes.firstOrNull { it.id == down.id }
-                                                ?: break
-                                            val deltaX = change.position.x - previousPosition.x
-                                            val deltaY = change.position.y - previousPosition.y
-                                            totalX += deltaX
-                                            totalY += deltaY
-
-                                            if (!isVerticalScroll &&
-                                                abs(totalY) > viewConfiguration.touchSlop &&
-                                                abs(totalY) > abs(totalX)
-                                            ) {
-                                                isVerticalScroll = true
-                                            }
-
-                                            if (isVerticalScroll && deltaY != 0f) {
-                                                change.consume()
-                                                scrollScope.launch {
-                                                    listState.scrollBy(-deltaY)
-                                                }
-                                            }
-                                            previousPosition = change.position
-                                        } while (change.pressed)
-                                    }
-                                }
-                        ) {
-                            PropertiesMapSection(
-                                properties = uiState.properties,
-                                context = context,
-                                onMarkerClick = { property -> viewModel.selectProperty(property) },
-                                onMapClick = {
-                                    val intent = Intent(context, FullSearchMapActivity::class.java)
-                                    context.startActivity(intent)
-                                },
-                                isDarkMode = isDarkMode
-                            )
-
-                            uiState.selectedProperty?.let { property ->
-                                PropertyDetailOverlay(
-                                    property = property,
-                                    onClose = { viewModel.clearSelectedProperty() },
-                                    onViewDetails = {
-                                        val intent = Intent(context, PropertyDetailActivity::class.java)
-                                        intent.putExtra("propertyId", property.id)
-                                        context.startActivity(intent)
-                                    },
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(16.dp),
-                                    isDarkMode = isDarkMode
-                                )
-                            }
+                uiState.isLoading -> {
+                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(Modifier.height(16.dp))
+                        Text("Searching properties...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                uiState.properties.isEmpty() -> {
+                    Column(
+                        Modifier.align(Alignment.Center).padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("No properties found", style = MaterialTheme.typography.titleLarge)
+                        Text("Try another area or remove a filter to see more homes.", style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        if (hasSearchCriteria) {
+                            Button(onClick = { viewModel.resetFilters() }, colors = GharBatoButtonDefaults.primaryColors()) { Text("Clear search and filters") }
+                        } else if (uiState.error != null) {
+                            OutlinedButton(onClick = viewModel::refreshProperties, colors = GharBatoButtonDefaults.outlinedColors(), border = GharBatoButtonDefaults.outlinedBorder()) { Text("Try again") }
                         }
                     }
                 }
-
-                when {
-                    uiState.isLoading -> {
-                        item {
-                            Box(
-                                modifier = Modifier.fillParentMaxHeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    CircularProgressIndicator(
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "Searching properties...",
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
-                                    )
-                                }
-                            }
-                        }
+                uiState.showMap -> {
+                    PropertiesMapSection(
+                        properties = uiState.properties,
+                        context = context,
+                        onMarkerClick = viewModel::selectProperty,
+                        onMapBackgroundClick = viewModel::clearSelectedProperty,
+                        onMapClick = { context.startActivity(Intent(context, FullSearchMapActivity::class.java)) },
+                        isDarkMode = isDarkMode
+                    )
+                    uiState.selectedProperty?.let { property ->
+                        PropertyDetailOverlay(
+                            property = property,
+                            onClose = viewModel::clearSelectedProperty,
+                            onViewDetails = {
+                                context.startActivity(Intent(context, PropertyDetailActivity::class.java).putExtra("propertyId", property.id))
+                            },
+                            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                            isDarkMode = isDarkMode
+                        )
                     }
-
-                    uiState.error != null && uiState.properties.isEmpty() -> {
-                        item {
-                            Box(
-                                modifier = Modifier.fillParentMaxHeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.SearchOff,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "No results found",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Try adjusting your search or filters",
-                                        fontSize = 14.sp,
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                                    )
-
-                                    if (uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null) {
-                                        Spacer(modifier = Modifier.height(16.dp))
-                                        Button(
-                                            onClick = {
-                                                viewModel.updateSearchQuery("")
-                                                viewModel.clearSearch()
-                                            },
-                                            colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
-                                            )
-                                        ) {
-                                            Icon(Icons.Default.Clear, contentDescription = null)
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text("Clear Search")
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    uiState.properties.isEmpty() -> {
-                        item {
-                            Box(
-                                modifier = Modifier.fillParentMaxHeight(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    modifier = Modifier.padding(32.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Home,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(48.dp),
-                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "No properties found",
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Try different filters or search terms",
-                                        fontSize = 14.sp,
-                                        color = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    else -> {
-                        items(uiState.properties) { property ->
+                }
+                else -> {
+                    LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
+                        items(uiState.properties, key = { it.id }) { property ->
                             PropertyCard(
                                 property = property,
+                                onFavoriteClick = { viewModel.toggleFavorite(property) },
                                 onClick = {
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
@@ -565,7 +379,8 @@ fun SearchScreen(
             },
             onDismiss = {
                 showFilterSheet = false
-            }
+            },
+            previewResultsCount = viewModel::countMatchingProperties
         )
     }
 
@@ -651,7 +466,7 @@ fun SearchScreen(
 
 // Helper function to convert PropertyFilters to Map for storage
 private fun convertFiltersToMap(filters: com.example.gharbato.model.PropertyFilters): Map<String, String> {
-    val map = mutableMapOf<String, String>()
+    val map = mutableMapOf("priceUnit" to "NPR")
 
     if (filters.marketType.isNotBlank()) {
         map["marketType"] = filters.marketType
@@ -679,9 +494,9 @@ fun HidePropertyConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
+    val backgroundColor = MaterialTheme.colorScheme.surface
+    val textColor = MaterialTheme.colorScheme.onSurface
+    val secondaryTextColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -689,14 +504,14 @@ fun HidePropertyConfirmDialog(
         icon = {
             Surface(
                 shape = CircleShape,
-                color = GharBatoPalette.brandContainerLight,
+                color = MaterialTheme.colorScheme.primaryContainer,
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                     Icon(
                         imageVector = Icons.Default.VisibilityOff,
                         contentDescription = null,
-                        tint = GharBatoPalette.brand,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -727,7 +542,7 @@ fun HidePropertyConfirmDialog(
                 Spacer(modifier = Modifier.height(8.dp))
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -737,7 +552,7 @@ fun HidePropertyConfirmDialog(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -753,10 +568,7 @@ fun HidePropertyConfirmDialog(
         confirmButton = {
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                ),
+                colors = GharBatoButtonDefaults.primaryColors(),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.height(48.dp)
             ) {
@@ -776,15 +588,13 @@ fun HidePropertyConfirmDialog(
             OutlinedButton(
                 onClick = onDismiss,
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                    1.dp,
-                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
-                ),
+                colors = GharBatoButtonDefaults.outlinedColors(),
+                border = GharBatoButtonDefaults.outlinedBorder(),
                 modifier = Modifier.height(48.dp)
             ) {
                 Text(
                     text = "Cancel",
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -804,152 +614,93 @@ fun SearchTopBar(
     isDarkMode: Boolean
 ) {
     val focusManager = LocalFocusManager.current
-    val focusRequester = remember { FocusRequester() }
-
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
-    val hintColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF9E9E9E)
-    val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
-    val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
-    val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = backgroundColor,
-        shadowElevation = 2.dp
+    val submit = { onSearchClick(); focusManager.clearFocus() }
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
-        ) {
-            // Enhanced Search Bar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = containerColor,
-                shadowElevation = if (isDarkMode) 0.dp else 2.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = onSearchQueryChange,
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester)
-                            .onFocusChanged { focusState ->
-                                onSearchBarFocused(focusState.isFocused)
-                            },
-                        placeholder = {
-                            Text(
-                                text = "Search location, property",
-                                color = hintColor,
-                                fontSize = 15.sp
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        trailingIcon = {
-                            if (hasActiveSearch) {
-                                IconButton(onClick = {
-                                    onClearSearch()
-                                    focusManager.clearFocus()
-                                }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Clear,
-                                        contentDescription = "Clear search",
-                                        tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF757575)
-                                    )
-                                }
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color.Transparent,
-                            unfocusedBorderColor = Color.Transparent,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            cursorColor = focusedBorderColor,
-                            focusedTextColor = textColor,
-                            unfocusedTextColor = textColor
-                        ),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(
-                            onSearch = {
-                                onSearchClick()
-                                focusManager.clearFocus()
-                            }
-                        )
-                    )
-
-                    // Search button inside the bar
-                    Surface(
-                        onClick = {
-                            onSearchClick()
-                            focusManager.clearFocus()
-                        },
-                        modifier = Modifier.size(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = buttonContainerColor
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Search",
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier.weight(1f).onFocusChanged { onSearchBarFocused(it.isFocused) },
+            placeholder = { Text("Search area or property", style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            leadingIcon = {
+                IconButton(onClick = { submit() }) {
+                    Icon(Icons.Default.Search, contentDescription = "Search properties")
+                }
+            },
+            trailingIcon = {
+                if (hasActiveSearch) {
+                    IconButton(onClick = { onClearSearch(); focusManager.clearFocus() }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
                     }
                 }
+            },
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { submit() })
+        )
+        FilledTonalIconButton(onClick = { focusManager.clearFocus(); onLocationClick() }, modifier = Modifier.size(48.dp)) {
+            Icon(Icons.Default.MyLocation, contentDescription = "Search near me")
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ActivePropertyFilters(
+    filters: PropertyFilters,
+    locationLabel: String?,
+    onFiltersChange: (PropertyFilters) -> Unit,
+    onClearLocation: () -> Unit
+) {
+    val chips = buildList<Pair<String, PropertyFilters>> {
+        if (filters.marketType.isNotBlank()) add(when (filters.marketType) { "Sell" -> "Buy"; "Book" -> "Stay"; else -> filters.marketType } to filters.copy(marketType = ""))
+        if (filters.propertyTypes.isNotEmpty()) add(filters.propertyTypes.joinToString() to filters.copy(propertyTypes = emptySet()))
+        if (filters.minPrice > 0 || filters.maxPrice > 0) {
+            val label = when {
+                filters.minPrice == 0 -> "Up to ${formatNprAmount(filters.maxPrice)}"
+                filters.maxPrice == 0 -> "From ${formatNprAmount(filters.minPrice)}"
+                else -> "${formatNprAmount(filters.minPrice)} - ${formatNprAmount(filters.maxPrice)}"
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Keep the location shortcut in the scrollable search content.
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                // Location Button
-                Surface(
-                    onClick = onLocationClick,
-                    modifier = Modifier.height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = buttonContainerColor.copy(alpha = 0.1f)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = "Near Me",
-                            tint = buttonContainerColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Near Me",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = buttonContainerColor
-                        )
-                    }
-                }
+            add(label to filters.copy(minPrice = 0, maxPrice = 0))
+        }
+        if (filters.minArea > 0 || filters.maxArea > 0) add("${filters.minArea}-${filters.maxArea.takeIf { it > 0 } ?: "Any"} sq.ft" to filters.copy(minArea = 0, maxArea = 0))
+        if (filters.bedrooms.isNotBlank()) add("${filters.bedrooms} bedrooms" to filters.copy(bedrooms = ""))
+        if (filters.furnishing.isNotBlank()) add(filters.furnishing to filters.copy(furnishing = ""))
+        filters.parking?.let { add((if (it) "Parking" else "No parking") to filters.copy(parking = null)) }
+        filters.petsAllowed?.let { add((if (it) "Pets allowed" else "No pets") to filters.copy(petsAllowed = null)) }
+        if (filters.amenities.isNotEmpty()) add("${filters.amenities.size} amenities" to filters.copy(amenities = emptySet()))
+        if (filters.floor.isNotBlank()) add(filters.floor to filters.copy(floor = ""))
+        if (filters.rentalPeriod != "Long-term") add(filters.rentalPeriod to filters.copy(rentalPeriod = "Long-term"))
+    }
+    if (chips.isEmpty() && locationLabel == null) return
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (locationLabel != null) {
+            item {
+                InputChip(selected = false, onClick = onClearLocation,
+                    label = { Text(locationLabel, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 180.dp)) },
+                    trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove location filter", modifier = Modifier.size(16.dp)) },
+                    modifier = Modifier.heightIn(min = 48.dp))
             }
         }
+        items(chips) { (label, updatedFilters) ->
+            InputChip(selected = false, onClick = { onFiltersChange(updatedFilters) },
+                label = { Text(label) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $label filter", modifier = Modifier.size(16.dp)) },
+                modifier = Modifier.heightIn(min = 48.dp))
+        }
+        if (chips.isNotEmpty()) item { TextButton(onClick = { onFiltersChange(PropertyFilters()) }) { Text("Clear filters") } }
     }
 }
 
@@ -959,47 +710,46 @@ fun PropertiesMapSection(
     context: Context,
     onMarkerClick: (PropertyModel) -> Unit,
     onMapClick: () -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    onMapBackgroundClick: () -> Unit = {}
 ) {
-    // Calculate center position based on all property locations
-    val centerLocation = remember(properties) {
-        if (properties.isEmpty()) {
-            LatLng(27.7172, 85.3240) // Default Kathmandu
-        } else {
-            val avgLat = properties.map { it.latitude }.average()
-            val avgLng = properties.map { it.longitude }.average()
-            LatLng(avgLat, avgLng)
-        }
+    val mapProperties = remember(properties) { properties.filter { it.hasValidCoordinates } }
+    val centerLocation = remember(mapProperties) {
+        mapProperties.firstOrNull()?.latLng ?: LatLng(27.7172, 85.3240)
     }
-
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(centerLocation, 11f)
     }
 
-    // Auto-fit bounds to show all properties
-    LaunchedEffect(properties) {
-        if (properties.isNotEmpty()) {
+    LaunchedEffect(mapProperties) {
+        if (mapProperties.isNotEmpty()) {
             try {
                 val boundsBuilder = LatLngBounds.builder()
-                properties.forEach { property ->
-                    boundsBuilder.include(property.latLng)
-                }
-                val bounds = boundsBuilder.build()
-                val padding = 100 // Padding in pixels
-                cameraPositionState.move(
-                    CameraUpdateFactory.newLatLngBounds(bounds, padding)
-                )
+                mapProperties.forEach { boundsBuilder.include(it.latLng) }
+                cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(boundsBuilder.build(), 100))
             } catch (e: Exception) {
                 Log.e("PropertiesMap", "Error fitting bounds: ${e.message}")
             }
         }
     }
 
-    val fabBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val fabContentColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val badgeBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
+    val fabBackgroundColor = MaterialTheme.colorScheme.surface
+    val fabContentColor = MaterialTheme.colorScheme.onSurface
+    val badgeBackgroundColor = LocalGharBatoActionColors.current.container
 
     Box(modifier = Modifier.fillMaxSize()) {
+        if (mapProperties.isEmpty()) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("No map locations available", style = MaterialTheme.typography.titleLarge)
+                Text("Switch to the list to explore these properties.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            return@Box
+        }
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
@@ -1012,14 +762,12 @@ fun PropertiesMapSection(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
                 mapToolbarEnabled = false,
-                scrollGesturesEnabled = false
+                scrollGesturesEnabled = true
             ),
-            onMapClick = {
-                onMapClick()
-            }
+            onMapClick = { onMapBackgroundClick() }
         ) {
             // Display all properties with custom price markers
-            properties.forEach { property ->
+            mapProperties.forEach { property ->
                 Marker(
                     state = MarkerState(position = property.latLng),
                     title = property.title,
@@ -1044,7 +792,7 @@ fun PropertiesMapSection(
                 onClick = {
                     cameraPositionState.move(CameraUpdateFactory.zoomIn())
                 },
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
                 containerColor = fabBackgroundColor
             ) {
                 Icon(
@@ -1060,7 +808,7 @@ fun PropertiesMapSection(
                 onClick = {
                     cameraPositionState.move(CameraUpdateFactory.zoomOut())
                 },
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp),
                 containerColor = fabBackgroundColor
             ) {
                 Icon(
@@ -1077,7 +825,7 @@ fun PropertiesMapSection(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(16.dp)
-                .size(40.dp)
+                .size(48.dp)
                 .zIndex(1f),
             containerColor = fabBackgroundColor
         ) {
@@ -1089,7 +837,7 @@ fun PropertiesMapSection(
         }
 
         // Property Count Badge
-        if (properties.isNotEmpty()) {
+        if (mapProperties.isNotEmpty()) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -1107,12 +855,12 @@ fun PropertiesMapSection(
                     Icon(
                         imageVector = Icons.Default.LocationOn,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = LocalGharBatoActionColors.current.onContainer,
                         modifier = Modifier.size(18.dp)
                     )
                     Text(
-                        text = "${properties.size} Properties",
-                        color = Color.White,
+                        text = "${mapProperties.size} on map",
+                        color = LocalGharBatoActionColors.current.onContainer,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -1122,107 +870,52 @@ fun PropertiesMapSection(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SortBar(
     propertiesCount: Int?,
     currentSort: SortOption,
     onSortClick: () -> Unit,
     onFilterClick: () -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    showMap: Boolean = false,
+    onMapToggle: (() -> Unit)? = null,
+    activeFilterCount: Int = 0
 ) {
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
-    val iconColor = MaterialTheme.colorScheme.primary
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = backgroundColor
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = propertiesCount?.let { count ->
-                    "$count ${if (count == 1) "property" else "properties"}"
-                } ?: "Explore properties",
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
-                color = textColor,
+                propertiesCount?.let { "$it ${if (it == 1) "property" else "properties"}" } ?: "Finding properties...",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                overflow = TextOverflow.Ellipsis
             )
-
-            Surface(
-                onClick = onFilterClick,
-                shape = RoundedCornerShape(12.dp),
-                color = chipBackgroundColor,
-                modifier = Modifier.height(40.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Tune,
-                        contentDescription = "Filters",
-                        tint = iconColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "Filters",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = textColor
-                    )
-                }
+            if (onMapToggle != null) {
+                FilterChip(selected = !showMap, onClick = { if (showMap) onMapToggle() }, label = { Text("List") },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.heightIn(min = 48.dp))
+                FilterChip(selected = showMap, onClick = { if (!showMap) onMapToggle() }, label = { Text("Map") },
+                    leadingIcon = { Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.heightIn(min = 48.dp))
             }
-
-            Surface(
-                onClick = onSortClick,
-                shape = RoundedCornerShape(12.dp),
-                color = chipBackgroundColor,
-                modifier = Modifier.height(40.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Sort,
-                        contentDescription = "Sort",
-                        tint = iconColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = currentSort.getShortName(),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = secondaryTextColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+        }
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onFilterClick, colors = GharBatoButtonDefaults.outlinedColors(), border = GharBatoButtonDefaults.outlinedBorder(), modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp)) {
+                Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (activeFilterCount > 0) "Filters ($activeFilterCount)" else "Filters")
+            }
+            OutlinedButton(onClick = onSortClick, colors = GharBatoButtonDefaults.outlinedColors(), border = GharBatoButtonDefaults.outlinedBorder(), modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp)) {
+                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(currentSort.getShortName(), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyCard(
     property: PropertyModel,
@@ -1231,152 +924,18 @@ fun PropertyCard(
     onReportClick: (PropertyModel) -> Unit,
     onHideClick: (PropertyModel) -> Unit,
     isDarkMode: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onFavoriteClick: (() -> Unit)? = null
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
-    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val priceColor = MaterialTheme.colorScheme.primary
-    val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = { showMenu = true }
-            ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(property.imageUrl),
-                    contentDescription = property.title,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp)
-                        .size(1.dp)
-                ) {
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.background(menuBackgroundColor)
-                    ) {
-                        DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Share,
-                                                contentDescription = null,
-                                                tint = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text("Share", color = menuTextColor)
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onShareClick(property)
-                                    }
-                                )
-
-                        HorizontalDivider(
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
-                                )
-
-                        DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.VisibilityOff,
-                                                contentDescription = null,
-                                                tint = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text("Not Interested", color = menuTextColor)
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onHideClick(property)
-                                    }
-                                )
-
-                        HorizontalDivider(
-                                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
-                                )
-
-                        DropdownMenuItem(
-                                    text = {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Report,
-                                                contentDescription = null,
-                                                tint = Color(0xFFD32F2F),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(12.dp))
-                                            Text("Report", color = Color(0xFFD32F2F))
-                                        }
-                                    },
-                                    onClick = {
-                                        showMenu = false
-                                        onReportClick(property)
-                                    }
-                        )
-                    }
-                }
-
-            }
-
-            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                Text(
-                    text = property.price,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = priceColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(5.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = property.location,
-                        fontSize = 12.sp,
-                        color = secondaryTextColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                PropertyCardFacts(
-                    property = property,
-                    tint = priceColor,
-                    contentColor = secondaryTextColor
-                )
-            }
-        }
-    }
+    PropertyListingCard(
+        property = property,
+        onClick = onClick,
+        modifier = modifier,
+        onFavoriteClick = onFavoriteClick,
+        onShareClick = { onShareClick(property) },
+        onReportClick = { onReportClick(property) },
+        onHideClick = { onHideClick(property) }
+    )
 }
 
 @Composable
@@ -1387,64 +946,35 @@ fun PropertyDetailOverlay(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean
 ) {
-    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val priceColor = MaterialTheme.colorScheme.primary
-    val chipBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5)
-    val buttonColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
-
     Card(
-        modifier = modifier.fillMaxWidth().wrapContentHeight(),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor)
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Image(
-                    painter = rememberAsyncImagePainter(property.imageUrl),
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SubcomposeAsyncImage(
+                    model = property.imageUrl,
                     contentDescription = property.title,
-                    modifier = Modifier.size(100.dp).clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
+                    modifier = Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    loading = { PropertyPhotoPlaceholder() },
+                    error = { PropertyPhotoPlaceholder() }
                 )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(property.price, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = priceColor)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(property.location, fontSize = 14.sp, color = secondaryTextColor)
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PropertyInfoChip(Icons.Default.SquareFoot, property.sqft, chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.SingleBed, "${property.bedrooms} BD", chipBackgroundColor, secondaryTextColor)
-                        PropertyInfoChip(Icons.Default.Bathtub, "${property.bathrooms} BA", chipBackgroundColor, secondaryTextColor)
-                    }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(formatPropertyPrice(property.price, property.marketType), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(property.title.ifBlank { property.propertyType }, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(property.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-
-                IconButton(onClick = onClose, modifier = Modifier.size(24.dp)) {
-                    Icon(Icons.Default.Close, "Close", tint = secondaryTextColor)
+                IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.Close, contentDescription = "Close property preview")
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Button(
-                onClick = onViewDetails,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("View Details", fontWeight = FontWeight.Bold)
+            PropertyCardFacts(property)
+            Button(onClick = onViewDetails, colors = GharBatoButtonDefaults.primaryColors(), modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp)) {
+                Text("View property")
             }
         }
     }
@@ -1477,7 +1007,7 @@ fun PropertyStatChip(
     iconTint: Color
 ) {
     Surface(
-        color = Color.White.copy(alpha = 0.15f),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -1502,7 +1032,7 @@ fun PropertyStatChip(
             Column {
                 Text(
                     text = value,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     lineHeight = 14.sp
@@ -1510,7 +1040,7 @@ fun PropertyStatChip(
                 if (label != null) {
                     Text(
                         text = label,
-                        color = Color.White.copy(alpha = 0.7f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 10.sp,
                         lineHeight = 11.sp
                     )

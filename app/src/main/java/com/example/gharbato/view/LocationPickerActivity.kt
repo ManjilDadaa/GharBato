@@ -70,6 +70,7 @@ import java.util.Locale
 import com.example.gharbato.utils.SystemBarUtils
 import com.example.gharbato.ui.theme.Blue
 import com.example.gharbato.ui.theme.GharBatoTheme
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import com.example.gharbato.R
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.MapProperties
@@ -135,7 +136,6 @@ fun LocationPickerScreen(
     val circleFillColor = if (isDarkMode) Color(0x4DA995BE) else Color(0x4D2B193D)
     val circleStrokeColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val sliderInactiveColor = if (isDarkMode) Color(0xFF424242) else GharBatoPalette.brandContainerLight
-    val disabledButtonColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
     val cardBorderColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFE0E0E0)
 
     // Default location (Kathmandu)
@@ -442,12 +442,7 @@ fun LocationPickerScreen(
                             .fillMaxWidth()
                             .height(52.dp),
                         enabled = !isGeocoding,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = primaryColor,
-                            disabledContainerColor = disabledButtonColor,
-                            contentColor = Color.White,
-                            disabledContentColor = if (isDarkMode) Color(0xFF9E9E9E) else Color(0xFF757575)
-                        ),
+                        colors = GharBatoButtonDefaults.primaryColors(),
                         shape = RoundedCornerShape(12.dp),
                         elevation = ButtonDefaults.buttonElevation(
                             defaultElevation = 4.dp,

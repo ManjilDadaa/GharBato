@@ -1,9 +1,8 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.GharBatoPalette
-
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
+import com.example.gharbato.ui.theme.GharBatoButtonDefaults
 import android.content.Intent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,25 +11,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.rememberAsyncImagePainter
 import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.viewmodel.SavedPropertiesViewModel
@@ -60,16 +53,16 @@ fun SavedScreenContent(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Colors based on theme - from 1st and 2nd codes
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA)
-    val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColorPrimary = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
-    val textColorSecondary = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-    val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
-    val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else GharBatoPalette.brandContainerLight
+    // Use the same surfaces and emphasis as discovery and property details.
+    val backgroundColor = MaterialTheme.colorScheme.background
+    val cardBackgroundColor = MaterialTheme.colorScheme.surface
+    val textColorPrimary = MaterialTheme.colorScheme.onBackground
+    val textColorSecondary = MaterialTheme.colorScheme.onSurfaceVariant
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceVariantColor = MaterialTheme.colorScheme.surfaceVariant
     val errorColor = MaterialTheme.colorScheme.error
-    val soldBgColor = if (isDarkMode) Color(0xFFB71C1C).copy(alpha = 0.2f) else Color(0xFFD32F2F).copy(alpha = 0.1f)
-    val soldTextColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
+    val soldBgColor = MaterialTheme.colorScheme.errorContainer
+    val soldTextColor = MaterialTheme.colorScheme.onErrorContainer
 
     Scaffold(
         containerColor = backgroundColor,
@@ -77,14 +70,13 @@ fun SavedScreenContent(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Saved Properties",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "Saved homes",
+                        style = MaterialTheme.typography.headlineMedium,
                         color = textColorPrimary
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
+                    containerColor = backgroundColor
                 )
             )
         }
@@ -127,8 +119,7 @@ fun SavedScreenContent(
                         Text(
                             text = "${uiState.savedProperties.size} saved ${if (uiState.savedProperties.size == 1) "property" else "properties"}",
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = textColorSecondary
                         )
 
@@ -153,7 +144,8 @@ fun SavedScreenContent(
                                     textColorSecondary = textColorSecondary,
                                     primaryColor = primaryColor,
                                     soldBgColor = soldBgColor,
-                                    soldTextColor = soldTextColor
+                                    soldTextColor = soldTextColor,
+                                    onFavoriteClick = { viewModel.removeFromSaved(property.id) }
                                 )
                             }
 
@@ -182,11 +174,11 @@ fun SavedScreenContent(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(16.dp),
-                    containerColor = if (isDarkMode) MaterialTheme.colorScheme.errorContainer else Color(0xFFD32F2F)
+                    containerColor = MaterialTheme.colorScheme.errorContainer
                 ) {
                     Text(
                         text = error,
-                        color = if (isDarkMode) MaterialTheme.colorScheme.onErrorContainer else Color.White
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
@@ -215,16 +207,16 @@ fun EmptySavedState(
     ) {
         // Heart Icon - with dark mode support from 1st code
         Surface(
-            modifier = Modifier.size(120.dp),
-            color = if (isDarkMode) errorColor.copy(alpha = 0.1f) else Color(0xFFFFEBEE),
+            modifier = Modifier.size(80.dp),
+            color = MaterialTheme.colorScheme.primaryContainer,
             shape = CircleShape
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.FavoriteBorder,
                     contentDescription = "No favorites",
-                    modifier = Modifier.size(60.dp),
-                    tint = errorColor
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
@@ -232,16 +224,16 @@ fun EmptySavedState(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "No Saved Properties",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            text = "A place for your favorites",
+            style = MaterialTheme.typography.headlineSmall,
+            textAlign = TextAlign.Center,
             color = textColorPrimary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Start exploring properties and save your favorites here for quick access later",
+            text = "Save homes you love and come back to them anytime.",
             fontSize = 16.sp,
             color = textColorSecondary,
             textAlign = TextAlign.Center,
@@ -252,10 +244,8 @@ fun EmptySavedState(
 
         Button(
             onClick = onExploreClick,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = primaryColor
-            ),
-            shape = RoundedCornerShape(24.dp),
+            colors = GharBatoButtonDefaults.primaryColors(),
+            shape = RoundedCornerShape(16.dp),
             modifier = Modifier
                 .fillMaxWidth(0.7f)
                 .height(56.dp)
@@ -263,15 +253,15 @@ fun EmptySavedState(
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = "Search",
-                tint = Color.White,
+                tint = LocalGharBatoActionColors.current.onContainer,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = "Explore Properties",
+                text = "Explore homes",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = LocalGharBatoActionColors.current.onContainer
             )
         }
     }
@@ -291,12 +281,12 @@ fun ExploreMoreCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onExploreClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkMode) 0.dp else 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
             containerColor = surfaceVariantColor
         ),
-        shape = RoundedCornerShape(12.dp),
-        border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
+        shape = RoundedCornerShape(20.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -312,14 +302,14 @@ fun ExploreMoreCard(
             ) {
                 Surface(
                     modifier = Modifier.size(48.dp),
-                    color = primaryColor,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = CircleShape
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -327,13 +317,12 @@ fun ExploreMoreCard(
 
                 Column {
                     Text(
-                        text = "Explore More Properties",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = "Find your next home",
+                        style = MaterialTheme.typography.titleMedium,
                         color = textColorPrimary
                     )
                     Text(
-                        text = "Find your perfect home",
+                        text = "Explore more properties",
                         fontSize = 13.sp,
                         color = textColorSecondary
                     )
@@ -359,71 +348,13 @@ fun SavedPropertyCard(
     textColorSecondary: Color,
     primaryColor: Color,
     soldBgColor: Color,
-    soldTextColor: Color
+    soldTextColor: Color,
+    onFavoriteClick: (() -> Unit)? = null
 ) {
-    val isSold = property.propertyStatus == "SOLD"
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !isSold, onClick = onCardClick),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isDarkMode) 0.dp else 4.dp
-        ),
-        colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
-        shape = RoundedCornerShape(12.dp),
-        border = if (isDarkMode) CardDefaults.outlinedCardBorder() else null
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            Image(
-                painter = rememberAsyncImagePainter(property.imageUrl),
-                contentDescription = property.title,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(190.dp),
-                contentScale = ContentScale.Crop
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = property.price,
-                        fontSize = 19.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryColor,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (isSold) {
-                        Surface(shape = RoundedCornerShape(6.dp), color = soldBgColor) {
-                            Text(
-                                text = "SOLD",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = soldTextColor,
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = textColorSecondary, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(property.location, fontSize = 12.sp, color = textColorSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-
-                PropertyCardFacts(property = property, tint = primaryColor, contentColor = textColorSecondary)
-            }
-        }
-    }
+    PropertyListingCard(
+        property = property.copy(isFavorite = true),
+        onClick = onCardClick,
+        onFavoriteClick = onFavoriteClick,
+        enabled = property.propertyStatus != "SOLD"
+    )
 }
