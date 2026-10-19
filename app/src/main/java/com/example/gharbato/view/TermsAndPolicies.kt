@@ -2,6 +2,8 @@ package com.example.gharbato.view
 
 import com.example.gharbato.ui.theme.GharBatoPalette
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -190,13 +192,41 @@ fun TermsAndConditionsScreen() {
                     SectionItem(
                         number = "5",
                         title = "Privacy Policy",
-                        content = "We respect your privacy. Any personal information collected will be used solely to provide our services. Refer to our Privacy Policy for more details on how we handle your information.",
+                        content = "GharBato handles account details, property listings and photos, location, messages, verification submissions, and notification data to provide the app. The full Privacy Policy explains data use, service providers, retention, and deletion requests.",
                         isDarkMode = isDarkMode,
                         blueColor = blueColor,
                         onBackgroundColor = onBackgroundColor,
                         onSurfaceVariantColor = onSurfaceVariantColor,
                         dividerColor = dividerColor
                     )
+
+                    TextButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://manjilbasnet.com.np/gharbato-privacy.html")
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Read the full GharBato Privacy Policy")
+                    }
+
+                    TextButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(
+                                    Intent.ACTION_VIEW,
+                                    Uri.parse("https://manjilbasnet.com.np/gharbato-delete-account.html")
+                                )
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Request account and data deletion")
+                    }
 
                     SectionItem(
                         number = "6",
