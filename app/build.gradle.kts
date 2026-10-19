@@ -13,7 +13,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.gharbato"
+        applicationId = "com.gharbato.nepal.mobile"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
