@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="app_background">#F8FAFC</color>
-    <color name="gharbato_brand">#2C365E</color>
-    <color name="gharbato_brand_light">#7885AE</color>
+    <color name="gharbato_brand">#2B193D</color>
+    <color name="gharbato_brand_light">#A995BE</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
-    <color name="Blue1">#2C365E</color>
-    <color name="Blue2">#7885AE</color>
+    <color name="Blue1">#2B193D</color>
+    <color name="Blue2">#A995BE</color>
     <color name="teal_200">#FF03DAC5</color>
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>

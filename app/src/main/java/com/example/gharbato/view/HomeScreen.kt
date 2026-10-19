@@ -187,9 +187,6 @@ fun HomeScreen(
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
                                     context.startActivity(intent)
-                                },
-                                onFavoriteClick = { property ->
-                                    viewModel.toggleFavorite(property)
                                 }
                             )
                         }
@@ -217,11 +214,7 @@ fun HomeScreen(
                                     intent.putExtra("propertyId", property.id)
                                     context.startActivity(intent)
                                 },
-                                onFavoriteClick = {
-                                    viewModel.toggleFavorite(property)
-                                },
                                 surfaceColor = surfaceColor,
-                                onSurfaceColor = onSurfaceColor,
                                 onSurfaceVariantColor = onSurfaceVariantColor
                             )
                         }
@@ -435,7 +428,7 @@ fun CompactPropertyCard(
 ) {
     Card(
         modifier = Modifier
-            .width(160.dp)
+            .width(200.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = surfaceColor),
@@ -476,29 +469,23 @@ fun CompactPropertyCard(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Text(
-                    text = property.developer,
-                    fontSize = 12.sp,
-                    color = onSurfaceColor.copy(alpha = 0.7f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = "Views",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text(
-                        text = "${property.totalViews} views",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
+                        text = property.location,
+                        fontSize = 11.sp,
+                        color = onSurfaceColor.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                PropertyCardFacts(
+                    property = property,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -731,8 +718,7 @@ fun SectionHeader(
 @Composable
 fun FeaturedPropertiesCarousel(
     properties: List<PropertyModel>,
-    onPropertyClick: (PropertyModel) -> Unit,
-    onFavoriteClick: (PropertyModel) -> Unit
+    onPropertyClick: (PropertyModel) -> Unit
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -742,8 +728,7 @@ fun FeaturedPropertiesCarousel(
         items(properties) { property ->
             FeaturedPropertyCard(
                 property = property,
-                onClick = { onPropertyClick(property) },
-                onFavoriteClick = { onFavoriteClick(property) }
+                onClick = { onPropertyClick(property) }
             )
         }
     }
@@ -752,8 +737,7 @@ fun FeaturedPropertiesCarousel(
 @Composable
 fun FeaturedPropertyCard(
     property: PropertyModel,
-    onClick: () -> Unit,
-    onFavoriteClick: () -> Unit
+    onClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -781,44 +765,28 @@ fun FeaturedPropertyCard(
 
             Column(
                 modifier = Modifier.fillMaxWidth().padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(property.price, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(Icons.Default.Star, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(13.dp))
-                        Text("Featured", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-                        IconButton(onClick = onFavoriteClick, modifier = Modifier.size(36.dp)) {
-                            Icon(
-                                imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                                contentDescription = if (property.isFavorite) "Remove from favorites" else "Add to favorites",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-                    }
+                Text(
+                    text = property.price,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = property.location,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-
-                Text(
-                    text = property.title.ifBlank { property.developer },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                PropertyCardFacts(property = property)
+                PropertyCardFacts(property = property, tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -891,9 +859,7 @@ fun HomePropertyStatChip(
 fun ModernPropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
-    onFavoriteClick: () -> Unit,
     surfaceColor: Color,
-    onSurfaceColor: Color,
     onSurfaceVariantColor: Color
 ) {
     Card(
@@ -924,55 +890,11 @@ fun ModernPropertyCard(
                     .padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = property.price,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(6.dp)) {
-                        Text(
-                            text = when (property.marketType.lowercase()) {
-                                "sell" -> "For sale"
-                                "rent" -> "For rent"
-                                "book" -> "Booking"
-                                else -> property.marketType
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
-                        )
-                    }
-                    IconButton(onClick = onFavoriteClick, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = if (property.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (property.isFavorite) "Remove from favorites" else "Add to favorites",
-                            tint = if (property.isFavorite) MaterialTheme.colorScheme.primary else onSurfaceVariantColor,
-                            modifier = Modifier.size(19.dp)
-                        )
-                    }
-                }
-
                 Text(
-                    text = property.title.ifBlank { property.developer },
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = onSurfaceColor,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = onSurfaceVariantColor,
+                    text = property.price,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -987,7 +909,6 @@ fun ModernPropertyCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
                 PropertyCardFacts(property = property, tint = MaterialTheme.colorScheme.primary, contentColor = onSurfaceVariantColor)
             }
         }

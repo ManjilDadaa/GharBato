@@ -45,7 +45,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -485,9 +484,6 @@ fun SearchScreen(
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
                                     context.startActivity(intent)
-                                },
-                                onFavoriteClick = { property ->
-                                    viewModel.toggleFavorite(property)
                                 },
                                 onShareClick = { property ->
                                     val shareText = buildString {
@@ -1226,7 +1222,6 @@ fun PropertyList(
     properties: List<PropertyModel>,
     listState: LazyListState,
     onPropertyClick: (PropertyModel) -> Unit,
-    onFavoriteClick: (PropertyModel) -> Unit,
     onShareClick: (PropertyModel) -> Unit,
     onReportClick: (PropertyModel) -> Unit,
     onHideClick: (PropertyModel) -> Unit,
@@ -1241,7 +1236,6 @@ fun PropertyList(
             PropertyCard(
                 property = property,
                 onClick = { onPropertyClick(property) },
-                onFavoriteClick = { onFavoriteClick(property) },
                 onShareClick = { onShareClick(property) },
                 onReportClick = { onReportClick(property) },
                 onHideClick = { onHideClick(property) },
@@ -1255,23 +1249,19 @@ fun PropertyList(
 fun PropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
-    onFavoriteClick: (PropertyModel) -> Unit,
     onShareClick: (PropertyModel) -> Unit,
     onReportClick: (PropertyModel) -> Unit,
     onHideClick: (PropertyModel) -> Unit,
     isDarkMode: Boolean
 ) {
-    val context = LocalContext.current
     var showMenu by remember { mutableStateOf(false) }
 
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val priceColor = MaterialTheme.colorScheme.primary
     val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.95f)
     val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val marketTypeColor = GharBatoPalette.brand
 
     Card(
         modifier = Modifier
@@ -1304,28 +1294,7 @@ fun PropertyCard(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.Top
                 ) {
-                    // Action buttons
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Surface(
-                            onClick = { onFavoriteClick(property) },
-                            modifier = Modifier.size(38.dp),
-                            shape = CircleShape,
-                            color = iconButtonBackgroundColor,
-                            shadowElevation = 2.dp
-                        ) {
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                Icon(
-                                    imageVector = if (property.isFavorite) Icons.Default.Favorite
-                                    else Icons.Default.FavoriteBorder,
-                                    contentDescription = if (property.isFavorite) "Remove from favorites"
-                                    else "Add to favorites",
-                                    tint = if (property.isFavorite) MaterialTheme.colorScheme.primary else secondaryTextColor,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-
-                        Box {
+                    Box {
                             Surface(
                                 onClick = { showMenu = true },
                                 modifier = Modifier.size(38.dp),
@@ -1413,121 +1382,33 @@ fun PropertyCard(
                                     }
                                 )
                             }
-                        }
                     }
                 }
 
             }
 
-            // Content section
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = property.price,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = priceColor,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Surface(color = marketTypeColor, shape = RoundedCornerShape(8.dp)) {
-                                Text(
-                                    text = when (property.marketType.lowercase()) {
-                                        "sell" -> "For Sale"
-                                        "rent" -> "For Rent"
-                                        "book" -> "Booking"
-                                        else -> property.marketType
-                                    },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = property.title.ifBlank { property.developer },
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textColor,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
-                            fontSize = 12.sp,
-                            color = secondaryTextColor,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.LocationOn,
-                                null,
-                                tint = secondaryTextColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = property.location,
-                                fontSize = 13.sp,
-                                color = secondaryTextColor,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-
-                    // Chat button
-                    Surface(
-                        onClick = {
-                            if (property.ownerId.isNotEmpty()) {
-                                navigateToMessageWithUserFetch(
-                                    context = context,
-                                    activity = context as Activity,
-                                    otherUserId = property.ownerId,
-                                    fallbackName = property.ownerName.ifBlank { property.developer },
-                                    fallbackImage = property.ownerImageUrl ?: ""
-                                )
-                            }
-                        },
-                        modifier = Modifier.size(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        color = priceColor
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                "Chat With Owner",
-                                tint = Color.White,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                Text(
+                    text = property.price,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = priceColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(5.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.LocationOn, null, tint = secondaryTextColor, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = property.location,
+                        fontSize = 12.sp,
+                        color = secondaryTextColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 PropertyCardFacts(
                     property = property,
                     tint = priceColor,

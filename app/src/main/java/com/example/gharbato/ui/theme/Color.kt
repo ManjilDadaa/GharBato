@@ -4,11 +4,11 @@ import androidx.compose.ui.graphics.Color
 
 /** Shared GharBato brand palette. Keep decorative accents within this palette. */
 object GharBatoPalette {
-    val brand = Color(0xFF2C365E)
-    val brandDeep = Color(0xFF202947)
-    val brandLight = Color(0xFF7885AE)
-    val brandContainerLight = Color(0xFFE9EBF2)
-    val brandContainerDark = Color(0xFF303A5C)
+    val brand = Color(0xFF2B193D)
+    val brandDeep = Color(0xFF1B1028)
+    val brandLight = Color(0xFFA995BE)
+    val brandContainerLight = Color(0xFFEDE7F2)
+    val brandContainerDark = Color(0xFF3D2C50)
 
     val backgroundLight = Color(0xFFF8FAFC)
     val surfaceLight = Color(0xFFFFFFFF)

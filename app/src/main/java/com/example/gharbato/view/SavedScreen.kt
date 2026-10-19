@@ -60,10 +60,6 @@ fun SavedScreenContent(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // State for unsave confirmation dialog
-    var showUnsaveDialog by remember { mutableStateOf(false) }
-    var propertyToUnsave by remember { mutableStateOf<PropertyModel?>(null) }
-
     // Colors based on theme - from 1st and 2nd codes
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA)
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
@@ -72,7 +68,6 @@ fun SavedScreenContent(
     val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val surfaceVariantColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else GharBatoPalette.brandContainerLight
     val errorColor = MaterialTheme.colorScheme.error
-    val successColor = if (isDarkMode) Color(0xFF81C784) else Color(0xFF4CAF50)
     val soldBgColor = if (isDarkMode) Color(0xFFB71C1C).copy(alpha = 0.2f) else Color(0xFFD32F2F).copy(alpha = 0.1f)
     val soldTextColor = if (isDarkMode) Color(0xFFFF8A80) else Color(0xFFD32F2F)
 
@@ -153,15 +148,9 @@ fun SavedScreenContent(
                                         intent.putExtra("propertyId", property.id)
                                         context.startActivity(intent)
                                     },
-                                    onRemoveClick = {
-                                        propertyToUnsave = property
-                                        showUnsaveDialog = true
-                                    },
                                     isDarkMode = isDarkMode,
                                     cardBackgroundColor = cardBackgroundColor,
-                                    textColorPrimary = textColorPrimary,
                                     textColorSecondary = textColorSecondary,
-                                    successColor = successColor,
                                     primaryColor = primaryColor,
                                     soldBgColor = soldBgColor,
                                     soldTextColor = soldTextColor
@@ -204,22 +193,6 @@ fun SavedScreenContent(
         }
     }
 
-    // Unsave Confirmation Dialog
-    if (showUnsaveDialog && propertyToUnsave != null) {
-        UnsavePropertyConfirmDialog(
-            propertyTitle = propertyToUnsave!!.developer.ifBlank { propertyToUnsave!!.title },
-            isDarkMode = isDarkMode,
-            onConfirm = {
-                viewModel.removeFromSaved(propertyToUnsave!!.id)
-                showUnsaveDialog = false
-                propertyToUnsave = null
-            },
-            onDismiss = {
-                showUnsaveDialog = false
-                propertyToUnsave = null
-            }
-        )
-    }
 }
 
 @Composable
@@ -381,12 +354,9 @@ fun ExploreMoreCard(
 fun SavedPropertyCard(
     property: PropertyModel,
     onCardClick: () -> Unit,
-    onRemoveClick: () -> Unit,
     isDarkMode: Boolean,
     cardBackgroundColor: Color,
-    textColorPrimary: Color,
     textColorSecondary: Color,
-    successColor: Color,
     primaryColor: Color,
     soldBgColor: Color,
     soldTextColor: Color
@@ -444,32 +414,7 @@ fun SavedPropertyCard(
                             )
                         }
                     }
-                    IconButton(onClick = onRemoveClick, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = "Remove from favorites",
-                            tint = primaryColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
                 }
-
-                Text(
-                    text = property.title.ifBlank { property.developer },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textColorPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
-                    fontSize = 12.sp,
-                    color = textColorSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, tint = textColorSecondary, modifier = Modifier.size(14.dp))
@@ -477,151 +422,8 @@ fun SavedPropertyCard(
                     Text(property.location, fontSize = 12.sp, color = textColorSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
                 PropertyCardFacts(property = property, tint = primaryColor, contentColor = textColorSecondary)
             }
         }
     }
-}
-
-@Composable
-fun PropertyStat(
-    icon: ImageVector,
-    text: String,
-    iconColor: Color
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = iconColor,
-            modifier = Modifier.size(14.dp)
-        )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(
-            text = text,
-            fontSize = 11.sp,
-            color = iconColor
-        )
-    }
-}
-
-@Composable
-fun UnsavePropertyConfirmDialog(
-    propertyTitle: String,
-    isDarkMode: Boolean,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
-    val textColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-    val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = backgroundColor,
-        icon = {
-            Surface(
-                shape = CircleShape,
-                color = Color(0xFFFFEBEE),
-                modifier = Modifier.size(56.dp)
-            ) {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                    Icon(
-                        imageVector = Icons.Default.HeartBroken,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-            }
-        },
-        title = {
-            Text(
-                text = "Remove from Saved?",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = textColor,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        text = {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = "Are you sure you want to remove \"$propertyTitle\" from your saved properties?",
-                    fontSize = 14.sp,
-                    color = secondaryTextColor,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 20.sp
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F5F5),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Lightbulb,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "You can always save it again from the property details.",
-                            fontSize = 12.sp,
-                            color = secondaryTextColor
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.FavoriteBorder,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Remove",
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        },
-        dismissButton = {
-            OutlinedButton(
-                onClick = onDismiss,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                    1.dp,
-                    if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
-                ),
-                modifier = Modifier.height(48.dp)
-            ) {
-                Text(
-                    text = "Keep",
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
-    )
 }

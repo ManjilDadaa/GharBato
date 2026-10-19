@@ -17,6 +17,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -27,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -556,39 +558,39 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         .padding(horizontal = 12.dp)
                 ) {
                     val stepCircleSize = 36.dp
-                    val progressLineY = stepCircleSize / 2 - 1.5.dp
-                    val progressLineWidth = (maxWidth - stepCircleSize).coerceAtLeast(0.dp)
                     val stepColumnWidth = maxWidth / totalSteps.toFloat()
-                    val progressFraction = if (totalSteps > 1) {
-                        (step - 1).toFloat() / (totalSteps - 1).toFloat()
-                    } else {
-                        1f
-                    }
 
-                    Box(
+                    Canvas(
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(
-                                start = stepCircleSize / 2,
-                                end = stepCircleSize / 2,
-                                top = progressLineY
-                            )
                             .fillMaxWidth()
-                            .height(3.dp)
-                            .background(
-                                color = if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
-                                shape = RoundedCornerShape(2.dp)
-                            )
-                    )
+                            .height(stepCircleSize)
+                    ) {
+                        val slotWidth = size.width / totalSteps.toFloat()
+                        val circleRadius = stepCircleSize.toPx() / 2f
+                        val centerY = circleRadius
+                        val strokeWidth = 3.dp.toPx()
+                        val inactiveLine = if (isDarkMode) Color(0xFF51495E) else Color(0xFFE2DCE8)
 
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = stepCircleSize / 2, top = progressLineY)
-                            .width(progressLineWidth * progressFraction)
-                            .height(3.dp)
-                            .background(Blue, shape = RoundedCornerShape(2.dp))
-                    )
+                        for (index in 0 until totalSteps - 1) {
+                            val startX = slotWidth * (index + 0.5f) + circleRadius
+                            val endX = slotWidth * (index + 1.5f) - circleRadius
+                            drawLine(
+                                color = inactiveLine,
+                                start = Offset(startX, centerY),
+                                end = Offset(endX, centerY),
+                                strokeWidth = strokeWidth
+                            )
+                            if (index < step - 1) {
+                                drawLine(
+                                    color = Blue,
+                                    start = Offset(startX, centerY),
+                                    end = Offset(endX, centerY),
+                                    strokeWidth = strokeWidth
+                                )
+                            }
+                        }
+                    }
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -600,8 +602,9 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 modifier = Modifier.width(stepColumnWidth)
                             ) {
+                                val isComplete = step >= i
                                 val circleColor by animateColorAsState(
-                                    targetValue = if (step >= i) Blue else if (isDarkMode) Color(0xFF424242) else Gray.copy(0.25f),
+                                    targetValue = if (isComplete) Blue else if (isDarkMode) Color(0xFF51495E) else Color(0xFFE2DCE8),
                                     animationSpec = tween(durationMillis = 300),
                                     label = "stepColor"
                                 )
@@ -614,7 +617,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 ) {
                                     Text(
                                         text = "$i",
-                                        color = Color.White,
+                                        color = if (isComplete || isDarkMode) Color.White else Color(0xFF5D5366),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
                                     )

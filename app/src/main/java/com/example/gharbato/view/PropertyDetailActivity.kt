@@ -2393,10 +2393,7 @@ fun SimilarPropertiesSection(
                         property = property,
                         onClick = { onPropertyClick(property) },
                         surfaceColor = surfaceColor,
-                        onBackgroundColor = onBackgroundColor,
                         onSurfaceVariantColor = onSurfaceVariantColor,
-                        outlineVariantColor = outlineVariantColor,
-                        successColor = successColor,
                         primaryColor = primaryColor
                     )
                 }
@@ -2410,10 +2407,7 @@ fun SimilarPropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
     surfaceColor: Color,
-    onBackgroundColor: Color,
     onSurfaceVariantColor: Color,
-    outlineVariantColor: Color,
-    successColor: Color,
     primaryColor: Color
 ) {
     Card(
@@ -2447,54 +2441,15 @@ fun SimilarPropertyCard(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = property.price,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = primaryColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Surface(color = primaryColor, shape = RoundedCornerShape(6.dp)) {
-                        Text(
-                            text = when (property.marketType.lowercase()) {
-                                "sell" -> "Sale"
-                                else -> property.marketType
-                            },
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-
                 Text(
-                    text = property.title.ifBlank { property.developer },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = onBackgroundColor,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 20.sp
-                )
-
-                Text(
-                    text = "Listed by ${property.ownerName.ifBlank { property.developer }}",
-                    fontSize = 12.sp,
-                    color = onSurfaceVariantColor,
+                    text = property.price,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = primaryColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                PropertyCardFacts(property = property, tint = primaryColor, contentColor = onSurfaceVariantColor)
-
-                // Location
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth()
@@ -2514,6 +2469,8 @@ fun SimilarPropertyCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                PropertyCardFacts(property = property, tint = primaryColor, contentColor = onSurfaceVariantColor)
             }
         }
     }

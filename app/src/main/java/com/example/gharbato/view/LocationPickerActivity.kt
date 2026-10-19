@@ -132,7 +132,7 @@ fun LocationPickerScreen(
     val fabBackgroundColor = if (isDarkMode) Color(0xFF2C2C2C) else Color.White
     val fabContentColor = if (isDarkMode) Color(0xFFE1E1E1) else Color.Black
     val primaryColor = if (isDarkMode) GharBatoPalette.brandLight else Blue
-    val circleFillColor = if (isDarkMode) Color(0x4D7885AE) else Color(0x4D2C365E)
+    val circleFillColor = if (isDarkMode) Color(0x4DA995BE) else Color(0x4D2B193D)
     val circleStrokeColor = if (isDarkMode) GharBatoPalette.brandLight else GharBatoPalette.brand
     val sliderInactiveColor = if (isDarkMode) Color(0xFF424242) else GharBatoPalette.brandContainerLight
     val disabledButtonColor = if (isDarkMode) Color(0xFF424242) else Color(0xFFCCCCCC)
