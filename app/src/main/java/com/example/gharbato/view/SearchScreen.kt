@@ -8,15 +8,14 @@ import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -30,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -49,7 +47,6 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Search
@@ -217,14 +214,6 @@ fun SearchScreen(
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
 
     val listState = rememberLazyListState()
-    val isScrolled = listState.firstVisibleItemIndex > 0 ||
-            listState.firstVisibleItemScrollOffset > 100
-
-    val mapHeight by animateDpAsState(
-        targetValue = if (isScrolled) 0.dp else 300.dp,
-        label = "mapHeight"
-    )
-
     val locationPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -250,54 +239,52 @@ fun SearchScreen(
 
     Scaffold(
         containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
-        topBar = {
-            SearchTopBar(
-                searchQuery = uiState.searchQuery,
-                onSearchQueryChange = { query ->
-                    viewModel.updateSearchQuery(query)
-                    isSearchBarFocused = query.isNotEmpty()
-                },
-                onFilterClick = {
-                    showFilterSheet = true
-                },
-                onLocationClick = {
-                    val intent = Intent(context, LocationPickerActivity::class.java)
-                    locationPickerLauncher.launch(intent)
-                },
-                onSearchClick = {
-                    viewModel.performSearch()
-                    isSearchBarFocused = false
-
-                    if (uiState.searchQuery.isNotEmpty()) {
-                        searchHistoryViewModel.saveTextSearch(
-                            query = uiState.searchQuery,
-                            resultsCount = uiState.properties.size,
-                            filters = convertFiltersToMap(uiState.currentFilters)
-                        )
-                    }
-                },
-                onClearSearch = {
-                    viewModel.updateSearchQuery("")
-                    viewModel.clearSearch()
-                    isSearchBarFocused = false
-                },
-                onSearchBarFocused = { focused ->
-                    isSearchBarFocused = focused
-                },
-                hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null,
-                isDarkMode = isDarkMode
-            )
-        },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
-        Box(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color(0xFFF8F9FA))
         ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (isSearchBarFocused && uiState.properties.isEmpty() && !uiState.isLoading) {
+            item {
+                SearchTopBar(
+                    searchQuery = uiState.searchQuery,
+                    onSearchQueryChange = { query ->
+                        viewModel.updateSearchQuery(query)
+                        isSearchBarFocused = query.isNotEmpty()
+                    },
+                    onFilterClick = { showFilterSheet = true },
+                    onLocationClick = {
+                        val intent = Intent(context, LocationPickerActivity::class.java)
+                        locationPickerLauncher.launch(intent)
+                    },
+                    onSearchClick = {
+                        viewModel.performSearch()
+                        isSearchBarFocused = false
+
+                        if (uiState.searchQuery.isNotEmpty()) {
+                            searchHistoryViewModel.saveTextSearch(
+                                query = uiState.searchQuery,
+                                resultsCount = uiState.properties.size,
+                                filters = convertFiltersToMap(uiState.currentFilters)
+                            )
+                        }
+                    },
+                    onClearSearch = {
+                        viewModel.updateSearchQuery("")
+                        viewModel.clearSearch()
+                        isSearchBarFocused = false
+                    },
+                    onSearchBarFocused = { focused -> isSearchBarFocused = focused },
+                    hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null,
+                    isDarkMode = isDarkMode
+                )
+            }
+
+            if (isSearchBarFocused && uiState.properties.isEmpty() && !uiState.isLoading) {
+                item {
                     SearchHistorySection(
                         searchHistory = historyUiState.searchHistory,
                         isLoading = historyUiState.isLoading,
@@ -318,34 +305,31 @@ fun SearchScreen(
                         onHistoryItemDelete = { history ->
                             searchHistoryViewModel.deleteSearchHistory(history.id)
                         },
-                        onClearAllClick = {
-                            searchHistoryViewModel.showClearAllDialog()
-                        },
-                        modifier = Modifier.fillMaxSize()
+                        onClearAllClick = { searchHistoryViewModel.showClearAllDialog() },
+                        modifier = Modifier.fillMaxWidth().fillParentMaxHeight()
                     )
-                } else {
+                }
+            } else {
+                item {
                     SortBar(
                         propertiesCount = uiState.properties.size.takeIf { hasSearchCriteria },
                         currentSort = uiState.currentSort,
-                        onSortClick = {
-                            showSortSheet = true
-                        },
+                        onSortClick = { showSortSheet = true },
                         isDarkMode = isDarkMode
                     )
+                }
 
-                    // Map Section
-                    if (mapHeight > 0.dp && uiState.properties.isNotEmpty()) {
+                if (uiState.properties.isNotEmpty()) {
+                    item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(mapHeight)
+                                .height(300.dp)
                         ) {
                             PropertiesMapSection(
                                 properties = uiState.properties,
                                 context = context,
-                                onMarkerClick = { property ->
-                                    viewModel.selectProperty(property)
-                                },
+                                onMarkerClick = { property -> viewModel.selectProperty(property) },
                                 onMapClick = {
                                     val intent = Intent(context, FullSearchMapActivity::class.java)
                                     context.startActivity(intent)
@@ -356,9 +340,7 @@ fun SearchScreen(
                             uiState.selectedProperty?.let { property ->
                                 PropertyDetailOverlay(
                                     property = property,
-                                    onClose = {
-                                        viewModel.clearSelectedProperty()
-                                    },
+                                    onClose = { viewModel.clearSelectedProperty() },
                                     onViewDetails = {
                                         val intent = Intent(context, PropertyDetailActivity::class.java)
                                         intent.putExtra("propertyId", property.id)
@@ -372,20 +354,19 @@ fun SearchScreen(
                             }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Content
-                    when {
-                        uiState.isLoading -> {
+                when {
+                    uiState.isLoading -> {
+                        item {
                             Box(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillParentMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    CircularProgressIndicator(color = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand)
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(
+                                        color = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
+                                    )
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         "Searching properties...",
@@ -394,10 +375,12 @@ fun SearchScreen(
                                 }
                             }
                         }
+                    }
 
-                        uiState.error != null && uiState.properties.isEmpty() -> {
+                    uiState.error != null && uiState.properties.isEmpty() -> {
+                        item {
                             Box(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillParentMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(
@@ -443,10 +426,12 @@ fun SearchScreen(
                                 }
                             }
                         }
+                    }
 
-                        uiState.properties.isEmpty() -> {
+                    uiState.properties.isEmpty() -> {
+                        item {
                             Box(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier.fillParentMaxHeight(),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(
@@ -475,41 +460,44 @@ fun SearchScreen(
                                 }
                             }
                         }
+                    }
 
-                        else -> {
-                            PropertyList(
-                                properties = uiState.properties,
-                                listState = listState,
-                                onPropertyClick = { property ->
+                    else -> {
+                        items(uiState.properties) { property ->
+                            PropertyCard(
+                                property = property,
+                                onClick = {
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
                                     context.startActivity(intent)
                                 },
-                                onShareClick = { property ->
+                                onShareClick = { sharedProperty ->
                                     val shareText = buildString {
-                                        append("🏠 ${property.title}\n\n")
-                                        append("💰 ${property.price}\n")
-                                        append("📍 ${property.location}\n")
-                                        append("🛏️ ${property.bedrooms} Beds • 🚿 ${property.bathrooms} Baths\n")
-                                        append("📐 ${property.sqft}\n\n")
+                                        append("${sharedProperty.price}\n")
+                                        append("${sharedProperty.location}\n")
+                                        append("${sharedProperty.bedrooms} beds / ${sharedProperty.bathrooms} baths\n")
+                                        append("${sharedProperty.sqft}\n\n")
                                         append("Check out this property on GharBato!")
                                     }
                                     val shareIntent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
                                         putExtra(Intent.EXTRA_TEXT, shareText)
-                                        putExtra(Intent.EXTRA_SUBJECT, "Property: ${property.title}")
+                                        putExtra(Intent.EXTRA_SUBJECT, "Property: ${sharedProperty.title}")
                                     }
                                     context.startActivity(Intent.createChooser(shareIntent, "Share Property"))
                                 },
-                                onReportClick = { property ->
-                                    propertyToReport = property
+                                onReportClick = { reportedProperty ->
+                                    propertyToReport = reportedProperty
                                     showReportDialog = true
                                 },
-                                onHideClick = { property ->
-                                    propertyToHide = property
+                                onHideClick = { hiddenProperty ->
+                                    propertyToHide = hiddenProperty
                                     showHideConfirmDialog = true
                                 },
-                                isDarkMode = isDarkMode
+                                isDarkMode = isDarkMode,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
                             )
                         }
                     }
@@ -788,24 +776,6 @@ fun SearchTopBar(
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            // Header
-            Text(
-                text = "Find Your Dream Property",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = textColor
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Search from thousands of listings",
-                fontSize = 14.sp,
-                color = hintColor
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Enhanced Search Bar
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -1030,7 +1000,8 @@ fun PropertiesMapSection(
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
-                mapToolbarEnabled = false
+                mapToolbarEnabled = false,
+                scrollGesturesEnabled = false
             ),
             onMapClick = {
                 onMapClick()
@@ -1217,34 +1188,7 @@ fun SortBar(
     }
 }
 
-@Composable
-fun PropertyList(
-    properties: List<PropertyModel>,
-    listState: LazyListState,
-    onPropertyClick: (PropertyModel) -> Unit,
-    onShareClick: (PropertyModel) -> Unit,
-    onReportClick: (PropertyModel) -> Unit,
-    onHideClick: (PropertyModel) -> Unit,
-    isDarkMode: Boolean
-) {
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        items(properties) { property ->
-            PropertyCard(
-                property = property,
-                onClick = { onPropertyClick(property) },
-                onShareClick = { onShareClick(property) },
-                onReportClick = { onReportClick(property) },
-                onHideClick = { onHideClick(property) },
-                isDarkMode = isDarkMode
-            )
-        }
-    }
-}
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PropertyCard(
     property: PropertyModel,
@@ -1252,21 +1196,24 @@ fun PropertyCard(
     onShareClick: (PropertyModel) -> Unit,
     onReportClick: (PropertyModel) -> Unit,
     onHideClick: (PropertyModel) -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
     val cardBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val secondaryTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color.Gray
     val priceColor = MaterialTheme.colorScheme.primary
-    val iconButtonBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.95f)
     val menuBackgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
     val menuTextColor = if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
 
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = { showMenu = true }
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(containerColor = cardBackgroundColor),
         shape = RoundedCornerShape(16.dp)
@@ -1286,38 +1233,18 @@ fun PropertyCard(
                     contentScale = ContentScale.Crop
                 )
 
-                // Keep the photograph unobstructed by leaving only controls over it.
-                Row(
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.Top
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(1.dp)
                 ) {
-                    Box {
-                            Surface(
-                                onClick = { showMenu = true },
-                                modifier = Modifier.size(38.dp),
-                                shape = CircleShape,
-                                color = iconButtonBackgroundColor,
-                                shadowElevation = 2.dp
-                            ) {
-                                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "More options",
-                                        tint = secondaryTextColor,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-
-                            DropdownMenu(
-                                expanded = showMenu,
-                                onDismissRequest = { showMenu = false },
-                                modifier = Modifier.background(menuBackgroundColor)
-                            ) {
-                                DropdownMenuItem(
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                        modifier = Modifier.background(menuBackgroundColor)
+                    ) {
+                        DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
@@ -1336,11 +1263,11 @@ fun PropertyCard(
                                     }
                                 )
 
-                                HorizontalDivider(
+                        HorizontalDivider(
                                     color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
                                 )
 
-                                DropdownMenuItem(
+                        DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
@@ -1359,11 +1286,11 @@ fun PropertyCard(
                                     }
                                 )
 
-                                HorizontalDivider(
+                        HorizontalDivider(
                                     color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFEEEEEE)
                                 )
 
-                                DropdownMenuItem(
+                        DropdownMenuItem(
                                     text = {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Icon(
@@ -1380,8 +1307,7 @@ fun PropertyCard(
                                         showMenu = false
                                         onReportClick(property)
                                     }
-                                )
-                            }
+                        )
                     }
                 }
 
