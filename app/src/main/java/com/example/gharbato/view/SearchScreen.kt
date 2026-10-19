@@ -13,6 +13,9 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,9 +27,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -83,6 +85,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -92,6 +95,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -132,6 +137,8 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.example.gharbato.R
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * Helper function to navigate to message screen with fetched user fullName from Firebase
@@ -214,6 +221,7 @@ fun SearchScreen(
     val reportViewModel = remember { ReportViewModel(ReportPropertyRepoImpl()) }
 
     val listState = rememberLazyListState()
+    val scrollScope = rememberCoroutineScope()
     val locationPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -239,6 +247,20 @@ fun SearchScreen(
 
     Scaffold(
         containerColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White,
+        topBar = {
+            Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
+                SortBar(
+                    propertiesCount = uiState.properties.size.takeIf { hasSearchCriteria },
+                    currentSort = uiState.currentSort,
+                    onSortClick = { showSortSheet = true },
+                    onFilterClick = { showFilterSheet = true },
+                    isDarkMode = isDarkMode
+                )
+                HorizontalDivider(
+                    color = if (isDarkMode) MaterialTheme.colorScheme.outlineVariant else Color(0xFFF0F0F0)
+                )
+            }
+        },
         contentWindowInsets = WindowInsets(0, 0, 0, 0)
     ) { paddingValues ->
         LazyColumn(
@@ -255,7 +277,6 @@ fun SearchScreen(
                         viewModel.updateSearchQuery(query)
                         isSearchBarFocused = query.isNotEmpty()
                     },
-                    onFilterClick = { showFilterSheet = true },
                     onLocationClick = {
                         val intent = Intent(context, LocationPickerActivity::class.java)
                         locationPickerLauncher.launch(intent)
@@ -310,21 +331,49 @@ fun SearchScreen(
                     )
                 }
             } else {
-                item {
-                    SortBar(
-                        propertiesCount = uiState.properties.size.takeIf { hasSearchCriteria },
-                        currentSort = uiState.currentSort,
-                        onSortClick = { showSortSheet = true },
-                        isDarkMode = isDarkMode
-                    )
-                }
-
                 if (uiState.properties.isNotEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(300.dp)
+                                .pointerInput(listState) {
+                                    awaitEachGesture {
+                                        val down = awaitFirstDown(
+                                            requireUnconsumed = false,
+                                            pass = PointerEventPass.Initial
+                                        )
+                                        var previousPosition = down.position
+                                        var totalX = 0f
+                                        var totalY = 0f
+                                        var isVerticalScroll = false
+
+                                        do {
+                                            val event = awaitPointerEvent(PointerEventPass.Initial)
+                                            val change = event.changes.firstOrNull { it.id == down.id }
+                                                ?: break
+                                            val deltaX = change.position.x - previousPosition.x
+                                            val deltaY = change.position.y - previousPosition.y
+                                            totalX += deltaX
+                                            totalY += deltaY
+
+                                            if (!isVerticalScroll &&
+                                                abs(totalY) > viewConfiguration.touchSlop &&
+                                                abs(totalY) > abs(totalX)
+                                            ) {
+                                                isVerticalScroll = true
+                                            }
+
+                                            if (isVerticalScroll && deltaY != 0f) {
+                                                change.consume()
+                                                scrollScope.launch {
+                                                    listState.scrollBy(-deltaY)
+                                                }
+                                            }
+                                            previousPosition = change.position
+                                        } while (change.pressed)
+                                    }
+                                }
                         ) {
                             PropertiesMapSection(
                                 properties = uiState.properties,
@@ -747,7 +796,6 @@ fun HidePropertyConfirmDialog(
 fun SearchTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onFilterClick: () -> Unit,
     onLocationClick: () -> Unit,
     onSearchClick: () -> Unit,
     onClearSearch: () -> Unit,
@@ -761,15 +809,12 @@ fun SearchTopBar(
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.background else Color.White
     val textColor = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
     val hintColor = if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFF9E9E9E)
-    val borderColor = if (isDarkMode) MaterialTheme.colorScheme.outline else Color(0xFFE8E8E8)
     val focusedBorderColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
     val containerColor = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFF5F7FA)
     val buttonContainerColor = if (isDarkMode) MaterialTheme.colorScheme.primary else GharBatoPalette.brand
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
+        modifier = Modifier.fillMaxWidth(),
         color = backgroundColor,
         shadowElevation = 2.dp
     ) {
@@ -871,49 +916,15 @@ fun SearchTopBar(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Quick action buttons
+            // Keep the location shortcut in the scrollable search content.
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.End
             ) {
-                // Filter Button
-                Surface(
-                    onClick = onFilterClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White,
-                    border = BorderStroke(1.dp, borderColor),
-                    shadowElevation = if (isDarkMode) 0.dp else 1.dp
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Filters",
-                            tint = buttonContainerColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Filters",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = textColor
-                        )
-                    }
-                }
-
                 // Location Button
                 Surface(
                     onClick = onLocationClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(44.dp),
+                    modifier = Modifier.height(44.dp),
                     shape = RoundedCornerShape(12.dp),
                     color = buttonContainerColor.copy(alpha = 0.1f)
                 ) {
@@ -1116,6 +1127,7 @@ fun SortBar(
     propertiesCount: Int?,
     currentSort: SortOption,
     onSortClick: () -> Unit,
+    onFilterClick: () -> Unit,
     isDarkMode: Boolean
 ) {
     val backgroundColor = if (isDarkMode) MaterialTheme.colorScheme.surface else Color.White
@@ -1126,61 +1138,83 @@ fun SortBar(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = backgroundColor,
-        shadowElevation = 1.dp
+        color = backgroundColor
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = propertiesCount?.let { count ->
-                    "$count matching ${if (count == 1) "property" else "properties"}"
+                    "$count ${if (count == 1) "property" else "properties"}"
                 } ?: "Explore properties",
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
-                color = textColor
+                fontSize = 14.sp,
+                color = textColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+
+            Surface(
+                onClick = onFilterClick,
+                shape = RoundedCornerShape(12.dp),
+                color = chipBackgroundColor,
+                modifier = Modifier.height(40.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Filters",
+                        tint = iconColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = "Filters",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textColor
+                    )
+                }
+            }
 
             Surface(
                 onClick = onSortClick,
                 shape = RoundedCornerShape(12.dp),
                 color = chipBackgroundColor,
-                modifier = Modifier.height(42.dp)
+                modifier = Modifier.height(40.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Surface(
-                        modifier = Modifier.size(24.dp),
-                        shape = CircleShape,
-                        color = iconColor.copy(alpha = 0.15f)
-                    ) {
-                        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Sort",
-                                tint = iconColor,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort",
+                        tint = iconColor,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Text(
                         text = currentSort.getShortName(),
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = textColor
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Icon(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = null,
                         tint = secondaryTextColor,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
