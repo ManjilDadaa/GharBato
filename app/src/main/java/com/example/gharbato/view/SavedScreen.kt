@@ -98,6 +98,16 @@ fun SavedScreenContent(
                     }
                 }
 
+                uiState.error != null -> {
+                    Column(Modifier.fillMaxSize().padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center) {
+                        Text(uiState.error.orEmpty(), textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(12.dp))
+                        Button(onClick = viewModel::retry) { Text("Retry") }
+                    }
+                }
+
                 // Empty State
                 uiState.savedProperties.isEmpty() -> {
                     EmptySavedState(

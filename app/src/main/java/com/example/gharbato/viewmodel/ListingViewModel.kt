@@ -10,11 +10,13 @@ import com.example.gharbato.model.PropertyStatus
 import com.example.gharbato.repository.PropertyRepo
 import com.example.gharbato.model.PropertyListingState
 import com.example.gharbato.model.ListingValidationResult
+import com.example.gharbato.utils.resolveListingImages
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.tasks.await
 
 private const val TAG = "ListingViewModel"
@@ -31,6 +33,9 @@ class ListingViewModel(
 
     private val _uploadSuccess = MutableStateFlow<Boolean?>(null)
     val uploadSuccess: StateFlow<Boolean?> = _uploadSuccess
+
+    private val _uploadError = MutableStateFlow<String?>(null)
+    val uploadError: StateFlow<String?> = _uploadError
 
     // STEP 1 VALIDATION - Purpose & Property Type
     fun validateStep1(state: PropertyListingState): ListingValidationResult {
@@ -140,7 +145,7 @@ class ListingViewModel(
 
     // STEP 4 VALIDATION - Rental Terms (only for Rent/Book)
     fun validateStep4(state: PropertyListingState): ListingValidationResult {
-        if (state.selectedPurpose == "Sell") {
+        if (state.selectedPurpose != "Rent") {
             return ListingValidationResult(true)
         }
 
@@ -182,7 +187,7 @@ class ListingViewModel(
             1 -> validateStep1(state)
             2 -> validateStep2(state)
             3 -> validateStep3(state)
-            4 -> validateStep4(state)
+            4 -> if (state.selectedPurpose == "Rent") validateStep4(state) else validateStep5(state)
             5 -> validateStep5(state)
             else -> ListingValidationResult(false, "Invalid step")
         }
@@ -192,10 +197,18 @@ class ListingViewModel(
         context: Context,
         state: PropertyListingState,
         propertyId: String? = null,
-        isEdit: Boolean = false,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit
+        isEdit: Boolean = false
     ) {
+        if (_isUploading.value || _uploadSuccess.value == true) return
+        _isUploading.value = true
+        _uploadSuccess.value = null
+        _uploadError.value = null
+        val onSuccess: () -> Unit = {}
+        val onError: (String) -> Unit = { message ->
+            _isUploading.value = false
+            _uploadError.value = message
+        }
+        val appContext = context.applicationContext
         viewModelScope.launch {
             try {
                 val auth = FirebaseAuth.getInstance()
@@ -214,46 +227,28 @@ class ListingViewModel(
                 _isUploading.value = true
                 _uploadProgress.value = "Preparing images..."
 
-                val allImageUris = mutableListOf<Uri>()
-                val existingUrls = mutableListOf<String>()
-                
-                state.imageCategories.forEach { category ->
-                    category.images.forEach { uriString ->
-                        try {
-                            if (uriString.startsWith("http://") || uriString.startsWith("https://")) {
-                                existingUrls.add(uriString)
-                            } else {
-                                allImageUris.add(Uri.parse(uriString))
-                            }
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Error parsing URI: $uriString", e)
-                        }
-                    }
+                val sources = state.imageCategories.associate { it.id to it.images.toList() }
+                val localSources = sources.values.flatten().filterNot {
+                    it.startsWith("https://") || it.startsWith("http://")
                 }
-
-                if (allImageUris.isEmpty()) {
-                    _uploadProgress.value = "Using existing images..."
-                    createAndSubmitProperty(state, existingUrls, currentUser.uid, propertyId, isEdit, onSuccess, onError)
+                if (localSources.isEmpty()) {
+                    createAndSubmitProperty(state, resolveListingImages(sources, emptyList()), currentUser.uid,
+                        propertyId, isEdit, onSuccess, onError)
                     return@launch
                 }
-
-                _uploadProgress.value = "Uploading ${allImageUris.size} new images..."
-
-                repository.uploadMultipleImages(context, allImageUris) { uploadedUrls ->
-                    viewModelScope.launch {
-                        if (uploadedUrls.isEmpty()) {
-                            _isUploading.value = false
-                            _uploadSuccess.value = false
-                            onError("Failed to upload images. Please check your internet connection.")
-                        } else {
-                            _uploadProgress.value = "✅ ${uploadedUrls.size} images uploaded. Saving..."
-                            val allUrls = existingUrls + uploadedUrls
-                            createAndSubmitProperty(state, allUrls, currentUser.uid, propertyId, isEdit, onSuccess, onError)
-                        }
+                _uploadProgress.value = "Uploading ${localSources.size} photos..."
+                repository.uploadMultipleImages(appContext, localSources.map(Uri::parse)) { uploadedUrls ->
+                    if (uploadedUrls.size != localSources.size || uploadedUrls.any { it.isBlank() }) {
+                        _uploadSuccess.value = false
+                        onError("Some photos could not be uploaded. Your listing was not submitted. Please try again.")
+                    } else {
+                        createAndSubmitProperty(state, resolveListingImages(sources, uploadedUrls), currentUser.uid,
+                            propertyId, isEdit, onSuccess, onError)
                     }
                 }
 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Error in submitListing", e)
                 _isUploading.value = false
                 _uploadSuccess.value = false
@@ -265,7 +260,7 @@ class ListingViewModel(
 
     private fun createAndSubmitProperty(
         state: PropertyListingState,
-        uploadedUrls: List<String>,
+        categorizedImages: Map<String, List<String>>,
         currentUserId: String,
         propertyId: String?,
         isEdit: Boolean,
@@ -294,20 +289,6 @@ class ListingViewModel(
                 Log.d(TAG, "Owner Name: $ownerName")
                 Log.d(TAG, "Owner Email: $ownerEmail")
                 Log.d(TAG, "Owner Image: $ownerImageUrl")
-
-                val categorizedImages = mutableMapOf<String, List<String>>()
-                var currentIndex = 0
-
-                state.imageCategories.forEach { category ->
-                    val count = category.images.size
-                    if (count > 0) {
-                        val urlsForCategory = uploadedUrls
-                            .drop(currentIndex)
-                            .take(count)
-                        categorizedImages[category.id] = urlsForCategory
-                        currentIndex += count
-                    }
-                }
 
                 // ⭐ CRITICAL FIX: Log coordinate information before creating property
                 Log.d(TAG, "=== Property Location Information ===")
@@ -364,12 +345,12 @@ class ListingViewModel(
                     ownerImageUrl = ownerImageUrl,
                     ownerEmail = ownerEmail,
 
-                    utilitiesIncluded = if (state.selectedPurpose != "Sell") state.utilitiesIncluded else null,
-                    commission = if (state.selectedPurpose != "Sell") state.commission else null,
-                    advancePayment = if (state.selectedPurpose != "Sell") state.advancePayment else null,
-                    securityDeposit = if (state.selectedPurpose != "Sell") state.securityDeposit else null,
-                    minimumLease = if (state.selectedPurpose != "Sell") state.minimumLease else null,
-                    availableFrom = if (state.selectedPurpose != "Sell") state.availableFrom else null,
+                    utilitiesIncluded = if (state.selectedPurpose == "Rent") state.utilitiesIncluded else null,
+                    commission = if (state.selectedPurpose == "Rent") state.commission else null,
+                    advancePayment = if (state.selectedPurpose == "Rent") state.advancePayment else null,
+                    securityDeposit = if (state.selectedPurpose == "Rent") state.securityDeposit else null,
+                    minimumLease = if (state.selectedPurpose == "Rent") state.minimumLease else null,
+                    availableFrom = if (state.selectedPurpose == "Rent") state.availableFrom else null,
 
                     amenities = state.amenities,
                     status = PropertyStatus.PENDING,
@@ -456,6 +437,7 @@ class ListingViewModel(
                 }
 
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "❌ Error in createAndSubmitProperty", e)
                 _isUploading.value = false
                 _uploadSuccess.value = false
@@ -467,6 +449,7 @@ class ListingViewModel(
 
     fun resetUploadStatus() {
         _uploadSuccess.value = null
+        _uploadError.value = null
         _uploadProgress.value = ""
     }
 }

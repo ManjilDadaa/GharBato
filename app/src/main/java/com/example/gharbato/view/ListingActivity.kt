@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.lifecycle.viewmodel.initializer
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import com.example.gharbato.utils.ListingDraftStore
@@ -76,7 +77,11 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val context = LocalContext.current
     val activity = context as Activity
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-    val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
+    val listingViewModel: ListingViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+        factory = androidx.lifecycle.viewmodel.viewModelFactory {
+            initializer { ListingViewModel(PropertyRepoImpl()) }
+        }
+    )
 
     var step by rememberSaveable { mutableIntStateOf(if (isEdit) 2 else 1) }
     val formScroll = rememberLazyListState()
@@ -159,8 +164,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     }
 
     var showExitDialog by remember { mutableStateOf(false) }
-    var showConfirmDialog by remember { mutableStateOf(false) }
-    var showSuccessDialog by remember { mutableStateOf(false) }
+    var showConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
     // Determine if rental terms should be shown
     val isRent = listingState.selectedPurpose == "Rent"
@@ -170,6 +174,19 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val isUploading by listingViewModel.isUploading.collectAsState()
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
     val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
+    val uploadError by listingViewModel.uploadError.collectAsState()
+    LaunchedEffect(uploadSuccess, uploadError) {
+        if (uploadSuccess == true) {
+            withContext(Dispatchers.IO) { draftStore.clear() }
+            Toast.makeText(context, "Listing submitted for approval.", Toast.LENGTH_LONG).show()
+            context.startActivity(Intent(context, PendingPropertiesActivity::class.java))
+            activity.finish()
+        } else if (uploadError != null) {
+            showConfirmDialog = false
+            Toast.makeText(context, uploadError, Toast.LENGTH_LONG).show()
+            listingViewModel.resetUploadStatus()
+        }
+    }
 
     val saveDraft: () -> Unit = {
         if (!isSavingDraft && !isUploading) {
@@ -211,7 +228,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     }
 
     // Confirm Submit Dialog - Improved UI
-    if (showConfirmDialog) {
+    if (showConfirmDialog || isUploading) {
         AlertDialog(
             onDismissRequest = { if (!isUploading) showConfirmDialog = false },
             title = {
@@ -287,19 +304,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                                 context = context,
                                 state = listingState,
                                 propertyId = propertyId,
-                                isEdit = isEdit,
-                                onSuccess = {
-                                    scope.launch(Dispatchers.IO) { draftStore.clear() }
-                                    showConfirmDialog = false
-                                    showSuccessDialog = true
-                                    Toast.makeText(context, if (isEdit) "Property updated successfully" else "Listing Added successfully, Admin Approval Required", Toast.LENGTH_LONG).show()
-                                    val intent = Intent(context, PendingPropertiesActivity::class.java)
-                                    context.startActivity(intent)
-                                },
-                                onError = { error ->
-                                    showConfirmDialog = false
-                                    Toast.makeText(context, error, Toast.LENGTH_LONG).show()
-                                }
+                                isEdit = isEdit
                             )
                         },
                         modifier = Modifier
@@ -338,86 +343,6 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                }
-            },
-            shape = RoundedCornerShape(20.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 0.dp
-        )
-    }
-
-    // Success Dialog - Improved UI
-    if (showSuccessDialog) {
-        AlertDialog(
-            onDismissRequest = { },
-            title = {
-                Text(
-                    text = "Success!",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = Color(0xFF10B981)
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .background(
-                                color = Color(0xFF10B981).copy(alpha = 0.1f),
-                                shape = CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.baseline_check_24),
-                            contentDescription = "Success icon",
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = if (isEdit) "Your property has been updated successfully!"
-                        else "Your property has been listed successfully!",
-                        textAlign = TextAlign.Center,
-                        fontSize = 16.sp,
-                        lineHeight = 24.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showSuccessDialog = false
-                        listingViewModel.resetUploadStatus()
-                        val intent = Intent(context, DashboardActivity::class.java)
-                        context.startActivity(intent)
-                        activity.finish()
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp)
-                        .padding(horizontal = 4.dp),
-                    colors = GharBatoButtonDefaults.primaryColors(),
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(
-                        defaultElevation = 0.dp,
-                        pressedElevation = 0.dp
-                    )
-                ) {
-                    Text(
-                        text = "Go to Dashboard",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
                 }
             },
             shape = RoundedCornerShape(20.dp),

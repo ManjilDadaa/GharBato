@@ -8,129 +8,65 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class SavedPropertiesRepositoryImpl : SavedPropertiesRepository {
+class SavedPropertiesRepositoryImpl(
+    private val database: FirebaseDatabase = FirebaseDatabase.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
+) : SavedPropertiesRepository {
+    private fun savedRef(userId: String) =
+        database.getReference("users/$userId/UserFavoriteList")
 
-    private val database = FirebaseDatabase.getInstance()
-    private val auth = FirebaseAuth.getInstance()
-
-    // In-memory cache
-    private val savedPropertiesMap = mutableMapOf<Int, PropertyModel>()
-    private val _savedPropertiesFlow = MutableStateFlow<List<PropertyModel>>(emptyList())
-
-    // Get current user ID (or use a default for testing)
-    private fun getUserId(): String {
-        return auth.currentUser?.uid ?: "default_user"
-    }
-
-    private fun getSavedPropertiesRef() =
-        database.getReference("users/${getUserId()}/UserFavoriteList")
+    private fun requireUserId(): String =
+        checkNotNull(auth.currentUser?.uid) { "Sign in to save properties." }
 
     override suspend fun getSavedProperties(): List<PropertyModel> {
-        return try {
-            val snapshot = getSavedPropertiesRef().get().await()
-            val properties = mutableListOf<PropertyModel>()
-
-            snapshot.children.forEach { child ->
-                child.getValue(PropertyModel::class.java)?.let { property ->
-                    properties.add(property.copy(isFavorite = true))
-                    savedPropertiesMap[property.id] = property.copy(isFavorite = true)
-                }
-            }
-
-            _savedPropertiesFlow.value = properties
-            properties
-        } catch (e: Exception) {
-            emptyList()
-        }
+        val userId = auth.currentUser?.uid ?: return emptyList()
+        return readProperties(savedRef(userId).get().await())
     }
 
     override suspend fun saveProperty(property: PropertyModel) {
-        try {
-            val propertyToSave = property.copy(isFavorite = true)
-
-            // Save to Firebase
-            getSavedPropertiesRef()
-                .child(property.id.toString())
-                .setValue(propertyToSave)
-                .await()
-
-            // Update in-memory cache
-            savedPropertiesMap[property.id] = propertyToSave
-            updateFlow()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        savedRef(requireUserId()).child(property.id.toString())
+            .setValue(property.copy(isFavorite = true)).await()
     }
 
     override suspend fun removeSavedProperty(propertyId: Int) {
-        try {
-            // Remove from Firebase
-            getSavedPropertiesRef()
-                .child(propertyId.toString())
-                .removeValue()
-                .await()
-
-            // Remove from in-memory cache
-            savedPropertiesMap.remove(propertyId)
-            updateFlow()
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        savedRef(requireUserId()).child(propertyId.toString()).removeValue().await()
     }
 
-    override suspend fun removeProperty(propertyId: Int) {
-        removeSavedProperty(propertyId)
-    }
+    override suspend fun removeProperty(propertyId: Int) = removeSavedProperty(propertyId)
 
     override suspend fun isPropertySaved(propertyId: Int): Boolean {
-        return try {
-            val snapshot = getSavedPropertiesRef()
-                .child(propertyId.toString())
-                .get()
-                .await()
-
-            snapshot.exists()
-        } catch (e: Exception) {
-            false
-        }
+        val userId = auth.currentUser?.uid ?: return false
+        return savedRef(userId).child(propertyId.toString()).get().await().exists()
     }
 
     override fun getSavedPropertiesFlow(): Flow<List<PropertyModel>> = callbackFlow {
+        val userId = auth.currentUser?.uid
+        if (userId == null) {
+            trySend(emptyList())
+            close()
+            return@callbackFlow
+        }
+        // Capture the exact reference so sign-out cannot detach from a different path.
+        val reference = savedRef(userId)
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val properties = mutableListOf<PropertyModel>()
-                savedPropertiesMap.clear()
-
-                snapshot.children.forEach { child ->
-                    child.getValue(PropertyModel::class.java)?.let { property ->
-                        val savedProperty = property.copy(isFavorite = true)
-                        properties.add(savedProperty)
-                        savedPropertiesMap[property.id] = savedProperty
-                    }
+                try {
+                    trySend(readProperties(snapshot))
+                } catch (e: Exception) {
+                    close(e)
                 }
-
-                _savedPropertiesFlow.value = properties
-                trySend(properties)
             }
-
             override fun onCancelled(error: DatabaseError) {
-                // Handle error
                 close(error.toException())
             }
         }
-
-        getSavedPropertiesRef().addValueEventListener(listener)
-
-        awaitClose {
-            getSavedPropertiesRef().removeEventListener(listener)
-        }
+        reference.addValueEventListener(listener)
+        awaitClose { reference.removeEventListener(listener) }
     }
 
-    private fun updateFlow() {
-        _savedPropertiesFlow.value = savedPropertiesMap.values.toList()
-    }
+    private fun readProperties(snapshot: DataSnapshot): List<PropertyModel> =
+        snapshot.children.mapNotNull { it.getValue(PropertyModel::class.java)?.copy(isFavorite = true) }
 }

@@ -383,6 +383,8 @@ class PropertyRepoImpl : PropertyRepo {
                 Handler(Looper.getMainLooper()).post {
                     callback(null)
                 }
+            } finally {
+                executor.shutdown()
             }
         }
     }
@@ -393,28 +395,21 @@ class PropertyRepoImpl : PropertyRepo {
         callback: (List<String>) -> Unit
     ) {
         val executor = Executors.newSingleThreadExecutor()
+        val appContext = context.applicationContext
         executor.execute {
-            val uploadedUrls = mutableListOf<String>()
-
-            try {
-                imageUris.forEach { uri ->
-                    try {
-                        val imageUrl = SecureCloudinaryUploader.uploadImage(context, uri, "property")
-
-                        if (imageUrl != null) {
-                            uploadedUrls.add(imageUrl)
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
+            val uploadedUrls = try {
+                imageUris.map { uri ->
+                    requireNotNull(SecureCloudinaryUploader.uploadImage(appContext, uri, "property")) {
+                        "Photo upload failed"
+                    }.also { check(it.isNotBlank()) }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e(TAG, "Photo upload failed; listing must not be submitted", e)
+                emptyList()
+            } finally {
+                executor.shutdown()
             }
-
-            Handler(Looper.getMainLooper()).post {
-                callback(uploadedUrls)
-            }
+            Handler(Looper.getMainLooper()).post { callback(uploadedUrls) }
         }
     }
 

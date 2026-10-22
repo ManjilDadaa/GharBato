@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.catch
 
 data class SavedPropertiesUiState(
     val savedProperties: List<PropertyModel> = emptyList(),
@@ -22,35 +25,25 @@ class SavedPropertiesViewModel(
     private val _uiState = MutableStateFlow(SavedPropertiesUiState())
     val uiState: StateFlow<SavedPropertiesUiState> = _uiState.asStateFlow()
 
-    init {
-        loadSavedProperties()
+    private var observationJob: Job? = null
+
+    fun retry() {
         observeSavedProperties()
     }
 
-    private fun loadSavedProperties() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true)
-            try {
-                val properties = repository.getSavedProperties()
-                _uiState.value = _uiState.value.copy(
-                    savedProperties = properties,
-                    isLoading = false,
-                    error = null
-                )
-            } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message
-                )
-            }
-        }
+    init {
+        observeSavedProperties()
     }
 
     private fun observeSavedProperties() {
-        viewModelScope.launch {
-            repository.getSavedPropertiesFlow().collect { properties ->
+        observationJob?.cancel()
+        _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+        observationJob = viewModelScope.launch {
+            repository.getSavedPropertiesFlow().catch {
+                _uiState.value = _uiState.value.copy(isLoading = false, error = "Couldn't load saved properties. Please retry.")
+            }.collect { properties ->
                 _uiState.value = _uiState.value.copy(
-                    savedProperties = properties
+                    savedProperties = properties, isLoading = false, error = null
                 )
             }
         }
@@ -60,9 +53,9 @@ class SavedPropertiesViewModel(
         viewModelScope.launch {
             try {
                 repository.removeSavedProperty(propertyId)
-                loadSavedProperties()
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
+                if (e is CancellationException) throw e
+                _uiState.value = _uiState.value.copy(error = "Couldn't update saved properties. Please retry.")
             }
         }
     }
@@ -76,7 +69,8 @@ class SavedPropertiesViewModel(
                     repository.saveProperty(property)
                 }
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(error = e.message)
+                if (e is CancellationException) throw e
+                _uiState.value = _uiState.value.copy(error = "Couldn't update saved properties. Please retry.")
             }
         }
     }

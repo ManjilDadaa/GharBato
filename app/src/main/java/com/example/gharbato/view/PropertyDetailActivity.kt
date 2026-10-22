@@ -61,6 +61,12 @@ class PropertyDetailActivity : ComponentActivity() {
         setContent {
             val dark by ThemePreference.isDarkModeState.collectAsState()
             val state by viewModel.uiState.collectAsStateWithLifecycle()
+            LaunchedEffect(state.error) {
+                state.error?.let {
+                    Toast.makeText(this@PropertyDetailActivity, it, Toast.LENGTH_LONG).show()
+                    viewModel.clearError()
+                }
+            }
             SystemBarUtils.setSystemBarsAppearance(this, dark)
             GharBatoTheme(darkTheme = dark) {
                 val property = state.selectedProperty

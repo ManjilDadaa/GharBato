@@ -12,6 +12,8 @@ import com.example.gharbato.model.SortOption
 import com.example.gharbato.repository.HiddenPropertiesRepository
 import com.example.gharbato.repository.SavedPropertiesRepository
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +63,9 @@ class PropertyViewModel(
     val uiState: StateFlow<PropertyUiState> = _uiState.asStateFlow()
 
     private var searchJob: Job? = null
+    private var savedIds: Set<Int> = emptySet()
+
+    fun clearError() { _uiState.value = _uiState.value.copy(error = null) }
 
     init {
         loadHiddenProperties()
@@ -79,7 +84,9 @@ class PropertyViewModel(
 
     private fun observeHiddenProperties() {
         viewModelScope.launch {
-            hiddenPropertiesRepository.getHiddenPropertyIdsFlow().collect { hiddenIds ->
+            hiddenPropertiesRepository.getHiddenPropertyIdsFlow().catch {
+                _uiState.value = _uiState.value.copy(error = "Couldn't sync hidden properties. Please reopen this screen to retry.")
+            }.collect { hiddenIds ->
                 _uiState.value = _uiState.value.copy(hiddenPropertyIds = hiddenIds)
 
                 // Re-filter properties when hidden list changes
@@ -121,7 +128,7 @@ class PropertyViewModel(
                 Log.d(TAG, "Filtered out user's own properties and ${hiddenIds.size} hidden properties. Current user: $currentUserId")
 
                 val propertiesWithFavorites = availableProperties.map { property ->
-                    property.copy(isFavorite = savedPropertiesRepository.isPropertySaved(property.id))
+                    property.copy(isFavorite = savedIds.contains(property.id))
                 }
 
                 Log.d(TAG, "Loaded ${propertiesWithFavorites.size} properties (excluding own and hidden)")
@@ -152,8 +159,10 @@ class PropertyViewModel(
 
     private fun observeSavedProperties() {
         viewModelScope.launch {
-            savedPropertiesRepository.getSavedPropertiesFlow().collect { savedProperties ->
-                val savedIds = savedProperties.map { it.id }.toSet()
+            savedPropertiesRepository.getSavedPropertiesFlow().catch {
+                _uiState.value = _uiState.value.copy(error = "Couldn't sync saved properties. Please reopen this screen to retry.")
+            }.collect { savedProperties ->
+                savedIds = savedProperties.map { it.id }.toSet()
 
                 val updatedProperties = _uiState.value.properties.map { property ->
                     property.copy(isFavorite = savedIds.contains(property.id))
@@ -170,6 +179,7 @@ class PropertyViewModel(
                 _uiState.value = _uiState.value.copy(
                     properties = updatedProperties,
                     allLoadedProperties = updatedAllProperties,
+                    similarProperties = _uiState.value.similarProperties.map { it.copy(isFavorite = it.id in savedIds) },
                     selectedProperty = updatedSelectedProperty
                 )
             }
@@ -185,7 +195,7 @@ class PropertyViewModel(
             try {
                 val property = repository.getPropertyById(id)
                 val propertyWithFavoriteStatus = property?.copy(
-                    isFavorite = savedPropertiesRepository.isPropertySaved(property.id)
+                    isFavorite = savedIds.contains(property.id)
                 )
                 _uiState.value = _uiState.value.copy(
                     selectedProperty = propertyWithFavoriteStatus,
@@ -578,8 +588,9 @@ class PropertyViewModel(
                     savedPropertiesRepository.saveProperty(property)
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Log.e(TAG, "Error toggling favorite", e)
-                _uiState.value = _uiState.value.copy(error = e.message)
+                _uiState.value = _uiState.value.copy(error = "Couldn't update saved properties. Check your connection and sign-in, then try again.")
             }
         }
     }
@@ -624,7 +635,7 @@ class PropertyViewModel(
 
                 // Update favorite status for similar properties
                 val similarWithFavorites = similar.map { prop ->
-                    prop.copy(isFavorite = savedPropertiesRepository.isPropertySaved(prop.id))
+                    prop.copy(isFavorite = savedIds.contains(prop.id))
                 }
 
                 _uiState.value = _uiState.value.copy(
