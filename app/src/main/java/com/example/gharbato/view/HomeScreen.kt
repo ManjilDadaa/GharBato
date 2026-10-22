@@ -1,7 +1,6 @@
 package com.example.gharbato.view
 
 import com.example.gharbato.ui.theme.LocalGharBatoActionColors
-import android.app.Activity
 import android.content.Intent
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -24,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,7 +49,6 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val activity = context as Activity
 
     // Get UserViewModel for notifications
     val userViewModel = remember { UserViewModelProvider.getInstance() }
@@ -58,26 +57,37 @@ fun HomeScreen(
     // Get UI state from ViewModel
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // IMPORTANT: Use ALL loaded properties, NOT filtered ones
     val allProperties = uiState.allLoadedProperties
+    var selectedMarketType by rememberSaveable { mutableStateOf("") }
+    val homeProperties = remember(allProperties, selectedMarketType) {
+        allProperties.filter { property ->
+            selectedMarketType.isBlank() ||
+                property.marketType.trim().equals(selectedMarketType, ignoreCase = true)
+        }
+    }
+    val seeAllProperties = {
+        viewModel.resetFilters()
+        viewModel.applyFilters(PropertyFilters(marketType = selectedMarketType))
+        onNavigateToSearch()
+    }
 
     // Calculate featured properties using professional algorithm
-    val featuredProperties = remember(allProperties) {
-        calculateFeaturedProperties(allProperties)
+    val featuredProperties = remember(homeProperties) {
+        calculateFeaturedProperties(homeProperties)
     }
 
     // Get recent properties (last 2 weeks, sorted by date)
-    val recentProperties = remember(allProperties) {
+    val recentProperties = remember(homeProperties) {
         val twoWeeksAgo = System.currentTimeMillis() - (14 * 24 * 60 * 60 * 1000)
-        allProperties
+        homeProperties
             .filter { it.updatedAt >= twoWeeksAgo }
             .sortedByDescending { it.updatedAt }
             .take(20)
     }
 
     // Popular properties (high views)
-    val popularProperties = remember(allProperties) {
-        allProperties
+    val popularProperties = remember(homeProperties) {
+        homeProperties
             .sortedByDescending { it.totalViews }
             .take(10)
     }
@@ -138,31 +148,14 @@ fun HomeScreen(
                             viewModel.updateSearchQuery(query)
                             viewModel.performSearch()
                             onNavigateToSearch()
-                        },
-                        onListProperty = {
-                            context.startActivity(Intent(context, ListingActivity::class.java))
                         }
                     )
                 }
 
-                // Quick Actions - Navigate to Search with pre-applied filter
                 item {
                     QuickActionsSection(
-                        onRentClick = {
-                            viewModel.resetFilters()
-                            viewModel.applyFilters(PropertyFilters(marketType = "Rent"))
-                            onNavigateToSearch()
-                        },
-                        onBuyClick = {
-                            viewModel.resetFilters()
-                            viewModel.applyFilters(PropertyFilters(marketType = "Sell"))
-                            onNavigateToSearch()
-                        },
-                        onBookClick = {
-                            viewModel.resetFilters()
-                            viewModel.applyFilters(PropertyFilters(marketType = "Book"))
-                            onNavigateToSearch()
-                        }
+                        selectedMarketType = selectedMarketType,
+                        onMarketTypeSelected = { selectedMarketType = it }
                     )
                 }
 
@@ -184,14 +177,11 @@ fun HomeScreen(
                 if (featuredProperties.isNotEmpty()) {
                     item {
                         SectionHeader(
-                            title = "Featured homes",
+                            title = "Featured properties",
                             subtitle = "",
                             icon = Icons.Default.Star,
                             showViewAll = true,
-                            onViewAllClick = {
-                                viewModel.resetFilters()
-                                onNavigateToSearch()
-                            },
+                            onViewAllClick = seeAllProperties,
                             onBackgroundColor = onBackgroundColor,
                             onSurfaceVariantColor = onSurfaceVariantColor
                         )
@@ -200,7 +190,6 @@ fun HomeScreen(
                     item {
                         FeaturedPropertiesCarousel(
                             properties = featuredProperties,
-                            onFavoriteToggle = viewModel::toggleFavorite,
                             onPropertyClick = { property ->
                                 val intent = Intent(context, PropertyDetailActivity::class.java)
                                 intent.putExtra("propertyId", property.id)
@@ -218,7 +207,7 @@ fun HomeScreen(
                             subtitle = "",
                             icon = Icons.Default.NewReleases,
                             showViewAll = true,
-                            onViewAllClick = onNavigateToSearch,
+                            onViewAllClick = seeAllProperties,
                             onBackgroundColor = onBackgroundColor,
                             onSurfaceVariantColor = onSurfaceVariantColor
                         )
@@ -233,8 +222,7 @@ fun HomeScreen(
                                 context.startActivity(intent)
                             },
                             surfaceColor = surfaceColor,
-                            onSurfaceVariantColor = onSurfaceVariantColor,
-                            onFavoriteClick = { viewModel.toggleFavorite(property) }
+                            onSurfaceVariantColor = onSurfaceVariantColor
                         )
                     }
                 }
@@ -255,7 +243,6 @@ fun HomeScreen(
                     item {
                         PopularPropertiesRow(
                             properties = popularProperties.take(5),
-                            onFavoriteToggle = viewModel::toggleFavorite,
                             onPropertyClick = { property ->
                                 val intent = Intent(context, PropertyDetailActivity::class.java)
                                 intent.putExtra("propertyId", property.id)
@@ -268,10 +255,11 @@ fun HomeScreen(
                 }
 
                 // Empty State
-                if (allProperties.isEmpty() && !uiState.isLoading) {
+                if (homeProperties.isEmpty() && !uiState.isLoading) {
                     item {
                         EmptyStateSection(
-                            onSurfaceVariantColor = onSurfaceVariantColor
+                            onSurfaceVariantColor = onSurfaceVariantColor,
+                            filtered = selectedMarketType.isNotBlank()
                         )
                     }
                 }
@@ -421,8 +409,7 @@ fun PopularPropertiesRow(
     properties: List<PropertyModel>,
     onPropertyClick: (PropertyModel) -> Unit,
     surfaceColor: Color,
-    onSurfaceColor: Color,
-    onFavoriteToggle: (PropertyModel) -> Unit = {}
+    onSurfaceColor: Color
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -434,8 +421,7 @@ fun PopularPropertiesRow(
                 property = property,
                 onClick = { onPropertyClick(property) },
                 surfaceColor = surfaceColor,
-                onSurfaceColor = onSurfaceColor,
-                onFavoriteClick = { onFavoriteToggle(property) }
+                onSurfaceColor = onSurfaceColor
             )
         }
     }
@@ -446,20 +432,18 @@ fun CompactPropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
     surfaceColor: Color,
-    onSurfaceColor: Color,
-    onFavoriteClick: (() -> Unit)? = null
+    onSurfaceColor: Color
 ) {
     PropertyListingCard(
         property = property,
         onClick = onClick,
-        onFavoriteClick = onFavoriteClick,
         compact = true,
         modifier = Modifier.width(264.dp)
     )
 }
 
 @Composable
-internal fun HomeSearchSection(onSearch: (String) -> Unit, onListProperty: () -> Unit) {
+internal fun HomeSearchSection(onSearch: (String) -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val submit = { focusManager.clearFocus(); onSearch(query.trim()) }
@@ -488,11 +472,6 @@ internal fun HomeSearchSection(onSearch: (String) -> Unit, onListProperty: () ->
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
             )
         )
-        TextButton(onClick = onListProperty, modifier = Modifier.align(Alignment.End).heightIn(min = 48.dp)) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(6.dp))
-            Text("List your property")
-        }
     }
 }
 
@@ -523,7 +502,7 @@ fun HomeHeader(
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
                     Text(
-                        text = "Find your next home",
+                        text = "Find your dream property",
                         style = MaterialTheme.typography.headlineLarge,
                         color = onBackgroundColor
                     )
@@ -569,83 +548,46 @@ fun HomeHeader(
 
 @Composable
 fun QuickActionsSection(
-    onRentClick: () -> Unit,
-    onBuyClick: () -> Unit,
-    onBookClick: () -> Unit
+    selectedMarketType: String,
+    onMarketTypeSelected: (String) -> Unit
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = GharBatoSpacing.screenHorizontal)
-            .padding(bottom = GharBatoSpacing.small)
+            .padding(vertical = GharBatoSpacing.small),
+        horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.small)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.small)
-        ) {
-            QuickActionCard(
-                title = "Rent",
-                icon = Icons.Default.Key,
-                onClick = onRentClick,
-                modifier = Modifier.weight(1f)
-            )
-
-            QuickActionCard(
-                title = "Buy",
-                icon = Icons.Default.Home,
-                onClick = onBuyClick,
-                modifier = Modifier.weight(1f)
-            )
-
-            QuickActionCard(
-                title = "Stay",
-                icon = Icons.Default.Hotel,
-                onClick = onBookClick,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun QuickActionCard(
-    title: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .heightIn(min = 56.dp)
-            .clickable(onClick = onClick),
-        shape = GharBatoShapes.control,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 56.dp)
-                .padding(horizontal = GharBatoSpacing.small, vertical = GharBatoSpacing.medium),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(GharBatoDimensions.compactIcon)
-            )
-            Spacer(modifier = Modifier.width(GharBatoSpacing.xSmall))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+        listOf(
+            Triple("Rent", "Rent", Icons.Default.Key),
+            Triple("Buy", "Sell", Icons.Default.Home),
+            Triple("Stay", "Book", Icons.Default.Hotel)
+        ).forEach { (title, marketType, icon) ->
+            val selected = selectedMarketType == marketType
+            FilterChip(
+                selected = selected,
+                onClick = { onMarketTypeSelected(if (selected) "" else marketType) },
+                label = {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(GharBatoSpacing.small, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp).testTag("home_filter_icon_$marketType")
+                        )
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                modifier = Modifier.weight(1f).heightIn(min = GharBatoDimensions.touchTarget),
+                shape = RoundedCornerShape(percent = 50)
             )
         }
     }
@@ -694,7 +636,7 @@ fun SectionHeader(
                 Text(
                     text = "See all",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
+                    color = onSurfaceVariantColor
                 )
             }
         }
@@ -704,8 +646,7 @@ fun SectionHeader(
 @Composable
 fun FeaturedPropertiesCarousel(
     properties: List<PropertyModel>,
-    onPropertyClick: (PropertyModel) -> Unit,
-    onFavoriteToggle: (PropertyModel) -> Unit = {}
+    onPropertyClick: (PropertyModel) -> Unit
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
@@ -715,8 +656,7 @@ fun FeaturedPropertiesCarousel(
         items(properties) { property ->
             FeaturedPropertyCard(
                 property = property,
-                onClick = { onPropertyClick(property) },
-                onFavoriteClick = { onFavoriteToggle(property) }
+                onClick = { onPropertyClick(property) }
             )
         }
     }
@@ -725,13 +665,11 @@ fun FeaturedPropertiesCarousel(
 @Composable
 fun FeaturedPropertyCard(
     property: PropertyModel,
-    onClick: () -> Unit,
-    onFavoriteClick: (() -> Unit)? = null
+    onClick: () -> Unit
 ) {
     PropertyListingCard(
         property = property,
         onClick = onClick,
-        onFavoriteClick = onFavoriteClick,
         compact = true,
         modifier = Modifier.width(296.dp)
     )
@@ -805,13 +743,11 @@ fun ModernPropertyCard(
     property: PropertyModel,
     onClick: () -> Unit,
     surfaceColor: Color,
-    onSurfaceVariantColor: Color,
-    onFavoriteClick: (() -> Unit)? = null
+    onSurfaceVariantColor: Color
 ) {
     PropertyListingCard(
         property = property,
         onClick = onClick,
-        onFavoriteClick = onFavoriteClick,
         modifier = Modifier.padding(horizontal = GharBatoSpacing.screenHorizontal, vertical = GharBatoSpacing.small)
     )
 }
@@ -850,7 +786,8 @@ fun InfoChip(icon: ImageVector, text: String, modifier: Modifier = Modifier) {
 
 @Composable
 fun EmptyStateSection(
-    onSurfaceVariantColor: Color
+    onSurfaceVariantColor: Color,
+    filtered: Boolean = false
 ) {
     Column(
         modifier = Modifier
@@ -868,7 +805,7 @@ fun EmptyStateSection(
         Spacer(modifier = Modifier.height(GharBatoSpacing.medium))
 
         Text(
-            text = "No properties available",
+            text = if (filtered) "No properties in this category" else "No properties available",
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             color = onSurfaceVariantColor
@@ -877,7 +814,7 @@ fun EmptyStateSection(
         Spacer(modifier = Modifier.height(GharBatoSpacing.xSmall))
 
         Text(
-            text = "Check back later for new listings",
+            text = if (filtered) "Choose another filter or tap it again to see all properties" else "Check back later for new listings",
             fontSize = 13.sp,
             color = onSurfaceVariantColor.copy(alpha = 0.7f)
         )

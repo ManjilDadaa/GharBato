@@ -144,8 +144,7 @@ fun SavedScreenContent(
                                     textColorSecondary = textColorSecondary,
                                     primaryColor = primaryColor,
                                     soldBgColor = soldBgColor,
-                                    soldTextColor = soldTextColor,
-                                    onFavoriteClick = { viewModel.removeFromSaved(property.id) }
+                                    soldTextColor = soldTextColor
                                 )
                             }
 
@@ -348,13 +347,11 @@ fun SavedPropertyCard(
     textColorSecondary: Color,
     primaryColor: Color,
     soldBgColor: Color,
-    soldTextColor: Color,
-    onFavoriteClick: (() -> Unit)? = null
+    soldTextColor: Color
 ) {
     PropertyListingCard(
         property = property.copy(isFavorite = true),
         onClick = onCardClick,
-        onFavoriteClick = onFavoriteClick,
         enabled = property.propertyStatus != "SOLD"
     )
 }

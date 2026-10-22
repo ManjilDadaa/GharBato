@@ -3,6 +3,27 @@ package com.example.gharbato.utils
 import java.text.NumberFormat
 import java.util.Locale
 
+private val propertyPlusCode = Regex(
+    "\\b[23456789CFGHJMPQRVWX]{2,8}\\s*\\+\\s*[23456789CFGHJMPQRVWX]{2,7}\\b",
+    RegexOption.IGNORE_CASE
+)
+private val propertyCoordinatePair = Regex(
+    "(?:lat(?:itude)?\\s*[:=]?\\s*)?[+-]?\\d{1,2}\\.\\d+\\s*[,/]\\s*" +
+        "(?:(?:lon(?:gitude)?|lng)\\s*[:=]?\\s*)?[+-]?\\d{1,3}\\.\\d+",
+    RegexOption.IGNORE_CASE
+)
+
+/** Keep discovery addresses readable; the original address and map stay in property details. */
+fun formatPropertyLocationSummary(location: String): String = location
+    .replace(propertyPlusCode, "")
+    .replace(propertyCoordinatePair, "")
+    .replace(Regex("\\(\\s*\\)|\\[\\s*]"), "")
+    .split(',')
+    .map { it.trim(' ', '\t', '\n', '\r', '-', '|', ';') }
+    .filter { it.isNotBlank() }
+    .joinToString(", ")
+    .ifBlank { "View location in details" }
+
 /** A stored default or missing coordinate must never be presented as the property's real address. */
 fun hasPropertyCoordinates(latitude: Double, longitude: Double): Boolean =
     latitude.isFinite() && longitude.isFinite() &&

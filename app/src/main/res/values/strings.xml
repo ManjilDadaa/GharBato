@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">GharBato</string>
+    <string name="google_sign_in_maintenance_title">Under maintenance</string>
+    <string name="google_sign_in_maintenance_message">Google sign-in is temporarily unavailable. Please sign in with your email and password.</string>
     <string name="title_activity_sign_up">SignUpActivity</string>
     <string name="title_activity_dashboard">DashboardActivity</string>
     <string name="title_activity_random">RandomActivity</string>

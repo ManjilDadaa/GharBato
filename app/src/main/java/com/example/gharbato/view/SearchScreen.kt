@@ -11,12 +11,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.MyLocation
 import com.example.gharbato.model.PropertyFilters
 import com.example.gharbato.utils.formatNprAmount
 import com.example.gharbato.utils.formatPropertyPrice
+import com.example.gharbato.utils.formatPropertyLocationSummary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -210,10 +209,6 @@ fun SearchScreen(
                     onSearchQueryChange = { query ->
                         viewModel.updateSearchQuery(query)
                     },
-                    onLocationClick = {
-                        val intent = Intent(context, LocationPickerActivity::class.java)
-                        locationPickerLauncher.launch(intent)
-                    },
                     onSearchClick = {
                         viewModel.performSearch()
                         isSearchBarFocused = false
@@ -233,7 +228,11 @@ fun SearchScreen(
                     },
                     onSearchBarFocused = { focused -> isSearchBarFocused = focused },
                     hasActiveSearch = uiState.searchQuery.isNotEmpty() || uiState.searchLocation != null,
-                    isDarkMode = isDarkMode
+                    onFilterClick = {
+                        isSearchBarFocused = false
+                        showFilterSheet = true
+                    },
+                    activeFilterCount = countActiveFilters(filters)
                 )
                 ActivePropertyFilters(
                     filters = filters,
@@ -245,14 +244,16 @@ fun SearchScreen(
                     propertiesCount = if (uiState.isLoading) null else uiState.properties.size,
                     currentSort = uiState.currentSort,
                     onSortClick = { showSortSheet = true },
-                    onFilterClick = { showFilterSheet = true },
-                    isDarkMode = isDarkMode,
+                    onLocationClick = {
+                        isSearchBarFocused = false
+                        val intent = Intent(context, LocationPickerActivity::class.java)
+                        locationPickerLauncher.launch(intent)
+                    },
                     showMap = uiState.showMap,
                     onMapToggle = {
                         viewModel.clearSelectedProperty()
                         viewModel.toggleMapVisibility()
-                    },
-                    activeFilterCount = countActiveFilters(filters)
+                    }
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
@@ -294,7 +295,7 @@ fun SearchScreen(
                     ) {
                         Icon(Icons.Default.SearchOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("No properties found", style = MaterialTheme.typography.titleLarge)
-                        Text("Try another area or remove a filter to see more homes.", style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Text("Try another area or remove a filter to see more properties.", style = MaterialTheme.typography.bodyMedium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                         if (hasSearchCriteria) {
                             Button(onClick = { viewModel.resetFilters() }, colors = GharBatoButtonDefaults.primaryColors()) { Text("Clear search and filters") }
                         } else if (uiState.error != null) {
@@ -328,7 +329,6 @@ fun SearchScreen(
                         items(uiState.properties, key = { it.id }) { property ->
                             PropertyCard(
                                 property = property,
-                                onFavoriteClick = { viewModel.toggleFavorite(property) },
                                 onClick = {
                                     val intent = Intent(context, PropertyDetailActivity::class.java)
                                     intent.putExtra("propertyId", property.id)
@@ -606,50 +606,57 @@ fun HidePropertyConfirmDialog(
 fun SearchTopBar(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    onLocationClick: () -> Unit,
     onSearchClick: () -> Unit,
     onClearSearch: () -> Unit,
     onSearchBarFocused: (Boolean) -> Unit,
     hasActiveSearch: Boolean,
-    isDarkMode: Boolean
+    onFilterClick: () -> Unit,
+    activeFilterCount: Int = 0
 ) {
     val focusManager = LocalFocusManager.current
     val submit = { onSearchClick(); focusManager.clearFocus() }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChange,
-            modifier = Modifier.weight(1f).onFocusChanged { onSearchBarFocused(it.isFocused) },
-            placeholder = { Text("Search area or property", style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-            leadingIcon = {
-                IconButton(onClick = { submit() }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search properties")
-                }
-            },
-            trailingIcon = {
+    OutlinedTextField(
+        value = searchQuery,
+        onValueChange = onSearchQueryChange,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            .onFocusChanged { onSearchBarFocused(it.isFocused) },
+        placeholder = { Text("Search area or property", style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = {
+            IconButton(onClick = { submit() }) {
+                Icon(Icons.Default.Search, contentDescription = "Search properties")
+            }
+        },
+        trailingIcon = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 if (hasActiveSearch) {
                     IconButton(onClick = { onClearSearch(); focusManager.clearFocus() }) {
                         Icon(Icons.Default.Clear, contentDescription = "Clear search")
                     }
                 }
-            },
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { submit() })
-        )
-        FilledTonalIconButton(onClick = { focusManager.clearFocus(); onLocationClick() }, modifier = Modifier.size(48.dp)) {
-            Icon(Icons.Default.MyLocation, contentDescription = "Search near me")
-        }
-    }
+                VerticalDivider(Modifier.height(24.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                IconButton(onClick = { focusManager.clearFocus(); onFilterClick() }) {
+                    BadgedBox(badge = {
+                        if (activeFilterCount > 0) {
+                            Badge { Text(activeFilterCount.toString()) }
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Tune,
+                            contentDescription = if (activeFilterCount > 0) "Filters ($activeFilterCount)" else "Filters"
+                        )
+                    }
+                }
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { submit() })
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -876,42 +883,30 @@ fun SortBar(
     propertiesCount: Int?,
     currentSort: SortOption,
     onSortClick: () -> Unit,
-    onFilterClick: () -> Unit,
-    isDarkMode: Boolean,
+    onLocationClick: () -> Unit,
     showMap: Boolean = false,
-    onMapToggle: (() -> Unit)? = null,
-    activeFilterCount: Int = 0
+    onMapToggle: (() -> Unit)? = null
 ) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                propertiesCount?.let { "$it ${if (it == 1) "property" else "properties"}" } ?: "Finding properties...",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (onMapToggle != null) {
-                FilterChip(selected = !showMap, onClick = { if (showMap) onMapToggle() }, label = { Text("List") },
-                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ViewList, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.heightIn(min = 48.dp))
-                FilterChip(selected = showMap, onClick = { if (!showMap) onMapToggle() }, label = { Text("Map") },
-                    leadingIcon = { Icon(Icons.Default.Map, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    modifier = Modifier.heightIn(min = 48.dp))
-            }
+    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            propertiesCount?.let { "$it ${if (it == 1) "property" else "properties"}" } ?: "Finding properties...",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        IconButton(onClick = onLocationClick) {
+            Icon(Icons.Default.MyLocation, contentDescription = "Search near me")
         }
-        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onFilterClick, colors = GharBatoButtonDefaults.outlinedColors(), border = GharBatoButtonDefaults.outlinedBorder(), modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(if (activeFilterCount > 0) "Filters ($activeFilterCount)" else "Filters")
-            }
-            OutlinedButton(onClick = onSortClick, colors = GharBatoButtonDefaults.outlinedColors(), border = GharBatoButtonDefaults.outlinedBorder(), modifier = Modifier.weight(1f).heightIn(min = 48.dp), shape = RoundedCornerShape(12.dp)) {
-                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(currentSort.getShortName(), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+        IconButton(onClick = onSortClick) {
+            Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort properties: ${currentSort.getShortName()}")
+        }
+        if (onMapToggle != null) {
+            FilterChip(selected = !showMap, onClick = { if (showMap) onMapToggle() }, label = { Text("List", maxLines = 1) },
+                modifier = Modifier.heightIn(min = 48.dp))
+            FilterChip(selected = showMap, onClick = { if (!showMap) onMapToggle() }, label = { Text("Map", maxLines = 1) },
+                modifier = Modifier.heightIn(min = 48.dp))
         }
     }
 }
@@ -924,14 +919,12 @@ fun PropertyCard(
     onReportClick: (PropertyModel) -> Unit,
     onHideClick: (PropertyModel) -> Unit,
     isDarkMode: Boolean,
-    modifier: Modifier = Modifier,
-    onFavoriteClick: (() -> Unit)? = null
+    modifier: Modifier = Modifier
 ) {
     PropertyListingCard(
         property = property,
         onClick = onClick,
         modifier = modifier,
-        onFavoriteClick = onFavoriteClick,
         onShareClick = { onShareClick(property) },
         onReportClick = { onReportClick(property) },
         onHideClick = { onHideClick(property) }
@@ -966,7 +959,7 @@ fun PropertyDetailOverlay(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(formatPropertyPrice(property.price, property.marketType), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     Text(property.title.ifBlank { property.propertyType }, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(property.location, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(formatPropertyLocationSummary(property.location), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 IconButton(onClick = onClose, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Default.Close, contentDescription = "Close property preview")

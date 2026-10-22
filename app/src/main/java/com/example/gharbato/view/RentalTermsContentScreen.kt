@@ -23,7 +23,8 @@ import com.example.gharbato.ui.theme.Blue
 @Composable
 fun RentalTermsContentScreen(
     state: PropertyListingState,
-    onStateChange: (PropertyListingState) -> Unit
+    onStateChange: (PropertyListingState) -> Unit,
+    scrollEnabled: Boolean = true
 ) {
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
 
@@ -31,7 +32,7 @@ fun RentalTermsContentScreen(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+            .then(if (scrollEnabled) Modifier.verticalScroll(rememberScrollState()) else Modifier)
     ) {
 
         Text(

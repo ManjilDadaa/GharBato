@@ -1,23 +1,20 @@
 package com.example.gharbato.view
 
-import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +24,7 @@ import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.ui.theme.GharBatoShapes
 import com.example.gharbato.utils.formatPropertyPrice
+import com.example.gharbato.utils.formatPropertyLocationSummary
 
 /** The same information order and actions are used in discovery, search, and saved listings. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,7 +34,6 @@ fun PropertyListingCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
-    onFavoriteClick: (() -> Unit)? = null,
     onShareClick: (() -> Unit)? = null,
     onReportClick: (() -> Unit)? = null,
     onHideClick: (() -> Unit)? = null,
@@ -47,9 +44,14 @@ fun PropertyListingCard(
     val title = property.title.ifBlank { property.propertyType.ifBlank { "Property" } }
     val colors = MaterialTheme.colorScheme
     Card(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().clip(GharBatoShapes.card).combinedClickable(
+            enabled = enabled,
+            role = Role.Button,
+            onClickLabel = "View property details",
+            onLongClickLabel = "Property options",
+            onLongClick = { showMenu = true },
+            onClick = onClick
+        ),
         shape = GharBatoShapes.card,
         colors = CardDefaults.cardColors(containerColor = colors.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -83,73 +85,36 @@ fun PropertyListingCard(
                     )
                 }
             }
-            Row(
-                modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (onFavoriteClick != null) {
-                    FilledIconToggleButton(
-                        checked = property.isFavorite,
-                        onCheckedChange = { onFavoriteClick() },
-                        shape = CircleShape,
-                        modifier = Modifier.size(48.dp).semantics {
-                            contentDescription = if (property.isFavorite) "Remove from saved" else "Save property"
-                            stateDescription = if (property.isFavorite) "Saved" else "Not saved"
-                        },
-                        colors = IconButtonDefaults.filledIconToggleButtonColors(
-                            containerColor = colors.surface.copy(alpha = 0.96f),
-                            contentColor = colors.onSurface,
-                            checkedContainerColor = LocalGharBatoActionColors.current.container,
-                            checkedContentColor = LocalGharBatoActionColors.current.onContainer
-                        )
-                    ) {
-                        Icon(
-                            if (property.isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
-                            contentDescription = null
-                        )
-                    }
-                }
-                Box {
-                    FilledIconButton(
-                        onClick = { showMenu = true },
-                        modifier = Modifier.size(48.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = colors.surface.copy(alpha = 0.96f),
-                            contentColor = colors.onSurface
-                        )
-                    ) {
-                        Icon(Icons.Default.MoreHoriz, contentDescription = "Property options")
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Share property") },
-                            leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
-                            onClick = {
-                                showMenu = false
-                                if (onShareClick != null) onShareClick() else {
-                                    val share = Intent(Intent.ACTION_SEND).apply {
-                                        type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, title)
-                                        putExtra(Intent.EXTRA_TEXT, "$title\n${formatPropertyPrice(property.price, property.marketType)}\n${property.location}\n\nFind this property on GharBato.")
-                                    }
-                                    context.startActivity(Intent.createChooser(share, "Share property"))
+            Box(Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+                DropdownMenu(expanded = showMenu && enabled, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Share property") },
+                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                        onClick = {
+                            showMenu = false
+                            if (onShareClick != null) onShareClick() else {
+                                val share = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_SUBJECT, title)
+                                    putExtra(Intent.EXTRA_TEXT, "$title\n${formatPropertyPrice(property.price, property.marketType)}\n${property.location}\n\nFind this property on GharBato.")
                                 }
+                                context.startActivity(Intent.createChooser(share, "Share property"))
                             }
+                        }
+                    )
+                    if (onHideClick != null) {
+                        DropdownMenuItem(
+                            text = { Text("Not interested") },
+                            leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
+                            onClick = { showMenu = false; onHideClick() }
                         )
-                        if (onHideClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Not interested") },
-                                leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
-                                onClick = { showMenu = false; onHideClick() }
-                            )
-                        }
-                        if (onReportClick != null) {
-                            DropdownMenuItem(
-                                text = { Text("Report listing") },
-                                leadingIcon = { Icon(Icons.Default.Report, contentDescription = null) },
-                                onClick = { showMenu = false; onReportClick() }
-                            )
-                        }
+                    }
+                    if (onReportClick != null) {
+                        DropdownMenuItem(
+                            text = { Text("Report listing") },
+                            leadingIcon = { Icon(Icons.Default.Report, contentDescription = null) },
+                            onClick = { showMenu = false; onReportClick() }
+                        )
                     }
                 }
             }
@@ -174,10 +139,10 @@ fun PropertyListingCard(
             )
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    property.location.ifBlank { "Location not provided" },
+                    formatPropertyLocationSummary(property.location),
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -205,7 +170,6 @@ private fun PropertyListingCardPreview() {
         PropertyListingCard(
             property = PropertyModel(title = "Bright two-bedroom apartment", price = "25000", marketType = "Rent", location = "Bhaisepati, Lalitpur", bedrooms = 2, bathrooms = 1, sqft = "1,100 sq.ft"),
             onClick = {},
-            onFavoriteClick = {},
             modifier = Modifier.padding(16.dp)
         )
     }

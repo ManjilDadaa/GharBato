@@ -8,6 +8,17 @@ plugins {
     id("kotlin-parcelize")
 }
 
+val releaseSigningFile = rootProject.file("keystore.properties")
+val releaseSigningProperties = Properties().apply {
+    if (releaseSigningFile.isFile) {
+        releaseSigningFile.inputStream().use { load(it) }
+    }
+}
+val releaseSigningKeys = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val hasReleaseSigning = releaseSigningKeys.all {
+    !releaseSigningProperties.getProperty(it).isNullOrBlank()
+}
+
 android {
     namespace = "com.example.gharbato"
     compileSdk = 36
@@ -16,7 +27,7 @@ android {
         applicationId = "com.gharbato.nepal.mobile"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 3
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -42,8 +53,22 @@ android {
             ).toString().trim()
     }
 
+    signingConfigs {
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = rootProject.file(releaseSigningProperties.getProperty("storeFile"))
+                storePassword = releaseSigningProperties.getProperty("storePassword")
+                keyAlias = releaseSigningProperties.getProperty("keyAlias")
+                keyPassword = releaseSigningProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -64,6 +89,21 @@ android {
     }
 }
 
+val verifyReleaseSigning by tasks.registering {
+    doLast {
+        check(hasReleaseSigning) {
+            "Release signing requires keystore.properties with storeFile, storePassword, keyAlias, and keyPassword."
+        }
+        check(rootProject.file(releaseSigningProperties.getProperty("storeFile")).isFile) {
+            "The release upload keystore configured in keystore.properties does not exist."
+        }
+    }
+}
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    dependsOn(verifyReleaseSigning)
+}
+
 // Keep local builds on the existing development app and its registered Firebase
 // client so Run updates that installation instead of creating a second app.
 androidComponents {
@@ -75,6 +115,7 @@ androidComponents {
 dependencies {
     // ========== FIREBASE - USE SINGLE BOM VERSION ==========
     implementation(platform("com.google.firebase:firebase-bom:34.19.0"))
+    implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-database")
     implementation("com.google.firebase:firebase-storage")

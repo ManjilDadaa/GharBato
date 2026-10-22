@@ -6,8 +6,6 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import com.example.gharbato.utils.ListingDraftStore
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
@@ -15,32 +13,25 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,7 +43,6 @@ import com.example.gharbato.model.PropertyModel
 import com.example.gharbato.model.getDefaultImageCategories
 import com.example.gharbato.ui.theme.GharBatoTheme
 import com.example.gharbato.ui.theme.GharBatoButtonDefaults
-import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 import com.example.gharbato.viewmodel.ListingViewModel
 import com.google.firebase.database.FirebaseDatabase
 import com.example.gharbato.utils.SystemBarUtils
@@ -79,7 +69,7 @@ class ListingActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
 
@@ -89,12 +79,15 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val listingViewModel = remember { ListingViewModel(PropertyRepoImpl()) }
 
     var step by rememberSaveable { mutableIntStateOf(if (isEdit) 2 else 1) }
-    val showHeader = step == 1
+    val formScroll = rememberLazyListState()
+    var introHeight by remember { mutableIntStateOf(0) }
+    LaunchedEffect(step) { formScroll.scrollToItem(0) }
 
     var listingState by rememberSaveable { mutableStateOf(PropertyListingState()) }
     var isLoadingProperty by rememberSaveable { mutableStateOf(true) }
     var initialized by rememberSaveable { mutableStateOf(false) }
     var isSavingDraft by remember { mutableStateOf(false) }
+    var draftSaveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "guest"
@@ -178,21 +171,22 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     val uploadProgress by listingViewModel.uploadProgress.collectAsState()
     val uploadSuccess by listingViewModel.uploadSuccess.collectAsState()
 
-    val saveDraft: (Boolean) -> Unit = { exitAfterSaving ->
+    val saveDraft: () -> Unit = {
         if (!isSavingDraft && !isUploading) {
             val snapshot = listingState.copy(
                 imageCategories = listingState.imageCategories.map { it.copy(images = it.images.toMutableList()) }
             )
             val savedStep = step
+            draftSaveError = null
             isSavingDraft = true
             scope.launch {
                 val saved = withContext(Dispatchers.IO) { draftStore.save(snapshot, savedStep) }
                 isSavingDraft = false
                 if (saved) {
                     showExitDialog = false
-                    if (exitAfterSaving) activity.finish() else snackbar.showSnackbar("Draft saved. You can return to it later.")
+                    activity.finish()
                 } else {
-                    snackbar.showSnackbar("Couldn't save the draft. Check that your photos are still available and try again.")
+                    draftSaveError = "Couldn't save your draft. Check that your selected photos are still available, then try again."
                 }
             }
         }
@@ -204,22 +198,14 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     }
 
     if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { if (!isSavingDraft) showExitDialog = false },
-            title = { Text("Save your progress?") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Save a draft to finish your listing later, including your selected photos.")
-                    TextButton(onClick = { activity.finish() }, enabled = !isSavingDraft) { Text("Exit without saving") }
-                }
-            },
-            confirmButton = {
-                Button(onClick = { saveDraft(true) }, enabled = !isSavingDraft, colors = GharBatoButtonDefaults.primaryColors()) {
-                    Text(if (isSavingDraft) "Saving..." else "Save and exit")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitDialog = false }, enabled = !isSavingDraft) { Text("Keep editing") }
+        SaveListingProgressDialog(
+            isSaving = isSavingDraft,
+            saveError = draftSaveError,
+            onSaveAndExit = saveDraft,
+            onExitWithoutSaving = { activity.finish() },
+            onKeepEditing = {
+                showExitDialog = false
+                draftSaveError = null
             }
         )
     }
@@ -441,290 +427,33 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
     }
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         containerColor = MaterialTheme.colorScheme.background,
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text(if (isEdit) "Edit property" else "List your property", style = MaterialTheme.typography.titleLarge) },
+                title = {},
+                modifier = Modifier.testTag("listing_app_bar"),
                 navigationIcon = {
                     IconButton(onClick = { showExitDialog = true }, enabled = !isUploading && !isSavingDraft) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Exit listing")
                     }
                 },
-                actions = {
-                    TextButton(onClick = { saveDraft(false) }, enabled = !isLoadingProperty && !isUploading && !isSavingDraft) {
-                        Text(if (isSavingDraft) "Saving..." else "Save draft")
-                    }
-                }
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
-        }
-    ) { padding ->
-        if (isLoadingProperty) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    CircularProgressIndicator(
-                        color = MaterialTheme.colorScheme.primary,
-                        strokeWidth = 4.dp,
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Text(
-                        text = "Loading property details...",
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-                    .animateContentSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Header with animation
-                AnimatedVisibility(
-                    visible = showHeader,
-                    enter = fadeIn(
-                        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
-                    ) + expandVertically(
-                        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)
-                    ),
-                    exit = fadeOut(
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    ) + shrinkVertically(
-                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp, vertical = 32.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .background(color = LocalGharBatoActionColors.current.container, shape = RoundedCornerShape(20.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.home),
-                                    contentDescription = "Property icon",
-                                    modifier = Modifier.size(24.dp),
-                                    tint = LocalGharBatoActionColors.current.onContainer
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "List Your Property",
-                                style = TextStyle(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 24.sp,
-                                    letterSpacing = (-0.5).sp,
-                                    color = MaterialTheme.colorScheme.onBackground
-                                )
-                            )
-
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            Text(
-                                text = "Reach thousands of potential buyers and renters",
-                                style = TextStyle(
-                                    fontSize = 16.sp,
-                                    lineHeight = 22.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                ),
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(if (showHeader) 16.dp else 32.dp))
-
-                // Progress Indicator - Improved UI
-                BoxWithConstraints(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp)
-                ) {
-                    val stepCircleSize = 36.dp
-                    val stepColumnWidth = maxWidth / totalSteps.toFloat()
-                    val stepperPrimaryColor = LocalGharBatoActionColors.current.container
-                    val inactiveLine = MaterialTheme.colorScheme.outlineVariant
-
-                    Canvas(
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .fillMaxWidth()
-                            .height(stepCircleSize)
-                    ) {
-                        val slotWidth = size.width / totalSteps.toFloat()
-                        val circleRadius = stepCircleSize.toPx() / 2f
-                        val centerY = circleRadius
-                        val strokeWidth = 3.dp.toPx()
-                        for (index in 0 until totalSteps - 1) {
-                            val startX = slotWidth * (index + 0.5f) + circleRadius
-                            val endX = slotWidth * (index + 1.5f) - circleRadius
-                            drawLine(
-                                color = inactiveLine,
-                                start = Offset(startX, centerY),
-                                end = Offset(endX, centerY),
-                                strokeWidth = strokeWidth
-                            )
-                            if (index < step - 1) {
-                                drawLine(
-                                    color = stepperPrimaryColor,
-                                    start = Offset(startX, centerY),
-                                    end = Offset(endX, centerY),
-                                    strokeWidth = strokeWidth
-                                )
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        for (i in 1..totalSteps) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = Modifier.width(stepColumnWidth)
-                            ) {
-                                val isComplete = step >= i
-                                val circleColor by animateColorAsState(
-                                    targetValue = if (isComplete) LocalGharBatoActionColors.current.container else MaterialTheme.colorScheme.outlineVariant,
-                                    animationSpec = tween(durationMillis = 300),
-                                    label = "stepColor"
-                                )
-
-                                Box(
-                                    modifier = Modifier
-                                        .background(color = circleColor, shape = CircleShape)
-                                        .size(stepCircleSize),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "$i",
-                                        color = if (isComplete) LocalGharBatoActionColors.current.onContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                Text(
-                                    text = when {
-                                        i == 1 -> "Purpose"
-                                        i == 2 -> "Details"
-                                        i == 3 -> "Photos"
-                                        i == 4 && !isRent -> "Amenities"
-                                        i == 4 && isRent -> "Terms"
-                                        i == 5 -> "Amenities"
-                                        else -> ""
-                                    },
-                                    fontSize = 12.sp,
-                                    fontWeight = if (step == i) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (step >= i) {
-                                        MaterialTheme.colorScheme.onSurface
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
-                                    textAlign = TextAlign.Center,
-                                    lineHeight = 16.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Content based on step and purpose
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                ) {
-                    when {
-                        step == 1 -> PurposeContentScreen(
-                            selectedPurpose = listingState.selectedPurpose,
-                            selectedPropertyType = listingState.selectedPropertyType,
-                            onPropertyTypeChange = { newType ->
-                                listingState = listingState.copy(selectedPropertyType = newType)
-                            },
-                            onPurposeChange = { newPurpose ->
-                                listingState = listingState.copy(selectedPurpose = newPurpose)
-                            }
-                        )
-                        step == 2 -> DetailsContentScreen(
-                            state = listingState,
-                            onStateChange = { newState ->
-                                listingState = newState
-                            }
-                        )
-                        step == 3 -> PhotosContentScreen(
-                            imageCategories = listingState.imageCategories,
-                            onCategoriesChange = { newCategories ->
-                                listingState = listingState.copy(imageCategories = newCategories)
-                            }
-                        )
-                        step == 4 && !isRent -> AmenitiesContentScreen(
-                            state = listingState,
-                            onStateChange = { newState ->
-                                listingState = newState
-                            }
-                        )
-                        step == 4 && isRent -> RentalTermsContentScreen(
-                            state = listingState,
-                            onStateChange = { newState ->
-                                listingState = newState
-                            }
-                        )
-                        step == 5 && isRent -> AmenitiesContentScreen(
-                            state = listingState,
-                            onStateChange = { newState ->
-                                listingState = newState
-                            }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Navigation Buttons - Improved UI
+        },
+        bottomBar = {
+            if (!isLoadingProperty) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                        .navigationBarsPadding()
                 ) {
                     // Back Button
                     OutlinedButton(
+                        enabled = !isUploading && !isSavingDraft,
                         onClick = {
                             val newStep = step - 1
                             val minStep = if (isEdit) 2 else 1
@@ -736,7 +465,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = GharBatoButtonDefaults.outlinedColors(),
                         border = GharBatoButtonDefaults.outlinedBorder()
@@ -751,6 +480,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
 
                     // Next/Submit Button
                     Button(
+                        enabled = !isUploading && !isSavingDraft,
                         onClick = {
                             val validationResult = listingViewModel.validateStep(step, listingState)
 
@@ -770,7 +500,7 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(52.dp),
+                            .heightIn(min = 52.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = GharBatoButtonDefaults.primaryColors(),
                         elevation = ButtonDefaults.buttonElevation(
@@ -783,6 +513,92 @@ fun ListingBody(propertyId: String? = null, isEdit: Boolean = false) {
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
+                    }
+                }
+            }
+        }
+    ) { padding ->
+        if (isLoadingProperty) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    CircularProgressIndicator(Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
+                    Text("Loading property details...", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)
+                    .testTag("listing_form_scroll"),
+                state = formScroll,
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                if (step == 1) {
+                    item(key = "listing_intro") {
+                        val opacity by remember {
+                            derivedStateOf {
+                                if (formScroll.firstVisibleItemIndex != 0) 0f
+                                else if (introHeight == 0) 1f
+                                else (1f - formScroll.firstVisibleItemScrollOffset / (introHeight * 0.5f)).coerceIn(0f, 1f)
+                            }
+                        }
+                        ListingIntro(opacity, Modifier.padding(horizontal = 16.dp).onSizeChanged { introHeight = it.height })
+                    }
+                }
+                stickyHeader(key = "listing_progress") {
+                    ListingProgressHeader(step = step, isRent = isRent)
+                }
+                item(key = "listing_content_$step") {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        when {
+                            step == 1 -> PurposeContentScreen(
+                                selectedPurpose = listingState.selectedPurpose,
+                                selectedPropertyType = listingState.selectedPropertyType,
+                                onPropertyTypeChange = { newType ->
+                                    listingState = listingState.copy(selectedPropertyType = newType)
+                                },
+                                onPurposeChange = { newPurpose ->
+                                    listingState = listingState.copy(selectedPurpose = newPurpose)
+                                }
+                            )
+                            step == 2 -> DetailsContentScreen(
+                                state = listingState,
+                                scrollEnabled = false,
+                                onStateChange = { newState ->
+                                    listingState = newState
+                                }
+                            )
+                            step == 3 -> PhotosContentScreen(
+                                imageCategories = listingState.imageCategories,
+                                scrollEnabled = false,
+                                onCategoriesChange = { newCategories ->
+                                    listingState = listingState.copy(imageCategories = newCategories)
+                                }
+                            )
+                            step == 4 && !isRent -> AmenitiesContentScreen(
+                                state = listingState,
+                                scrollEnabled = false,
+                                onStateChange = { newState ->
+                                    listingState = newState
+                                }
+                            )
+                            step == 4 && isRent -> RentalTermsContentScreen(
+                                state = listingState,
+                                scrollEnabled = false,
+                                onStateChange = { newState ->
+                                    listingState = newState
+                                }
+                            )
+                            step == 5 && isRent -> AmenitiesContentScreen(
+                                state = listingState,
+                                scrollEnabled = false,
+                                onStateChange = { newState ->
+                                    listingState = newState
+                                }
+                            )
+                        }
                     }
                 }
             }

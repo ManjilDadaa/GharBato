@@ -1,40 +1,31 @@
 package com.example.gharbato.view
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
 import com.example.gharbato.R
-import com.example.gharbato.ui.theme.Blue
-import com.example.gharbato.ui.theme.Gray
+import com.example.gharbato.ui.theme.LocalGharBatoActionColors
 
 @Composable
 fun PurposeContentScreen(
@@ -43,159 +34,146 @@ fun PurposeContentScreen(
     selectedPropertyType: String,
     onPropertyTypeChange: (String) -> Unit
 ) {
-    val context = LocalContext.current
-    val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
-    val propertyTypes = listOf("Apartment", "House", "Villa", "Studio")
+    val colors = MaterialTheme.colorScheme
+    val actions = LocalGharBatoActionColors.current
 
-    Column(
-        modifier = Modifier.verticalScroll(rememberScrollState())
-    ){
-        Row {
-            Text(
-                "What would you like to do?",
-                style = TextStyle(
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.DarkGray,
-                    fontSize = 18.sp
-                ),
-                modifier = Modifier.padding(start = 10.dp, top = 20.dp, end = 10.dp, bottom = 5.dp)
-            )
-        }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp)) {
+        Text(
+            text = "What would you like to do?",
+            style = MaterialTheme.typography.titleMedium,
+            color = colors.onBackground,
+            modifier = Modifier.padding(start = 5.dp, top = 20.dp, end = 5.dp, bottom = 20.dp)
+        )
 
-        Column (
-            modifier = Modifier
-                .padding(horizontal = 5.dp, vertical = 15.dp)
-                .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color.White)
-        ){
-            listOf("Sell", "Rent", "Book").forEachIndexed { index, title ->
+        Column(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            listOf("Sell", "Rent", "Book").forEachIndexed { index, purpose ->
+                val selected = selectedPurpose == purpose
                 OutlinedCard(
-                    onClick = { onPurposeChange(title) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (selectedPurpose == title) Blue else {
-                            if (isDarkMode) MaterialTheme.colorScheme.surface else Color.Transparent
-                        },
-                        contentColor = if (selectedPurpose == title) Color.White else {
-                            if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-                        }
+                        .heightIn(min = 80.dp)
+                        .selectable(
+                            selected = selected,
+                            role = Role.RadioButton,
+                            onClick = { onPurposeChange(purpose) }
+                        ),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = if (selected) actions.container else colors.surface,
+                        contentColor = if (selected) actions.onContainer else colors.onSurface
                     ),
+                    border = BorderStroke(
+                        if (selected) 2.dp else 1.dp,
+                        if (selected) colors.primary else colors.outlineVariant
+                    )
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Start,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    when(index){
-                                        0 -> R.drawable.tag
-                                        1 -> R.drawable.home
-                                        2 -> R.drawable.calendar
-                                        else -> R.drawable.home
-                                    }
-                                ),
-                                contentDescription = null,
-                                modifier = Modifier.size(28.dp),
-                                tint = if (selectedPurpose == title) Color.White else {
-                                    if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
+                        Icon(
+                            painter = painterResource(
+                                when (index) {
+                                    0 -> R.drawable.tag
+                                    1 -> R.drawable.home
+                                    else -> R.drawable.calendar
                                 }
+                            ),
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = if (selected) actions.onContainer else colors.onSurfaceVariant
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                        ) {
+                            Text(
+                                text = when (index) {
+                                    0 -> "Sell Property"
+                                    1 -> "Rent Out Property"
+                                    else -> "Short-Term Booking"
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    when(index){
-                                        0 -> "Sell Property"
-                                        1 -> "Rent Out Property"
-                                        2 -> "Short-Term Booking"
-                                        else -> ""
-                                    },
-                                    style = TextStyle(
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp
-                                    )
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    when(index) {
-                                        0 -> "List your property for sale"
-                                        1 -> "Find tenants for long-term rental"
-                                        2 -> "Vacation rental or daily booking"
-                                        else -> ""
-                                    },
-                                    fontSize = 13.sp,
-                                    color = if (selectedPurpose == title)
-                                        Color.White.copy(alpha = 0.85f)
-                                    else {
-                                        if (isDarkMode) MaterialTheme.colorScheme.onSurfaceVariant else Gray
-                                    }
+                            Text(
+                                text = when (index) {
+                                    0 -> "List your property for sale"
+                                    1 -> "Find tenants for long-term rental"
+                                    else -> "Vacation rental or daily booking"
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (selected) actions.onContainer else colors.onSurfaceVariant
+                            )
+                        }
+                        Box(Modifier.size(24.dp)) {
+                            if (selected) {
+                                Icon(
+                                    painter = painterResource(R.drawable.baseline_check_24),
+                                    contentDescription = null,
+                                    tint = actions.onContainer,
+                                    modifier = Modifier.size(24.dp)
                                 )
                             }
-                        }
-
-                        if (selectedPurpose == title) {
-                            Icon(
-                                painter = painterResource(R.drawable.baseline_check_24),
-                                contentDescription = "Selected",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.White
-                            )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(12.dp))
             }
+        }
 
-            Text("Property Type",
-                style = TextStyle(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onBackground else Color.Black
-                ),
-                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = "Property Type",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = colors.onBackground,
+            modifier = Modifier.padding(top = 20.dp, bottom = 16.dp)
+        )
 
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                maxItemsInEachRow = 2
-            ) {
-                propertyTypes.forEach { type ->
-                    OutlinedCard(
-                        onClick = { onPropertyTypeChange(type) },
-                        modifier = Modifier
-                            .height(55.dp)
-                            .weight(1f),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if(selectedPropertyType == type) Blue else {
-                                if (isDarkMode) MaterialTheme.colorScheme.surface else Color.Transparent
-                            },
-                            contentColor = if(selectedPropertyType == type) Color.White else {
-                                if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-                            }
-                        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            maxItemsInEachRow = 2
+        ) {
+            listOf("Apartment", "House", "Villa", "Studio").forEach { type ->
+                val selected = selectedPropertyType == type
+                OutlinedCard(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 56.dp)
+                        .selectable(
+                            selected = selected,
+                            role = Role.RadioButton,
+                            onClick = { onPropertyTypeChange(type) }
+                        ),
+                    colors = CardDefaults.outlinedCardColors(
+                        containerColor = if (selected) actions.container else colors.surface,
+                        contentColor = if (selected) actions.onContainer else colors.onSurface
+                    ),
+                    border = BorderStroke(
+                        if (selected) 2.dp else 1.dp,
+                        if (selected) colors.primary else colors.outlineVariant
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ){
-                            Text(
-                                text = type,
-                                fontSize = 16.sp,
-                                color = if (selectedPropertyType == type)
-                                    Color.White
-                                else {
-                                    if (isDarkMode) MaterialTheme.colorScheme.onSurface else Color.Black
-                                }
+                        Text(
+                            text = type,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (selected) {
+                            Icon(
+                                painter = painterResource(R.drawable.baseline_check_24),
+                                contentDescription = null,
+                                tint = actions.onContainer,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

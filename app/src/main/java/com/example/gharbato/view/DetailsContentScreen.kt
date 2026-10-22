@@ -23,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.gharbato.model.PropertyListingState
@@ -31,7 +32,8 @@ import com.example.gharbato.ui.theme.Blue
 @Composable
 fun DetailsContentScreen(
     state: PropertyListingState,
-    onStateChange: (PropertyListingState) -> Unit
+    onStateChange: (PropertyListingState) -> Unit,
+    scrollEnabled: Boolean = true
 ) {
     val context = LocalContext.current
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
@@ -76,7 +78,7 @@ fun DetailsContentScreen(
             .fillMaxWidth()
             .background(if (isDarkMode) MaterialTheme.colorScheme.background else Color.White)
             .padding(horizontal = 8.dp)
-            .verticalScroll(rememberScrollState())
+            .then(if (scrollEnabled) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .imePadding()
     ) {
         Text(
@@ -205,17 +207,17 @@ fun DetailsContentScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Floor and Furnishing
-        Row(
+        // Give furnishing its own row so the full selection remains readable on narrow screens.
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             CustomOutlinedTextField(
                 value = state.floor,
                 onValueChange = { onStateChange(state.copy(floor = it)) },
                 label = "Floor",
                 placeholder = "e.g., 5 floors",
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 isDarkMode = isDarkMode
             )
 
@@ -223,7 +225,7 @@ fun DetailsContentScreen(
             FurnishingDropdown(
                 selectedFurnishing = state.furnishing,
                 onFurnishingChange = { onStateChange(state.copy(furnishing = it)) },
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxWidth(),
                 isDarkMode = isDarkMode
             )
         }
@@ -556,6 +558,7 @@ fun FurnishingDropdown(
                 )
             },
             readOnly = true,
+            singleLine = true,
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -604,6 +607,8 @@ fun FurnishingDropdown(
                         Text(
                             option,
                             fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color = if (isSelected) {
                                 if (isDarkMode) GharBatoPalette.brandLight else Blue

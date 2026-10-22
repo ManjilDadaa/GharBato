@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.Density
@@ -32,37 +33,50 @@ class DiscoveryUiInstrumentedTest {
     @get:Rule val compose = createComposeRule()
     private val property = PropertyModel(id = 1, title = "Bright two-bedroom apartment", price = "25500", marketType = "Rent", location = "Bhaisepati, Lalitpur", bedrooms = 2, bathrooms = 1, sqft = "1,100 sq.ft")
 
-    @Test fun cardShowsItsTitleBudgetAndDiscoverableActions() {
+    @Test fun cardOpensDetailsOnTapAndOptionsOnLongPressWithoutOverlayButtons() {
         var shares = 0
+        var detailClicks = 0
+        var reports = 0
+        var hides = 0
         compose.setContent {
-            var saved by remember { mutableStateOf(false) }
             GharBatoTheme(darkTheme = false) {
-                PropertyListingCard(property.copy(isFavorite = saved), onClick = {}, onFavoriteClick = { saved = !saved },
-                    onShareClick = { shares++ }, onReportClick = {}, onHideClick = {}, modifier = Modifier.padding(16.dp))
+                PropertyListingCard(property, onClick = { detailClicks++ },
+                    onShareClick = { shares++ }, onReportClick = { reports++ }, onHideClick = { hides++ }, modifier = Modifier.padding(16.dp))
             }
         }
         compose.onNodeWithText(property.title).assertIsDisplayed()
         compose.onNodeWithText("Rs 25,500/month").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Save property").performClick()
-        compose.onNodeWithContentDescription("Remove from saved").assertIsToggleable().assertIsOn()
+        compose.onNodeWithContentDescription("Save property").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Remove from saved").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Property options").assertDoesNotExist()
         capture("property-card-light")
-        compose.onNodeWithContentDescription("Property options").performClick()
+        compose.onNodeWithText(property.title).performTouchInput { longClick() }
         compose.onNodeWithText("Report listing").assertIsDisplayed()
         compose.onNodeWithText("Not interested").assertIsDisplayed()
         compose.onNodeWithText("Share property").performClick()
-        compose.runOnIdle { assertEquals(1, shares) }
+        compose.runOnIdle { assertEquals(1, shares); assertEquals(0, detailClicks) }
+        compose.onNodeWithText(property.title).performSemanticsAction(SemanticsActions.OnLongClick) { it() }
+        compose.onNodeWithText("Report listing").performClick()
+        compose.onNodeWithText(property.title).performTouchInput { longClick() }
+        compose.onNodeWithText("Not interested").performClick()
+        compose.onNodeWithText(property.title).performClick()
+        compose.runOnIdle {
+            assertEquals(1, reports)
+            assertEquals(1, hides)
+            assertEquals(1, detailClicks)
+        }
     }
 
-    @Test fun homeSearchAndListingEntryWorkWithoutWaitingForProperties() {
+    @Test fun homeSearchAndMarketChipsWorkWithoutAListingShortcut() {
         var searched = ""
-        var listingOpened = false
+        var selectedMarketType by mutableStateOf("")
         compose.setContent {
             GharBatoTheme(darkTheme = false) {
                 Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).verticalScroll(rememberScrollState())) {
                     HomeHeader(0, {}, MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.onBackground)
-                    HomeSearchSection(onSearch = { searched = it }, onListProperty = { listingOpened = true })
-                    QuickActionsSection({}, {}, {})
-                    PropertyListingCard(property, {}, onFavoriteClick = {}, modifier = Modifier.padding(horizontal = com.example.gharbato.ui.theme.GharBatoSpacing.screenHorizontal, vertical = 16.dp))
+                    HomeSearchSection(onSearch = { searched = it })
+                    QuickActionsSection(selectedMarketType) { selectedMarketType = it }
+                    PropertyListingCard(property, {}, modifier = Modifier.padding(horizontal = com.example.gharbato.ui.theme.GharBatoSpacing.screenHorizontal, vertical = 16.dp))
                 }
             }
         }
@@ -70,8 +84,17 @@ class DiscoveryUiInstrumentedTest {
         compose.onNodeWithText("Search city, area, or property").performTextInput("Patan")
         compose.onNodeWithText("Patan").performImeAction()
         compose.runOnIdle { assertEquals("Patan", searched) }
-        compose.onNodeWithText("List your property").performClick()
-        compose.runOnIdle { assertTrue(listingOpened) }
+        compose.onNodeWithText("Find your dream property").assertIsDisplayed()
+        compose.onNodeWithText("List your property").assertDoesNotExist()
+        compose.onNodeWithText("Rent").performClick().assertIsSelected()
+        compose.runOnIdle { assertEquals("Rent", selectedMarketType) }
+        compose.onNodeWithText("Buy").performClick().assertIsSelected()
+        compose.onNodeWithText("Rent").assertIsNotSelected()
+        compose.runOnIdle { assertEquals("Sell", selectedMarketType) }
+        compose.onNodeWithText("Stay").performClick().assertIsSelected()
+        compose.runOnIdle { assertEquals("Book", selectedMarketType) }
+        compose.onNodeWithText("Stay").performClick().assertIsNotSelected()
+        compose.runOnIdle { assertEquals("", selectedMarketType) }
     }
 
     @Test fun searchModeAndFilterControlsWorkAtLargeFontSizes() {
@@ -82,8 +105,8 @@ class DiscoveryUiInstrumentedTest {
                 GharBatoTheme(darkTheme = false) {
                     var map by remember { mutableStateOf(false) }
                     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-                        SearchTopBar("", {}, {}, {}, {}, {}, false, false)
-                        SortBar(24, SortOption.DATE_NEWEST, {}, { filtersOpened = true }, false, map, { map = !map }, 2)
+                        SearchTopBar("", {}, {}, {}, {}, false, { filtersOpened = true }, 2)
+                        SortBar(24, SortOption.DATE_NEWEST, {}, {}, map, { map = !map })
                     }
                 }
             }
@@ -91,7 +114,7 @@ class DiscoveryUiInstrumentedTest {
         compose.onNodeWithText("List").assertIsSelected()
         compose.onNodeWithText("Map").performClick().assertIsSelected()
         compose.onNodeWithText("List").performClick().assertIsSelected()
-        compose.onNodeWithText("Filters (2)").performClick()
+        compose.onNodeWithContentDescription("Filters (2)").performClick()
         compose.runOnIdle { assertTrue(filtersOpened) }
         capture("search-controls-large-font")
     }
@@ -100,13 +123,14 @@ class DiscoveryUiInstrumentedTest {
         compose.setContent {
             GharBatoTheme(darkTheme = true) {
                 Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(16.dp)) {
-                    PropertyListingCard(property.copy(isFavorite = true), {}, onFavoriteClick = {})
+                    PropertyListingCard(property.copy(isFavorite = true), {})
                 }
             }
         }
         compose.onNodeWithText("2 beds").assertIsDisplayed()
         compose.onNodeWithText("1 bath").assertIsDisplayed()
-        compose.onNodeWithContentDescription("Remove from saved").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Remove from saved").assertDoesNotExist()
+        compose.onNodeWithText(property.title).assertHasClickAction()
         capture("property-card-dark")
     }
 

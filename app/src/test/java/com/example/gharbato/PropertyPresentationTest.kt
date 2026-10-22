@@ -1,12 +1,36 @@
 package com.example.gharbato
 
 import com.example.gharbato.utils.formatPropertyPrice
+import com.example.gharbato.utils.formatPropertyLocationSummary
 import com.example.gharbato.utils.hasPropertyCoordinates
 import com.example.gharbato.utils.isWithinPriceRange
 import org.junit.Assert.*
 import org.junit.Test
 
 class PropertyPresentationTest {
+    @Test fun locationSummariesRemovePlusCodesAndKeepTheArea() {
+        assertEquals("Kathmandu, Nepal", formatPropertyLocationSummary("M988+HF7, Kathmandu, Nepal"))
+        assertEquals("Kathmandu", formatPropertyLocationSummary("M988+ HF7 Kathmandu"))
+        assertEquals("Lalitpur", formatPropertyLocationSummary("7MV7M988+HF7, Lalitpur"))
+        assertEquals("Patan", formatPropertyLocationSummary("m988+hf7, Patan"))
+        assertEquals("Kathmandu", formatPropertyLocationSummary("M988+HF7Q, Kathmandu"))
+    }
+
+    @Test fun locationSummariesKeepCoordinatesInDetails() {
+        assertEquals("Lalitpur", formatPropertyLocationSummary("27.6727, 85.3105, Lalitpur"))
+        assertEquals("Kathmandu", formatPropertyLocationSummary("27.7, 85.3, Kathmandu"))
+        assertEquals("Patan", formatPropertyLocationSummary("Patan (Lat: 27.6727, Lng: 85.3105)"))
+        assertEquals("View location in details", formatPropertyLocationSummary("M988+ HF7"))
+        assertEquals("View location in details", formatPropertyLocationSummary("27.6727, 85.3105"))
+        assertEquals("View location in details", formatPropertyLocationSummary(""))
+    }
+
+    @Test fun locationSummariesPreserveReadableAddresses() {
+        assertEquals("Bhaisepati, Lalitpur", formatPropertyLocationSummary("Bhaisepati, Lalitpur"))
+        assertEquals("House 27, Ward 8, Kathmandu 44600", formatPropertyLocationSummary("House 27, Ward 8, Kathmandu 44600"))
+        assertEquals("पाटन, ललितपुर", formatPropertyLocationSummary("पाटन, ललितपुर"))
+    }
+
     @Test fun rawPricesIncludeCurrencyAndTheCorrectPeriod() {
         assertEquals("Rs 25,000/month", formatPropertyPrice("25000", "Rent"))
         assertEquals("Rs 3,500/night", formatPropertyPrice("3500", "Book"))

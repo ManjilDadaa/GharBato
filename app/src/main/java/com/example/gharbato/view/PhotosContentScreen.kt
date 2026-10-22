@@ -36,7 +36,8 @@ import com.example.gharbato.ui.theme.Blue
 @Composable
 fun PhotosContentScreen(
     imageCategories: List<ImageCategory>,
-    onCategoriesChange: (List<ImageCategory>) -> Unit
+    onCategoriesChange: (List<ImageCategory>) -> Unit,
+    scrollEnabled: Boolean = true
 ) {
     val isDarkMode by ThemePreference.isDarkModeState.collectAsState()
     val totalImages = imageCategories.sumOf { it.images.size }
@@ -47,7 +48,7 @@ fun PhotosContentScreen(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .then(if (scrollEnabled) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(horizontal = 8.dp)
     ) {
         // Header Section
